@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cold Start VR</title>
+<style>
+  body { margin: 0; overflow: hidden; background: #1b2440; font: 17px/1.5 Georgia, "Times New Roman", serif; color: #f4f1e8; }
+  canvas { display: block; }
+  #ui { position: fixed; left: 0; right: 0; bottom: 24px; text-align: center; pointer-events: none; }
+  #ui > * { pointer-events: auto; }
+  #enter { display: none; font: inherit; font-size: 22px; padding: 12px 34px; border: 3px solid #f4f1e8; background: #1e2a44; color: #f4f1e8; border-radius: 3px; cursor: pointer; }
+  #enter:hover { background: #e8801a; border-color: #e8801a; }
+  #note { margin: 10px auto 0; max-width: 60ch; font-size: 15px; color: #cfc9b9; background: rgba(30,42,68,0.7); padding: 6px 14px; border-radius: 3px; }
+  h1 { position: fixed; top: 16px; left: 22px; margin: 0; font-weight: normal; font-size: 22px; letter-spacing: 0.01em; }
+</style>
+</head>
+<body>
+<h1>Cold Start</h1>
+<div id="ui"><button id="enter">Enter VR</button><p id="note">Loading the site office.</p></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+var MATHS = [
+  { title: "Decimals, GST, slab volume, rafters", q: [
+    { stage: "Warm up", sec: "Numbers & measurement", rule: "Align the decimal points before you add or subtract.", eg: "2.400 + 0.075 = 2.475",
+      q: "14.520 minus 2.400.", a: "12.120. Misalign by one column and the answer is ten times out." },
+    { stage: "Build", sec: "Ratios, proportions & costs", rule: "GST component of a total = total divided by 11.", eg: "$5,500 / 11 = $500 GST, so $5,000 ex GST",
+      q: "An invoice shows $3,850 including GST. What is the GST, and the ex GST amount?", a: "3,850 / 11 = $350 GST. Ex GST = $3,500. Do not divide by 10 - that overstates it." },
+    { stage: "Work", sec: "Geometry - areas & volumes", rule: "Volume = length x width x depth. The allowance goes on last.", eg: "12.000 x 8.000 x 0.100 = 9.6 cubic metres",
+      q: "A slab is 10.400 x 7.200 and 100 thick. Add 10%. What do you order?", a: "74.88 square metres x 0.100 = 7.488 cubic metres. x 1.10 = 8.24 cubic metres." },
+    { stage: "Stretch", sec: "Pythagoras & angles", rule: "Rafter = square root of (run squared + rise squared).", eg: "run 3.600, rise 1.200 -> root of 14.40 = 3.795",
+      q: "Run is 4.200 and rise is 1.500. What is the rafter length?", a: "17.64 + 2.25 = 19.89. Square root = 4.460 m." } ] },
+  { title: "Rearranging, scale, test data, levels", q: [
+    { stage: "Warm up", sec: "Algebra for estimating", rule: "Rearrange a formula the same way every time: whatever you do to one side, do to the other.", eg: "Area = L x W, so L = Area / W",
+      q: "You need 48 square metres of decking at 6.000 wide. What length?", a: "48 / 6 = 8.000 m." },
+    { stage: "Build", sec: "Scale drawings & plans", rule: "Real dimension = drawing measurement x the scale denominator.", eg: "45 mm on a 1:100 plan = 4,500 mm real",
+      q: "A beam measures 9 mm on a 1:50 detail. What is the real depth?", a: "9 x 50 = 450 mm." },
+    { stage: "Work", sec: "Stats, data & quick reference", rule: "Mean = sum divided by count. Range = highest minus lowest.", eg: "28, 31, 29, 30, 27 -> mean 29, range 4",
+      q: "Five cylinder tests read 32, 35, 33, 31 and 34 MPa. Mean and range?", a: "Sum 165 / 5 = 33 MPa. Range = 35 - 31 = 4 MPa. A tight range means a consistent mix." },
+    { stage: "Stretch", sec: "Numbers & measurement", rule: "Below datum is just a negative. Subtracting a negative adds.", eg: "5.400 - (-0.300) = 5.700",
+      q: "Floor RL is 5.400. The sewer invert sits 600 below floor, then the drain falls a further 250 to the boundary. What is the invert RL at the boundary?", a: "5.400 - 0.600 = 4.800. Then 4.800 - 0.250 = 4.550." } ] },
+  { title: "Waste, diagonals, gable area, scaling off a plan", q: [
+    { stage: "Warm up", sec: "Ratios, proportions & costs", rule: "Order quantity = measured quantity x (1 + waste rate).", eg: "45 x 1.12 = 50.4 square metres",
+      q: "You have measured 62 square metres of tiling and allow 12% waste. What do you order?", a: "62 x 1.12 = 69.44, so 69.5 square metres." },
+    { stage: "Build", sec: "Pythagoras & angles", rule: "Both diagonals of a rectangle must be equal, and equal to the square root of (a squared + b squared).", eg: "9.000 x 12.000 -> root of 225 = 15.000",
+      q: "A slab is set out 9.000 x 12.000. What must both diagonals read?", a: "81 + 144 = 225. Square root = 15.000 m. Both of them - not one." },
+    { stage: "Work", sec: "Geometry - areas & volumes", rule: "Triangle area = half x base x perpendicular height. The sloping side is not the height.", eg: "half x 7.2 x 1.8 = 6.48 square metres",
+      q: "A gable end is 7.200 wide with the ridge 1.800 above the plate. What is the cladding area?", a: "0.5 x 7.200 x 1.800 = 6.48 square metres." },
+    { stage: "Stretch", sec: "Scale drawings & plans", rule: "Scale each dimension first, then work out the area. Area scales by the square of the factor.", eg: "48 mm at 1:100 = 4.800 m",
+      q: "A room measures 48 mm x 36 mm on a 1:100 plan. What is the real floor area?", a: "4.800 x 3.600 = 17.28 square metres. Double every dimension and the area quadruples, not doubles." } ] },
+  { title: "Mental maths, conversions, BODMAS, gradients", q: [
+    { stage: "Warm up", sec: "Stats, data & quick reference", rule: "For 15%, take 10% then halve it and add the two.", eg: "15% of $840: 84 + 42 = $126",
+      q: "15% of $1,260, in your head.", a: "10% = 126. Half of that = 63. Total = $189." },
+    { stage: "Build", sec: "Numbers & measurement", rule: "One foot is 304.8 mm. Set up a proportion and you never need to memorise the rest.", eg: "8 ft x 304.8 = 2,438.4 mm",
+      q: "A standard sheet is 8 feet long. What is that in millimetres?", a: "8 x 304.8 = 2,438.4 mm. Close enough to 2,438 on site." },
+    { stage: "Work", sec: "Algebra for estimating", rule: "BODMAS. Brackets, then orders, then divide and multiply, then add and subtract.", eg: "2 x (3.6 + 4.2) x 0.4 x 0.3 = 1.872",
+      q: "Work out 2 x (3.600 + 4.200) x 0.400 x 0.300.", a: "Brackets first: 7.800. Then 2 x 7.800 = 15.6, x 0.400 = 6.24, x 0.300 = 1.872 cubic metres." },
+    { stage: "Stretch", sec: "Pythagoras & angles", rule: "Gradient = rise / run. So run = rise / gradient, and rise = gradient x run.", eg: "0.300 fall at 1:80 needs 0.300 x 80 = 24.000 run",
+      q: "A pipe must fall 300 mm at 1:80 - what run does that need? And an accessible ramp rising 900 mm at a maximum 1:14 - what is the minimum run?", a: "Pipe: 0.300 x 80 = 24.000 m. Ramp: 0.900 x 14 = 12.600 m minimum, plus a landing." } ] },
+  { title: "Slab area, unit rates, a plan you cannot trust, defect rates", q: [
+    { stage: "Warm up", sec: "Geometry - areas & volumes", rule: "Area = length x width. Get the clean number before anything else happens to it.", eg: "8.400 x 4.200 = 35.28 square metres",
+      q: "A slab is 8.400 x 4.200. What is the area?", a: "35.28 square metres." },
+    { stage: "Build", sec: "Ratios, proportions & costs", rule: "Unit rate = total divided by quantity. Then quantity x rate gives the job.", eg: "6 hrs / 15 sq m = 0.4 hrs per square metre",
+      q: "A tiler takes 6 hours to lay 15 square metres. How long for 45 square metres, and at $65 an hour what is the labour?", a: "6 / 15 = 0.4 hrs per square metre. 45 x 0.4 = 18 hours. 18 x 65 = $1,170." },
+    { stage: "Work", sec: "Scale drawings & plans", rule: "If a drawing was not plotted at the size its scale note assumes, the scale note is wrong.", eg: "A3 reduced to A4 is about 71% of the original",
+      q: "An A3 drawing noted 1:100 has been printed to A4. A wall measures 32 mm on your copy. What does naive scaling give you, what is it really, and what should you do?", a: "Naive scaling gives 3.200 m. The A4 print is about 71% of A3, so the real wall is roughly 4.525 m - about 1.3 m out. Use the written dimension, or confirm the plot scale before you measure anything." },
+    { stage: "Stretch", sec: "Stats, data & quick reference", rule: "Probability = favourable outcomes divided by total outcomes.", eg: "3 defective tiles in 50 = 3/50 = 6%",
+      q: "An inspection finds 4 defective welds in 80 sampled. What is the defect rate, and does it pass a 5% acceptance standard?", a: "4 / 80 = 0.05 = 5%. Right on the limit, so it passes - but only just. Anything above 5% and the batch is rejected." } ] },
+  { title: "Fractions, finding a leg, stacked discounts, solving for depth", q: [
+    { stage: "Warm up", sec: "Numbers & measurement", rule: "Fraction to decimal: divide the top by the bottom.", eg: "3/8 = 3 / 8 = 0.375 inches",
+      q: "Convert 3/8 of an inch to a decimal, then to millimetres.", a: "3 / 8 = 0.375 inches. 0.375 x 25.4 = 9.525 mm." },
+    { stage: "Build", sec: "Pythagoras & angles", rule: "If you know the hypotenuse and one leg, the other leg is the square root of (c squared minus a squared).", eg: "root of (16 - 5.76) = root of 10.24 = 3.200",
+      q: "A stair stringer measures 4.000 diagonally and the total rise is 2.400. What is the going?", a: "16.00 - 5.76 = 10.24. Square root = 3.200 m." },
+    { stage: "Work", sec: "Ratios, proportions & costs", rule: "Two discounts do not add. Multiply the factors.", eg: "20% then 10% = 0.80 x 0.90 = 0.72",
+      q: "A supplier offers 20% off, then a further 10% off. What is the actual discount?", a: "0.80 x 0.90 = 0.72, so 28% off - not 30%." },
+    { stage: "Stretch", sec: "Algebra for estimating", rule: "Volume = length x width x depth, so depth = volume / (length x width).", eg: "18 / 36 = 0.500 m",
+      q: "You have 18 cubic metres of concrete to place over an area 9.000 x 4.000. What depth does that give you?", a: "9.000 x 4.000 = 36 square metres. 18 / 36 = 0.500 m, or 500 mm." } ] },
+  { title: "Joinery detail, a round column, survey grid, brace and paint", q: [
+    { stage: "Warm up", sec: "Scale drawings & plans", rule: "Same rule at every scale - measurement x denominator.", eg: "47 mm at 1:20 = 940 mm",
+      q: "A door opening measures 47 mm on a 1:20 joinery detail. What is the real width?", a: "47 x 20 = 940 mm." },
+    { stage: "Build", sec: "Geometry - areas & volumes", rule: "Circle area = pi x radius squared. Radius is half the diameter.", eg: "450 dia -> r 0.225 -> pi x 0.050625 = 0.159 sq m",
+      q: "A column is 450 diameter and 3.000 high. What concrete volume?", a: "r = 0.225. Area = 3.14159 x 0.050625 = 0.159 square metres. x 3.000 = 0.477 cubic metres, so order 0.5." },
+    { stage: "Work", sec: "Stats, data & quick reference", rule: "Distance between two survey points = square root of (easting difference squared + northing difference squared). It is Pythagoras again.", eg: "root of (6000 sq + 9000 sq) = 10,817 mm",
+      q: "Column A sits at easting 0, northing 0. Column B sits at easting 6000, northing 9000. What is the diagonal between them?", a: "36,000,000 + 81,000,000 = 117,000,000. Square root = 10,817 mm, or 10.817 m." },
+    { stage: "Stretch", sec: "Pythagoras & angles", rule: "Wall surface area = 2 x (length + width) x height, less the openings. The longest brace that fits a wall is its diagonal.", eg: "2 x (4.8 + 3.6) x 2.7 = 45.36 sq m",
+      q: "A room is 4.800 x 3.600 x 2.700 high, with one door 2.100 x 0.900 and one window 1.200 x 1.000. What is the net wall area to paint, and what is the longest brace that fits the 4.800 wall?", a: "Walls = 2 x 8.400 x 2.700 = 45.36. Less door 1.89 and window 1.20 = 42.27 square metres. Brace = root of (23.04 + 7.29) = root of 30.33 = 5.507 m." } ] },
+  { title: "Square roots, stacked fractions, escalation, strip footings", q: [
+    { stage: "Warm up", sec: "Algebra for estimating", rule: "A square root reverses a squaring. Use it when you know the result and need the input.", eg: "root of 56.25 = 7.500",
+      q: "A square courtyard is 56.25 square metres. What is each side?", a: "Square root of 56.25 = 7.500 m." },
+    { stage: "Build", sec: "Numbers & measurement", rule: "You cannot add fractions until the bottom numbers match. Find the common denominator first.", eg: "3/4 + 1/2 + 3/8 = 6/8 + 4/8 + 3/8 = 13/8",
+      q: "A floor build-up is 3/4 inch ply, 1/2 inch underlay and 3/8 inch hardwood. Total in inches and in millimetres?", a: "6/8 + 4/8 + 3/8 = 13/8 inches = 1 and 5/8 inches = 41.3 mm. Cross-check in metric: 19 + 13 + 9 = 41 mm." },
+    { stage: "Work", sec: "Ratios, proportions & costs", rule: "Percent change = (new minus old) divided by old, times 100.", eg: "(207 - 180) / 180 x 100 = 15%",
+      q: "Concrete has gone from $180 to $207 a cubic metre. What is the percentage increase, and what does it do to a tender allowance of $18,000?", a: "27 / 180 x 100 = 15% increase. $18,000 x 1.15 = $20,700." },
+    { stage: "Stretch", sec: "Geometry - areas & volumes", rule: "Volume of any prism = cross-section area x length. Allowance last.", eg: "0.600 x 0.400 x 48.600 = 11.664 cubic metres",
+      q: "Strip footings are 600 wide and 400 deep, 48.600 total length. Add 10%. What do you order?", a: "0.600 x 0.400 = 0.24 square metres cross-section. x 48.600 = 11.664 cubic metres. x 1.10 = 12.83 cubic metres." } ] }
+];
+
+// Abstract rules per sheet. step: +ve clockwise. kind: red | blue | line
+var ABSTRACT = [
+  { warm: [{ kind: "red", step: 1 }],  build: [{ kind: "red", step: -1 }, { kind: "blue", step: 1 }],
+    warmRule: "One wedge, one step clockwise each time.", buildRule: "Red one step anticlockwise, blue one step clockwise." },
+  { warm: [{ kind: "red", step: -1 }], build: [{ kind: "red", step: 1 }, { kind: "blue", step: 2 }],
+    warmRule: "One wedge, one step anticlockwise.", buildRule: "Red one step clockwise, blue two steps clockwise." },
+  { warm: [{ kind: "red", step: 2 }],  build: [{ kind: "red", step: 2 }, { kind: "line", step: -1 }],
+    warmRule: "One wedge, two steps clockwise.", buildRule: "Red two steps clockwise, the line one step anticlockwise." },
+  { warm: [{ kind: "red", step: -2 }], build: [{ kind: "red", step: 1 }, { kind: "blue", step: -3 }],
+    warmRule: "One wedge, two steps anticlockwise.", buildRule: "Red one step clockwise, blue three steps anticlockwise." },
+  { warm: [{ kind: "line", step: 1 }], build: [{ kind: "red", step: -2 }, { kind: "blue", step: 1 }],
+    warmRule: "A line only, one step clockwise.", buildRule: "Red two steps anticlockwise, blue one step clockwise." },
+  { warm: [{ kind: "red", step: -1 }], build: [{ kind: "red", step: 3 }, { kind: "blue", step: -1 }],
+    warmRule: "One wedge, one step anticlockwise.", buildRule: "Red three steps clockwise, blue one step anticlockwise." },
+  { warm: [{ kind: "red", step: 2 }],  build: [{ kind: "red", step: 1 }, { kind: "blue", step: 1, opposite: true }],
+    warmRule: "One wedge, two steps clockwise.", buildRule: "Both wedges one step clockwise - they stay opposite each other." },
+  { warm: [{ kind: "line", step: -2 }], build: [{ kind: "red", step: -1 }, { kind: "line", step: 2 }],
+    warmRule: "A line only, two steps anticlockwise.", buildRule: "Red one step anticlockwise, the line two steps clockwise." }
+];
+
+var LITERACY = [
+  { passage: "All persons entering the site must sign in at the site office. Visitors must be accompanied by a site representative at all times and must wear high visibility clothing, safety footwear and a hard hat. Deliveries are received between 7.00 am and 2.30 pm on weekdays only. Drivers who remain in their vehicle during unloading are not required to sign in.",
+    s: [ { t: "A driver who stays in the cab while being unloaded on a Tuesday morning does not have to sign in.", a: "T", why: "Stated directly, and Tuesday morning falls inside the delivery window." },
+         { t: "A visitor wearing full protective equipment may walk the site unaccompanied.", a: "F", why: "Visitors must be accompanied at all times. The equipment is a separate requirement, not an alternative to it." },
+         { t: "The site office is staffed before 7.00 am.", a: "C", why: "The passage gives delivery hours, not office hours." } ] },
+  { passage: "A subcontract requires the subcontractor to submit a payment claim by the 25th of each month. The head contractor must respond with a payment schedule within 15 business days. If no schedule is issued within that period, the head contractor becomes liable for the full amount claimed. A claim submitted after the 25th is treated as having been made in the following month.",
+    s: [ { t: "A claim submitted on 27 March is treated as an April claim.", a: "T", why: "Directly stated by the last sentence." },
+         { t: "The head contractor has 15 calendar days to respond.", a: "F", why: "Business days, not calendar days. Over a period with public holidays the two differ substantially." },
+         { t: "Most head contractors issue a schedule inside the period.", a: "C", why: "The passage sets out an obligation. It says nothing about how often it is met." } ] },
+  { passage: "A contractor recorded lost time injuries across four quarters: six, four, four and two. Total hours worked rose in every quarter. A revised site induction was introduced at the start of the third quarter.",
+    s: [ { t: "Lost time injuries fell in every quarter.", a: "F", why: "They were unchanged between the second and third quarters." },
+         { t: "The injury rate per hour worked fell across the year.", a: "T", why: "Injuries fell from six to two while hours rose, so the rate must have fallen." },
+         { t: "The revised induction caused the reduction.", a: "C", why: "The induction and the fall happened together. The passage gives no basis for saying one produced the other." } ] },
+  { passage: "An access ramp serving a building entrance must not exceed a gradient of 1:14. Where a ramp exceeds 9 metres in length a level landing must be provided. Landings must be at least 1.2 metres long. A ramp no steeper than 1:20 is treated as a walkway and is not subject to the landing requirement.",
+    s: [ { t: "A 12 metre ramp at 1:14 requires a landing.", a: "T", why: "It exceeds 9 metres and is steeper than 1:20, so the requirement applies." },
+         { t: "A 12 metre ramp at 1:20 requires a landing.", a: "F", why: "At 1:20 it is a walkway and the landing requirement does not apply." },
+         { t: "Landings must be at least 1.2 metres wide.", a: "C", why: "The passage specifies length. Width is never mentioned - a very common reading error." } ] },
+  { passage: "Course notice. The unit is delivered over three days at the West Perth campus. Enrolment closes ten days before the first day of delivery. Fees include all learning materials but not the cost of the standards referenced in the unit. Participants who withdraw more than five days before delivery receive a full refund. Withdrawals after that point receive a 50 per cent refund.",
+    s: [ { t: "A participant who withdraws three days before delivery receives half the fee back.", a: "T", why: "Three days is inside the five day cut off." },
+         { t: "The referenced standards are supplied with the course.", a: "F", why: "Fees expressly exclude them." },
+         { t: "The course runs more than once a year.", a: "C", why: "Frequency is not mentioned." } ] },
+  { passage: "The site is accessed from the northern end of the street. There are two entry points. Gate A is the only gate rated for vehicles over 4.5 tonnes. Gate B is closer to the site office. Gate B is closed between 6.00 pm and 6.00 am. All plant deliveries must use Gate A.",
+    s: [ { t: "A six tonne truck arriving at 8.00 am must use Gate A.", a: "T", why: "Gate A is the only gate rated above 4.5 tonnes." },
+         { t: "Gate A is closer to the site office than Gate B.", a: "F", why: "The passage says the opposite." },
+         { t: "Gate A is open overnight.", a: "C", why: "Closing hours are given for Gate B only. Silence about Gate A is not a statement that it stays open." } ] },
+  { passage: "Of 180 applications assessed in the period, 126 were approved and 36 were refused. The remainder were withdrawn before a decision was made. Approval rates were higher among applicants who submitted a complete document set at first submission. The median time to decision was 46 days.",
+    s: [ { t: "Eighteen applications were withdrawn.", a: "T", why: "180 less 126 less 36 leaves 18." },
+         { t: "More than two thirds of the applications were approved.", a: "T", why: "126 of 180 is 70 per cent, which is above two thirds." },
+         { t: "The average time to decision was 46 days.", a: "C", why: "A median is not a mean. A few very long decisions would pull the mean above the median without changing it." } ] },
+  { passage: "A defect notified within the 12 month defects liability period must be rectified by the contractor at no cost to the principal. A defect notified after that period may still be pursued where it arises from a structural element. Notification must be in writing. The contractor is entitled to 10 business days from notification before access is required.",
+    s: [ { t: "A defect notified verbally in month six triggers the rectification obligation.", a: "F", why: "Notification must be in writing." },
+         { t: "A structural defect notified in month 18 may still be pursued.", a: "T", why: "The second sentence provides for exactly that." },
+         { t: "Most defects are notified within the first 12 months.", a: "C", why: "The passage sets out rules. It reports no frequencies." } ] }
+];
+
+var WRITING = [
+  { task: "Write three sentences to the client: what has happened, what it means for them, and what you need from them.", limit: 60,
+    sources: ["Slab pour is booked for Thursday morning.", "Forecast is 25 mm of rain on Wednesday night.", "The concrete supplier needs 24 hours notice to cancel without charge.", "The client is overseas until Friday."],
+    guide: "Name the decision point (a call is needed by Wednesday morning), the consequence of not deciding (cancellation charge, or a pour into wet ground), and the specific thing you want from the client. The overseas detail matters only because it constrains how you reach them - it is not the news." },
+  { task: "Write a two sentence note for the site diary. Facts only, no opinion.", limit: 40,
+    sources: ["Excavator arrived 7.15 am, operator inducted 7.40 am.", "Service locator marked a gas line 300 mm outside the marked trench line.", "Work stopped 8.05 am pending confirmation from the network operator.", "The operator seemed frustrated about the delay."],
+    guide: "The last source is the one to drop - it is inference about someone's state of mind and has no place in a diary entry. The other three go in with times, because a diary is read later by someone reconstructing a sequence." },
+  { task: "Write a short paragraph recommending one option, and say what you traded away.", limit: 80,
+    sources: ["Option 1: brick veneer, 6 week lead time, within budget.", "Option 2: prefabricated panel, 2 week lead time, 8 per cent over budget.", "The client's stated priority is handover before the end of the financial year.", "The current programme has 3 weeks float."],
+    guide: "A recommendation that does not name the trade off is not a recommendation. The float figure is the pivot: 6 weeks against 3 weeks float means option 1 misses the client's stated priority, so the 8 per cent is the price of the thing they said mattered most." },
+  { task: "Write the opening paragraph of a report to a manager. State the position first, then the evidence.", limit: 70,
+    sources: ["12 of 40 submissions in the batch were incomplete at first marking.", "All 12 were missing the same attachment.", "The attachment is listed in the workbook but not in the submission checklist.", "Marking took an extra 9 hours across the batch."],
+    guide: "The position is that a document fault caused the rework, not candidate carelessness. Lead with that. The clustering of all 12 on the same missing item is the evidence that makes it a system problem - putting it second is what makes the paragraph an argument rather than a list." },
+  { task: "Write a written notification. State the fact, the basis for it and the date by which a response is required.", limit: 60,
+    sources: ["Cracking observed to the western wall, 3 locations, all above openings.", "Practical completion was 14 months ago.", "The contract provides a 12 month defects liability period.", "Structural defects may be pursued beyond that period."],
+    guide: "The 14 months is the fact that makes the last two sources matter. A notification that does not state why the claim survives the 12 month period invites a one line refusal." },
+  { task: "Write two sentences a reader could act on without asking a follow up question.", limit: 45,
+    sources: ["Three of the eight training rooms have no data projector.", "Rooms are allocated by the booking system without reference to equipment.", "Two trainers have raised it separately this month.", "A projector costs about $900."],
+    guide: "The actionable version names which change is wanted - equipment fields in the booking system, or three projectors, or both - and attaches the number. Two sentences that only describe the problem are not actionable." },
+  { task: "Summarise for someone who will read only this.", limit: 50,
+    sources: ["The application was lodged 62 days ago.", "The registry requested further information 40 days ago.", "The information was supplied 5 days after the request.", "The median decision time is 46 days."],
+    guide: "The useful summary makes the comparison explicit: the file is well past the median and the delay is not on the applicant's side, because the response went back in five days. Reciting the four dates in order is not a summary." },
+  { task: "Write a recommendation with a stated assumption.", limit: 70,
+    sources: ["Two of the four cohorts finish in November.", "The trainer contracted for those cohorts is unavailable from October.", "One internal trainer has delivered the unit once before.", "No decision has been made about a replacement."],
+    guide: "The gap between October and November is the whole problem. A recommendation here has to name what you are assuming - that the internal trainer's single prior delivery is enough, or that it is not - because the reader cannot check an assumption you have left silent." }
+];
+
+var METHOD = {
+  maths: "Estimate first. Put your gut answer down before you work.\n\nNo calculator until Stretch. Warm up, Build and Work are sized for paper or your head.\n\nRead the rule and worked line before the question. It is there so you never start by dredging something up.",
+  abstract: "Track one element at a time. Pick the red wedge, write where it sits in each frame as a position round the clock. Then the second element. Combine last.\n\nThe trap is the second rule. Crossing over looks like a swap. A distractor will offer the right positions with the colours reversed. Check colours last, deliberately.\n\nWrite the rule out in words before you look at the answer. If you cannot say it, you guessed it.",
+  literacy: "Answer from the passage, not from what you know.\n\nTrue: the passage supports it. False: the passage contradicts it. Cannot say: neither.\n\nSilence about a thing is not a statement about it.\n\nWatch the four words: all, only, must, may. And watch for swapped measurements - length for width, calendar days for business days, median for mean.",
+  writing: "Select before you structure. You get more sources than you need. Decide which one carries the decision; that source leads. Mood or motive almost always goes out.\n\nLead with the position, then the evidence.\n\nKeep to the word limit. The limit is the exercise.\n\nWrite it by hand, on paper, with the headset up on your forehead. No spellchecker."
+};
+
+// ---------- abstract puzzle generator (verbatim) ----------
+var HALF = [[0, -1, 1, -1], [1, -1, 1, 0], [1, 0, 1, 1], [1, 1, 0, 1], [0, 1, -1, 1], [-1, 1, -1, 0], [-1, 0, -1, -1], [-1, -1, 0, -1]];
+function wrap8(p) { return ((p - 1) % 8 + 8) % 8 + 1; }
+function framesFor(spec, starts) {
+  var out = [];
+  for (var f = 0; f < 6; f++) out.push(spec.map(function (e, i) { return { kind: e.kind, pos: wrap8(starts[i] + e.step * f) }; }));
+  return out;
+}
+function sameFrame(a, b) { return a.every(function (e, i) { return e.pos === b[i].pos && e.kind === b[i].kind; }); }
+
+function makePuzzle(spec) {
+  var starts, frames, tries = 0;
+  do {
+    starts = spec.map(function () { return 1 + Math.floor(Math.random() * 8); });
+    if (spec.length === 2 && spec[1].opposite) starts[1] = wrap8(starts[0] + 4);
+    frames = framesFor(spec, starts);
+    tries++;
+  } while (tries < 40 && spec.length === 2 && frames.slice(0, 5).some(function (fr) { return fr[0].pos === fr[1].pos; }));
+  var answer = frames[4], cands = [];
+  if (spec.length === 2 && spec[0].kind !== "line" && spec[1].kind !== "line")
+    cands.push([{ kind: answer[1].kind, pos: answer[0].pos }, { kind: answer[0].kind, pos: answer[1].pos }]);
+  cands.push(frames[5]);
+  cands.push(frames[3]);
+  cands.push(answer.map(function (e, i) { return i === 0 ? { kind: e.kind, pos: wrap8(frames[3][0].pos - spec[0].step) } : e; }));
+  cands.push(answer.map(function (e, i) { return i === spec.length - 1 ? { kind: e.kind, pos: wrap8(e.pos + 1) } : e; }));
+  cands.push(answer.map(function (e) { return { kind: e.kind, pos: wrap8(e.pos + 3) }; }));
+  cands.push(answer.map(function (e, i) { return i === 0 ? { kind: e.kind, pos: wrap8(e.pos - 2) } : e; }));
+  var options = [answer], seen = [answer];
+  cands.forEach(function (c) {
+    if (options.length >= 5) return;
+    if (seen.some(function (s) { return sameFrame(s, c); })) return;
+    seen.push(c); options.push(c);
+  });
+  for (var i = options.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = options[i]; options[i] = options[j]; options[j] = t; }
+  return { frames: frames.slice(0, 4), options: options, correct: options.indexOf(answer) };
+}
+
+// ---------- render ----------
+
+// ---------- state (identical to the 2D app) ----------
+
+var state = { sheet: 0, track: "maths", right: 0, wrong: 0, timerEnd: null };
+var mathsIdx = 0, mathsRevealed = false, estimate = "";
+var abs = { level: "warm", puzzle: null, key: "", picked: -1 };
+var lit = { idx: 0, answered: null };
+var wr = { showGuide: false };
+
+var C = { ink: "#1e2a44", paper: "#f4f1e8", ply: "#c9a978", orange: "#e8801a", green: "#2f8f5b", red: "#c9302c", blue: "#2857c4", mute: "#6f7480", rule: "#cfc9b9", white: "#ffffff" };
+var FONT = "Georgia, 'Noto Serif', 'Times New Roman', serif";
+var LETTERS = ["A", "B", "C", "D", "E"];
+
+// ---------- canvas panel ----------
+
+function Panel(wM, hM, cw, ch) {
+  this.cw = cw; this.ch = ch; this.wM = wM; this.hM = hM;
+  this.canvas = document.createElement("canvas"); this.canvas.width = cw; this.canvas.height = ch;
+  this.ctx = this.canvas.getContext("2d");
+  this.tex = new THREE.CanvasTexture(this.canvas);
+  this.tex.minFilter = THREE.LinearFilter; this.tex.anisotropy = 8; this.tex.encoding = THREE.sRGBEncoding;
+  this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(wM, hM), new THREE.MeshBasicMaterial({ map: this.tex }));
+  this.mesh.userData.panel = this;
+  this.hits = []; this.hover = -1;
+}
+Panel.prototype.begin = function () {
+  var x = this.ctx; this.hits = [];
+  x.setTransform(1, 0, 0, 1, 0, 0);
+  x.fillStyle = C.paper; x.fillRect(0, 0, this.cw, this.ch);
+  x.lineWidth = 10; x.strokeStyle = C.ink; x.strokeRect(5, 5, this.cw - 10, this.ch - 10);
+  x.textBaseline = "alphabetic";
+};
+Panel.prototype.end = function () { this.tex.needsUpdate = true; };
+Panel.prototype.font = function (px, style) { this.ctx.font = (style || "") + " " + px + "px " + FONT; };
+Panel.prototype.text = function (s, x, y, color, px, style) {
+  this.font(px, style); this.ctx.fillStyle = color || C.ink; this.ctx.textAlign = "left"; this.ctx.fillText(s, x, y);
+};
+// wrapped paragraph; returns y after the block
+Panel.prototype.para = function (s, x, y, maxW, color, px, style, lh) {
+  var ctx = this.ctx; this.font(px, style); ctx.fillStyle = color || C.ink; ctx.textAlign = "left";
+  lh = lh || Math.round(px * 1.45);
+  var paras = String(s).split("\n");
+  for (var p = 0; p < paras.length; p++) {
+    if (paras[p] === "") { y += lh * 0.6; continue; }
+    var words = paras[p].split(" "), line = "";
+    for (var i = 0; i < words.length; i++) {
+      var t = line ? line + " " + words[i] : words[i];
+      if (ctx.measureText(t).width > maxW && line) { ctx.fillText(line, x, y); y += lh; line = words[i]; }
+      else line = t;
+    }
+    if (line) { ctx.fillText(line, x, y); y += lh; }
+  }
+  return y;
+};
+Panel.prototype.rule = function (y, x1, x2) { var c = this.ctx; c.strokeStyle = C.rule; c.lineWidth = 3; c.beginPath(); c.moveTo(x1, y); c.lineTo(x2, y); c.stroke(); };
+// button: kind = "", "on", "track-on", "primary", "good", "bad", "dim", "right", "wrong"
+Panel.prototype.button = function (x, y, w, h, label, kind, action, px) {
+  var c = this.ctx, idx = this.hits.length, hov = this.hover === idx;
+  this.hits.push({ x: x, y: y, w: w, h: h, action: action, disabled: !action });
+  var fill = C.paper, stroke = C.ink, color = C.ink, alpha = 1;
+  if (kind === "on" || kind === "primary") { fill = C.ink; color = C.paper; }
+  if (kind === "track-on") { fill = C.orange; stroke = C.orange; color = C.white; }
+  if (kind === "good") { fill = C.green; stroke = C.green; color = C.white; }
+  if (kind === "bad") { fill = C.red; stroke = C.red; color = C.white; }
+  if (kind === "dim") alpha = 0.4;
+  if (kind === "right") { fill = "#e6f3ea"; stroke = C.green; }
+  if (kind === "wrong") { fill = "#f8e6e5"; stroke = C.red; }
+  if (hov && action && kind === "") fill = C.white;
+  c.globalAlpha = alpha;
+  c.fillStyle = fill; c.fillRect(x, y, w, h);
+  c.lineWidth = 4; c.strokeStyle = stroke; c.strokeRect(x, y, w, h);
+  if (hov && action) { c.lineWidth = 6; c.strokeStyle = C.orange; c.strokeRect(x - 6, y - 6, w + 12, h + 12); }
+  if (label) { this.font(px || 30); c.fillStyle = color; c.textAlign = "center"; c.fillText(label, x + w / 2, y + h / 2 + (px || 30) * 0.36); }
+  c.globalAlpha = 1; c.textAlign = "left";
+  return idx;
+};
+Panel.prototype.figure = function (elems, mystery, x, y, size) {
+  var c = this.ctx, s = size / 2.3, cx = x + size / 2, cy = y + size / 2;
+  c.fillStyle = C.white; c.fillRect(cx - s, cy - s, 2 * s, 2 * s);
+  c.lineWidth = Math.max(2, size * 0.03); c.strokeStyle = C.ink; c.strokeRect(cx - s, cy - s, 2 * s, 2 * s);
+  if (mystery) { this.font(size * 0.55); c.fillStyle = C.mute; c.textAlign = "center"; c.fillText("?", cx, cy + size * 0.18); c.textAlign = "left"; return; }
+  elems.forEach(function (e) {
+    var hh = HALF[e.pos - 1];
+    if (e.kind === "line") {
+      c.strokeStyle = C.ink; c.lineWidth = Math.max(3, size * 0.045); c.lineCap = "round";
+      c.beginPath(); c.moveTo(cx, cy); c.lineTo(cx + s * (hh[0] + hh[2]) / 2, cy + s * (hh[1] + hh[3]) / 2); c.stroke();
+    } else {
+      c.fillStyle = e.kind === "red" ? C.red : C.blue;
+      c.beginPath(); c.moveTo(cx, cy); c.lineTo(cx + s * hh[0], cy + s * hh[1]); c.lineTo(cx + s * hh[2], cy + s * hh[3]); c.closePath(); c.fill();
+    }
+  });
+};
+Panel.prototype.hitAt = function (u, v) {
+  var px = u * this.cw, py = (1 - v) * this.ch;
+  for (var i = 0; i < this.hits.length; i++) { var r = this.hits[i]; if (px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h) return i; }
+  return -1;
+};
+
+// ---------- the boards ----------
+
+var nav = new Panel(1.5, 0.15, 1500, 150);
+var board = new Panel(1.5, 1.2, 1500, 1200);
+var method = new Panel(0.8, 1.05, 800, 1050);
+var clock = new Panel(0.8, 0.62, 800, 620);
+
+function renderAll() { renderNav(); renderBoard(); renderMethod(); renderClock(); }
+
+function renderNav() {
+  nav.begin(); var x = nav.ctx;
+  nav.text("Cold Start", 40, 95, C.ink, 46);
+  var bx = 330;
+  for (var i = 0; i < 8; i++) { nav.button(bx, 32, 72, 86, String(i + 1), i === state.sheet ? "on" : "", { sheet: i }, 34); bx += 84; }
+  var tracks = [["maths", "Numbers"], ["abstract", "Abstract"], ["literacy", "Literacy"], ["writing", "Writing"]];
+  bx = 1070;
+  tracks.forEach(function (t) {
+    nav.button(bx, 32, 100, 86, t[1], t[0] === state.track ? "track-on" : "", { track: t[0] }, 24); bx += 105;
+  });
+  nav.end();
+}
+
+function renderBoard() {
+  board.begin();
+  if (state.track === "maths") renderMaths();
+  else if (state.track === "abstract") renderAbstract();
+  else if (state.track === "literacy") renderLiteracy();
+  else renderWriting();
+  board.end();
+}
+
+function renderMaths() {
+  var P = board, sheet = MATHS[state.sheet], q = sheet.q[mathsIdx], L = 56, W = P.cw - 112, y = 90;
+  P.text("Sheet " + (state.sheet + 1) + "  -  " + sheet.title, L, y, C.mute, 28); y += 44;
+  var bx = L;
+  sheet.q.forEach(function (x, i) { P.button(bx, y, 190, 62, x.stage, i === mathsIdx ? "on" : "", { q: i }, 28); bx += 202; });
+  y += 110;
+  P.text(q.sec, L, y, C.orange, 30); y += 48;
+  y = P.para("Rule: " + q.rule, L, y, W, C.ink, 30); y += 4;
+  y = P.para("e.g. " + q.eg, L, y, W, C.mute, 28); y += 12;
+  P.rule(y, L, L + W); y += 56;
+  y = P.para(q.q, L, y, W, C.ink, 42, "", 58); y += 6;
+  y = P.para(q.stage === "Stretch" ? "Calculator allowed. Estimate first." : "No calculator. Estimate first, then work it on paper.", L, y, W, C.mute, 28); y += 22;
+  // estimate line + keypad
+  P.text("Estimate", L, y + 44, C.mute, 30, "italic");
+  var ex = L + 150; P.ctx.strokeStyle = C.ink; P.ctx.lineWidth = 4; P.ctx.beginPath(); P.ctx.moveTo(ex, y + 56); P.ctx.lineTo(ex + 380, y + 56); P.ctx.stroke();
+  P.text(estimate || "", ex + 10, y + 44, C.ink, 34);
+  if (!estimate) P.text("gut answer", ex + 10, y + 44, "#b8b3a4", 30, "italic");
+  var keys = ["7", "8", "9", "4", "5", "6", "1", "2", "3", "0", ".", "<"];
+  var kx0 = L + 590, ky0 = y - 4, k = 0;
+  for (var r = 0; r < 4; r++) for (var cc = 0; cc < 3; cc++) { var key = keys[k++]; P.button(kx0 + cc * 78, ky0 + r * 62, 70, 54, key === "<" ? "\u232B" : key, "", { key: key }, 28); }
+  P.button(kx0 + 250, ky0, 110, 54, "Clear", "", { key: "clear" }, 24);
+  P.button(kx0 + 250, ky0 + 62, 110, 54, ",", "", { key: "," }, 28);
+  P.button(kx0 + 250, ky0 + 124, 110, 54, "-", "", { key: "-" }, 28);
+  y += 300;
+  if (!mathsRevealed) P.button(L, y, 300, 70, "Reveal answer", "primary", { act: "reveal" }, 30);
+  else {
+    P.ctx.fillStyle = C.green; P.ctx.fillRect(L, y - 30, 6, 100);
+    var y2 = P.para(q.a, L + 24, y, W - 24, C.green, 30);
+    y = Math.max(y2, y + 80) + 10;
+    P.button(L, y, 170, 66, "Got it", "good", { act: "got" }, 30);
+    P.button(L + 184, y, 190, 66, "Missed it", "bad", { act: "missed" }, 30);
+  }
+}
+
+function renderAbstract() {
+  var P = board, rules = ABSTRACT[state.sheet], key = state.sheet + abs.level;
+  if (abs.key !== key || !abs.puzzle) { abs.puzzle = makePuzzle(rules[abs.level]); abs.key = key; abs.picked = -1; }
+  var p = abs.puzzle, L = 56, W = P.cw - 112, y = 90;
+  P.text("Sheet " + (state.sheet + 1) + "  -  " + (abs.level === "warm" ? "Warm up" : "Build"), L, y, C.mute, 28);
+  P.button(L + W - 300, y - 44, 300, 62, "Switch to " + (abs.level === "warm" ? "Build" : "Warm up"), "", { act: "level" }, 26);
+  y += 78;
+  P.text("Which figure comes next?", L, y, C.ink, 42); y += 30;
+  var fs = 220, fx = L;
+  p.frames.forEach(function (f) { P.figure(f, false, fx, y, fs); fx += fs + 22; });
+  P.figure([], true, fx, y, fs);
+  y += fs + 60;
+  var os = 200, ox = L;
+  p.options.forEach(function (o, i) {
+    var kind = "";
+    if (abs.picked >= 0) kind = i === p.correct ? "right" : (i === abs.picked ? "wrong" : "dim");
+    P.button(ox, y, os + 40, os + 90, "", kind, abs.picked < 0 ? { opt: i } : null);
+    P.figure(o, false, ox + 20, y + 14, os);
+    if (kind === "dim") { P.ctx.globalAlpha = 0.6; P.ctx.fillStyle = C.paper; P.ctx.fillRect(ox + 4, y + 4, os + 32, os + 82); P.ctx.globalAlpha = 1; }
+    P.font(34); P.ctx.fillStyle = C.ink; P.ctx.textAlign = "center"; P.ctx.fillText(LETTERS[i], ox + (os + 40) / 2, y + os + 66); P.ctx.textAlign = "left";
+    ox += os + 62;
+  });
+  y += os + 140;
+  if (abs.picked < 0) P.para("Say the rule out loud before you pick. If you cannot say it, you guessed it.", L, y, W, C.mute, 28);
+  else {
+    var ok = abs.picked === p.correct, rule = abs.level === "warm" ? rules.warmRule : rules.buildRule;
+    P.ctx.fillStyle = ok ? C.green : C.red; P.ctx.fillRect(L, y - 30, 6, 90);
+    var y2 = P.para((ok ? "Right. " : "Not that one. ") + "Answer " + LETTERS[p.correct] + ". " + rule, L + 24, y, W - 24, ok ? C.green : C.red, 30);
+    P.button(L, Math.max(y2, y + 60) + 10, 240, 66, "Another one", "primary", { act: "newpuzzle" }, 30);
+  }
+}
+
+function renderLiteracy() {
+  var P = board, set = LITERACY[state.sheet], st = set.s[lit.idx], L = 56, W = P.cw - 112, y = 90;
+  P.text("Sheet " + (state.sheet + 1) + "  -  True, false or cannot say", L, y, C.mute, 28); y += 60;
+  y = P.para(set.passage, L, y, W, C.ink, 32, "", 50); y += 14;
+  P.rule(y, L, L + W); y += 56;
+  P.text("Statement " + (lit.idx + 1) + " of 3", L, y, C.mute, 28); y += 52;
+  y = P.para(st.t, L, y, W, C.ink, 40, "", 56); y += 20;
+  var opts = [["T", "True"], ["F", "False"], ["C", "Can't say"]], bx = L;
+  opts.forEach(function (o) {
+    var kind = "";
+    if (lit.answered) kind = o[0] === st.a ? "good" : (o[0] === lit.answered ? "bad" : "dim");
+    P.button(bx, y, 220, 70, o[1], kind, lit.answered ? null : { lit: o[0] }, 30); bx += 236;
+  });
+  y += 120;
+  if (lit.answered) {
+    var ok = lit.answered === st.a;
+    P.ctx.fillStyle = ok ? C.green : C.red; P.ctx.fillRect(L, y - 30, 6, 90);
+    var y2 = P.para(st.why, L + 24, y, W - 24, ok ? C.green : C.red, 30);
+    P.button(L, Math.max(y2, y + 60) + 10, 300, 66, lit.idx < 2 ? "Next statement" : "Next sheet", "primary", { act: "litnext" }, 30);
+  } else P.para("Answer from the passage, not from what you know.", L, y, W, C.mute, 28);
+}
+
+function renderWriting() {
+  var P = board, w = WRITING[state.sheet], L = 56, W = P.cw - 112, y = 90;
+  P.text("Sheet " + (state.sheet + 1) + "  -  Writing", L, y, C.mute, 28); y += 60;
+  y = P.para(w.task, L, y, W, C.ink, 40, "", 56); y += 6;
+  y = P.para(w.limit + " words maximum. By hand, no spellchecker. Five minutes.", L, y, W, C.orange, 30); y += 20;
+  y = P.para("Sources - not all of them belong in the answer", L, y, W, C.mute, 28); y += 6;
+  w.sources.forEach(function (s) { y = P.para("\u2022  " + s, L + 10, y, W - 10, C.ink, 30); y += 4; });
+  y += 30;
+  if (!wr.showGuide) {
+    y = P.para("Start the five minute timer and write on paper, headset up on your forehead. Come back when it says pens down.", L, y, W, C.mute, 28); y += 20;
+    P.button(L, y, 380, 66, "Show what to look for", "primary", { act: "guide" }, 30);
+  } else {
+    P.ctx.fillStyle = C.green; P.ctx.fillRect(L, y - 30, 6, 100);
+    var y2 = P.para(w.guide, L + 24, y, W - 24, C.green, 30);
+    P.button(L, Math.max(y2, y + 70) + 10, 220, 66, "Next sheet", "primary", { act: "wrnext" }, 30);
+  }
+}
+
+function renderMethod() {
+  var P = method, L = 44, W = P.cw - 88, y = 84;
+  P.begin();
+  P.text("The method", L, y, C.ink, 40); y += 18; P.rule(y, L, L + W); y += 56;
+  y = P.para(METHOD[state.track], L, y, W, C.ink, 27, "", 40);
+  P.end();
+}
+
+function renderClock() {
+  var P = clock, L = 44, W = P.cw - 88, y = 84;
+  P.begin();
+  P.text("Timer", L, y, C.ink, 40); y += 18; P.rule(y, L, L + W); y += 130;
+  var label = "Timer off", color = C.orange;
+  if (state.timerEnd) {
+    var s = Math.max(0, Math.round((state.timerEnd - Date.now()) / 1000));
+    if (s === 0) { label = "Time. Pens down."; color = C.red; }
+    else label = Math.floor(s / 60) + ":" + (s % 60 < 10 ? "0" : "") + (s % 60);
+  }
+  P.text(label, L, y, color, state.timerEnd && label.length > 6 ? 62 : 110); y += 60;
+  var bx = L;
+  [2, 4, 5].forEach(function (m) { P.button(bx, y, 150, 66, m + " min", "", { min: m }, 28); bx += 162; });
+  P.button(bx, y, 120, 66, "Off", "", { act: "timeroff" }, 28);
+  y += 130;
+  P.rule(y - 50, L, L + W);
+  P.text("This session: " + state.right + " right, " + state.wrong + " missed.", L, y, C.mute, 28);
+  P.end();
+}
+
+// ---------- actions (identical logic to the 2D app) ----------
+
+function mark(ok) { if (ok) state.right++; else state.wrong++; dawnBonus += 0.02; }
+function nextSheet() { state.sheet = (state.sheet + 1) % 8; }
+
+function act(a) {
+  if (!a) return;
+  if (a.sheet !== undefined) { state.sheet = a.sheet; mathsRevealed = false; estimate = ""; lit.answered = null; lit.idx = 0; wr.showGuide = false; }
+  else if (a.track) { state.track = a.track; }
+  else if (a.q !== undefined) { mathsIdx = a.q; mathsRevealed = false; estimate = ""; }
+  else if (a.opt !== undefined) { if (abs.picked >= 0) return; abs.picked = a.opt; mark(abs.picked === abs.puzzle.correct); }
+  else if (a.lit) { if (lit.answered) return; lit.answered = a.lit; mark(lit.answered === LITERACY[state.sheet].s[lit.idx].a); }
+  else if (a.min) { state.timerEnd = Date.now() + a.min * 60000; pensDownPlayed = false; }
+  else if (a.key) {
+    if (a.key === "clear") estimate = "";
+    else if (a.key === "<") estimate = estimate.slice(0, -1);
+    else if (estimate.length < 14) estimate += a.key;
+  }
+  else switch (a.act) {
+    case "reveal": mathsRevealed = true; break;
+    case "got": case "missed":
+      mark(a.act === "got"); mathsRevealed = false; estimate = "";
+      mathsIdx = (mathsIdx + 1) % 4; if (mathsIdx === 0) nextSheet(); break;
+    case "level": abs.level = abs.level === "warm" ? "build" : "warm"; abs.puzzle = null; break;
+    case "newpuzzle": abs.puzzle = null; break;
+    case "litnext": lit.answered = null; if (lit.idx < 2) lit.idx++; else { lit.idx = 0; nextSheet(); } break;
+    case "guide": wr.showGuide = true; break;
+    case "wrnext": wr.showGuide = false; nextSheet(); break;
+    case "timeroff": state.timerEnd = null; break;
+    default: return;
+  }
+  renderAll();
+}
+
+// ---------- sound ----------
+
+var audio = null, pensDownPlayed = false;
+function ac() { if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === "suspended") audio.resume(); return audio; }
+function tone(freq, t0, dur, gain) {
+  var a = ac(), o = a.createOscillator(), g = a.createGain();
+  o.type = "sine"; o.frequency.value = freq; g.gain.value = 0;
+  g.gain.setValueAtTime(0, a.currentTime + t0); g.gain.linearRampToValueAtTime(gain, a.currentTime + t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + t0 + dur);
+  o.connect(g); g.connect(a.destination); o.start(a.currentTime + t0); o.stop(a.currentTime + t0 + dur + 0.05);
+}
+function click() { try { tone(1200, 0, 0.04, 0.08); } catch (e) {} }
+function pensDown() { try { tone(660, 0, 0.5, 0.25); tone(520, 0.45, 0.5, 0.25); tone(392, 0.9, 1.0, 0.25); } catch (e) {} }
+
+// ---------- scene ----------
+
+var renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio); renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.outputEncoding = THREE.sRGBEncoding; renderer.xr.enabled = true;
+document.body.appendChild(renderer.domElement);
+
+var scene = new THREE.Scene();
+var camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.05, 60);
+var rig = new THREE.Group(); rig.add(camera); scene.add(rig);
+camera.position.set(0, 1.6, 0);
+
+// materials
+var mPly = new THREE.MeshStandardMaterial({ color: 0xc9a978, roughness: 0.85 });
+var mPlyDark = new THREE.MeshStandardMaterial({ color: 0x9c7d4f, roughness: 0.9 });
+var mWall = new THREE.MeshStandardMaterial({ color: 0xe9e4d6, roughness: 0.95 });
+var mInk = new THREE.MeshStandardMaterial({ color: 0x1e2a44, roughness: 0.6 });
+var mSteel = new THREE.MeshStandardMaterial({ color: 0x8a8f99, metalness: 0.6, roughness: 0.35 });
+
+// room: a site office, 5 x 3.4 x 2.6
+var room = new THREE.Group(); scene.add(room);
+function box(w, h, d, mat, x, y, z) { var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); room.add(m); return m; }
+box(5, 0.02, 3.4, mPly, 0, -0.01, -0.6);            // floor
+box(5, 0.02, 3.4, mWall, 0, 2.6, -0.6);             // ceiling
+box(5, 2.6, 0.02, mWall, 0, 1.3, -2.3);             // front wall
+box(5, 2.6, 0.02, mWall, 0, 1.3, 1.1);              // back wall
+box(0.02, 2.6, 3.4, mWall, -2.5, 1.3, -0.6);        // left wall
+box(0.02, 2.6, 3.4, mWall, 2.5, 1.3, -0.6);         // right wall
+box(2.4, 0.04, 0.7, mPly, 0, 0.9, -1.15);           // bench
+box(0.06, 0.9, 0.06, mSteel, -1.1, 0.45, -1.35); box(0.06, 0.9, 0.06, mSteel, 1.1, 0.45, -1.35);
+box(0.06, 0.9, 0.06, mSteel, -1.1, 0.45, -0.95); box(0.06, 0.9, 0.06, mSteel, 1.1, 0.45, -0.95);
+box(5, 0.12, 0.03, mPlyDark, 0, 0.06, -2.28);       // skirting
+// window on the right of the front wall, and the sky behind it
+var skyMat = new THREE.MeshBasicMaterial({ color: 0x1b2440 });
+var windowPane = box(1.3, 1.1, 0.01, skyMat, 1.7, 1.55, -2.285);
+box(1.4, 0.05, 0.06, mInk, 1.7, 2.12, -2.27); box(1.4, 0.05, 0.06, mInk, 1.7, 0.98, -2.27);
+box(0.05, 1.2, 0.06, mInk, 1.03, 1.55, -2.27); box(0.05, 1.2, 0.06, mInk, 2.37, 1.55, -2.27);
+box(0.04, 1.1, 0.02, mInk, 1.7, 1.55, -2.275);
+var sunMat = new THREE.MeshBasicMaterial({ color: 0xffd28a });
+var sun = new THREE.Mesh(new THREE.CircleGeometry(0.09, 32), sunMat); sun.position.set(1.85, 1.02, -2.282); room.add(sun);
+// desk lamp: on while it's still dark
+var lampBase = box(0.16, 0.02, 0.16, mInk, 1.0, 0.93, -1.3);
+box(0.02, 0.4, 0.02, mInk, 1.0, 1.13, -1.3);
+var lampMat = new THREE.MeshStandardMaterial({ color: 0x1e2a44, emissive: 0xffc46a, emissiveIntensity: 0.9 });
+var lampShade = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.12, 24, 1, true), lampMat); lampShade.position.set(0.92, 1.3, -1.3); lampShade.rotation.z = 0.4; room.add(lampShade);
+var lampLight = new THREE.PointLight(0xffc46a, 0.9, 2.5); lampLight.position.set(0.9, 1.25, -1.28); room.add(lampLight);
+// a mug and a pencil, because it is a desk
+var mug = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.036, 0.1, 24), new THREE.MeshStandardMaterial({ color: 0xf4f1e8, roughness: 0.5 })); mug.position.set(-0.9, 0.97, -1.05); room.add(mug);
+var pencil = box(0.18, 0.008, 0.008, new THREE.MeshStandardMaterial({ color: 0xe8801a }), -0.5, 0.925, -1.0); pencil.rotation.y = 0.5;
+
+// boards
+function place(p, x, y, z, ry, rx) { p.mesh.position.set(x, y, z); p.mesh.rotation.set(rx || 0, ry || 0, 0); scene.add(p.mesh); var back = new THREE.Mesh(new THREE.PlaneGeometry(p.wM + 0.04, p.hM + 0.04), mPlyDark); back.position.z = -0.006; p.mesh.add(back); }
+place(nav, 0, 2.2, -1.55, 0, -0.08);
+place(board, 0, 1.48, -1.56, 0, -0.08);
+place(method, -1.35, 1.52, -1.3, 0.62, 0);
+place(clock, 1.28, 1.6, -1.25, -0.62, 0);
+
+// light
+var hemi = new THREE.HemisphereLight(0x8fa3c9, 0x4a3b28, 0.5); scene.add(hemi);
+var dirL = new THREE.DirectionalLight(0xffe0b0, 0.2); dirL.position.set(2, 1.2, -2); scene.add(dirL);
+var fill = new THREE.PointLight(0xfff2dc, 0.35, 8); fill.position.set(0, 2.4, -0.4); scene.add(fill);
+
+// ---------- dawn ----------
+// The room starts before sunrise. It brightens over ten minutes, and each answer you mark nudges it along.
+var sessionStart = Date.now(), dawnBonus = 0;
+var cNight = new THREE.Color(0x1b2440), cDawn = new THREE.Color(0xe8801a), cDay = new THREE.Color(0xbcd4e6);
+var tmpC = new THREE.Color();
+function dawnUpdate() {
+  var t = Math.min(1, (Date.now() - sessionStart) / 600000 + dawnBonus);
+  if (t < 0.5) tmpC.copy(cNight).lerp(cDawn, t / 0.5); else tmpC.copy(cDawn).lerp(cDay, (t - 0.5) / 0.5);
+  skyMat.color.copy(tmpC); scene.background = tmpC;
+  sun.position.y = 1.02 + t * 0.85; sunMat.color.setHex(t < 0.5 ? 0xffb15a : 0xfff1c8);
+  hemi.intensity = 0.35 + t * 0.55; dirL.intensity = 0.1 + t * 0.9; fill.intensity = 0.55 - t * 0.35;
+  var lamp = Math.max(0, 1 - t * 1.8); lampLight.intensity = 0.9 * lamp; lampMat.emissiveIntensity = 0.9 * lamp;
+}
+
+// ---------- interaction ----------
+
+var raycaster = new THREE.Raycaster(), tmpM = new THREE.Matrix4();
+var panels = [nav.mesh, board.mesh, method.mesh, clock.mesh];
+var hoverMap = {};
+
+function pointerHit(origin, dir) {
+  raycaster.ray.origin.copy(origin); raycaster.ray.direction.copy(dir);
+  var hits = raycaster.intersectObjects(panels, false);
+  if (!hits.length || !hits[0].uv) return null;
+  var p = hits[0].object.userData.panel;
+  return { panel: p, idx: p.hitAt(hits[0].uv.x, hits[0].uv.y), dist: hits[0].distance };
+}
+function setHover(id, h) {
+  var prev = hoverMap[id];
+  if (prev && (!h || prev.panel !== h.panel || prev.idx !== h.idx)) { prev.panel.hover = -1; redraw(prev.panel); }
+  if (h && h.idx >= 0 && (!prev || prev.panel !== h.panel || prev.idx !== h.idx)) { h.panel.hover = h.idx; redraw(h.panel); }
+  hoverMap[id] = h && h.idx >= 0 ? h : null;
+}
+function redraw(p) { if (p === nav) renderNav(); else if (p === board) renderBoard(); else if (p === method) renderMethod(); else renderClock(); }
+function press(h, ctrl) {
+  if (!h || h.idx < 0) return;
+  var r = h.panel.hits[h.idx]; if (!r.action) return;
+  click(); haptic(ctrl);
+  act(r.action);
+}
+function haptic(ctrl) {
+  try { var gp = ctrl && ctrl.userData.gamepad; if (gp && gp.hapticActuators && gp.hapticActuators[0]) gp.hapticActuators[0].pulse(0.4, 40); } catch (e) {}
+}
+
+// controllers
+var controllers = [];
+for (var ci = 0; ci < 2; ci++) (function (i) {
+  var c = renderer.xr.getController(i);
+  var geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]);
+  var line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xe8801a, transparent: true, opacity: 0.7 })); line.scale.z = 3; c.add(line);
+  var tip = new THREE.Mesh(new THREE.SphereGeometry(0.012, 12, 12), new THREE.MeshBasicMaterial({ color: 0xe8801a })); c.add(tip);
+  var handle = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.018, 0.11, 16), mInk); handle.rotation.x = Math.PI / 2 - 0.35; handle.position.set(0, -0.02, 0.05); c.add(handle);
+  c.userData.line = line;
+  c.addEventListener("connected", function (e) { c.userData.gamepad = e.data.gamepad; c.visible = true; });
+  c.addEventListener("disconnected", function () { c.visible = false; });
+  c.addEventListener("selectstart", function () { press(hoverMap["c" + i] || currentHit(c), c); });
+  c.visible = false;
+  rig.add(c); controllers.push(c);
+})(ci);
+
+var o3 = new THREE.Vector3(), d3 = new THREE.Vector3();
+function currentHit(c) {
+  tmpM.identity().extractRotation(c.matrixWorld);
+  o3.setFromMatrixPosition(c.matrixWorld); d3.set(0, 0, -1).applyMatrix4(tmpM);
+  return pointerHit(o3, d3);
+}
+
+// desktop: drag to look, click to press
+var mouse = new THREE.Vector2(), yaw = 0, pitch = 0, dragging = false, moved = false, lastX = 0, lastY = 0;
+renderer.domElement.addEventListener("mousedown", function (e) { dragging = true; moved = false; lastX = e.clientX; lastY = e.clientY; });
+window.addEventListener("mouseup", function (e) {
+  dragging = false;
+  if (!moved && !renderer.xr.isPresenting) { updateMouse(e); raycaster.setFromCamera(mouse, camera); press(pointerHit(raycaster.ray.origin, raycaster.ray.direction), null); }
+});
+window.addEventListener("mousemove", function (e) {
+  if (dragging) { var dx = e.clientX - lastX, dy = e.clientY - lastY; if (Math.abs(dx) + Math.abs(dy) > 3) moved = true; yaw -= dx * 0.004; pitch = Math.max(-1.2, Math.min(1.2, pitch - dy * 0.004)); lastX = e.clientX; lastY = e.clientY; }
+  updateMouse(e);
+});
+function updateMouse(e) { mouse.x = (e.clientX / window.innerWidth) * 2 - 1; mouse.y = -(e.clientY / window.innerHeight) * 2 + 1; }
+window.addEventListener("resize", function () { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+
+// ---------- enter VR ----------
+
+var btn = document.getElementById("enter"), note = document.getElementById("note");
+if (navigator.xr && navigator.xr.isSessionSupported) {
+  navigator.xr.isSessionSupported("immersive-vr").then(function (ok) {
+    if (ok) { btn.style.display = "inline-block"; note.textContent = "Put the headset on, then press Enter VR. Or drag to look and click the boards here."; }
+    else note.textContent = "No VR headset found in this browser. Drag to look, click the boards. Open this page in the Quest browser for the full thing.";
+  });
+} else note.textContent = "This browser has no WebXR. Drag to look, click the boards. Open this page in the Quest browser for the full thing.";
+btn.addEventListener("click", function () {
+  ac();
+  navigator.xr.requestSession("immersive-vr", { optionalFeatures: ["local-floor", "bounded-floor"] }).then(function (session) {
+    session.addEventListener("end", function () { document.getElementById("ui").style.display = "block"; });
+    renderer.xr.setSession(session); document.getElementById("ui").style.display = "none";
+  });
+});
+
+// ---------- loop ----------
+
+var lastTick = 0;
+renderer.setAnimationLoop(function () {
+  var now = Date.now();
+  dawnUpdate();
+  if (renderer.xr.isPresenting) {
+    controllers.forEach(function (c, i) { if (c.visible) { var h = currentHit(c); setHover("c" + i, h); c.userData.line.scale.z = h ? h.dist : 3; } });
+  } else {
+    camera.rotation.set(pitch, yaw, 0, "YXZ");
+    raycaster.setFromCamera(mouse, camera); setHover("m", pointerHit(raycaster.ray.origin, raycaster.ray.direction));
+  }
+  if (now - lastTick > 500) {
+    lastTick = now;
+    if (state.timerEnd) { renderClock(); if (state.timerEnd <= now && !pensDownPlayed) { pensDownPlayed = true; pensDown(); } }
+  }
+  renderer.render(scene, camera);
+});
+
+renderAll();
+
+</script>
+</body>
+</html>
