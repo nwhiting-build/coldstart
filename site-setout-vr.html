@@ -32,9 +32,9 @@ var FONT = "Georgia, 'Noto Serif', 'Times New Roman', serif";
 // ---------- the job ----------
 // Lot 12: 20.000 wide x 30.000 deep. Street frontage on the +z side.
 // Building: 12.000 wide x 9.000 deep, brick veneer on slab.
-// Front setback 6.000, west side setback 1.500. Diagonal = root(144 + 81) = 15.000.
+// Front setback 6.000, west side setback 4.000. Diagonal = root(144 + 81) = 15.000.
 var LOT = { w: 20, d: 30, x0: -10, x1: 10, zRear: -15, zFront: 15 };
-var JOB = { front: 6.0, side: 1.5, width: 12.0, depth: 9.0 };
+var JOB = { front: 6.0, side: 4.0, width: 12.0, depth: 9.0 };
 var TRUE = {
   A: { x: LOT.x0 + JOB.side, z: LOT.zFront - JOB.front },          // front-west, the critical corner
   D: { x: LOT.x0 + JOB.side, z: LOT.zFront - JOB.front - JOB.depth }, // rear-west
@@ -55,90 +55,105 @@ var estimate = "";
 
 // ---------- the steps ----------
 // mode: read | place | cross | tap | keypad | measure | quiz | pour | done
-var STEPS = [
-  { n: 0, title: "Set-out: the ten steps",
+var SETOUT_STEPS = [
+  { n: 0, title: wrongRun ? "Watch it go wrong" : "Set-out: the ten steps",
     mode: "intro",
     task: "You are on the verge outside Lot 12. The plan is on the clipboard. Before anything goes in the ground, here is the whole sequence you are about to walk through - the same order every job, no skipping:\n\n1  Confirm the block and the survey pegs\n2  Boundary offset lines\n3  First building corner - peg A\n4  A 90 degree corner - isometric triangle\n5  Remaining corners, largest rectangle first\n6  Profiles, 1.5 m outside the dig, all heads level\n7  Transfer lines to the profiles\n8  Diagonal check, within 3 mm, before any concrete\n9  Wall lines on the profiles\n10  Final dimension check, then pour\n\nAt each step the game will walk you to the spot and tell you what to do. Press Next to start.",
     why: "Set out is where the plan becomes the building. A 2 degree error at the start is 420 mm out of position after 12 metres." },
   { n: 1, title: "Confirm the block and find the survey pegs",
-    mode: "tap", targets: ["survey"],
+    mode: "tap", watch: "Watch: the game walks you to each survey peg and confirms it. Four white tops, four nails - that is the boundary.", targets: ["survey"],
     task: "Four survey pegs mark the boundary. A licensed surveyor put them there - that is the cadastral survey, and you cannot start without it. Check the lot number on the plan is the lot you are standing on, then confirm each peg.",
     how: "Look for the white-topped peg inside the orange ring at your feet. Point the controller at it and pull the trigger. The game will then move you to the next one.",
     why: "If you cannot find a survey peg - stop and call a surveyor. Never set out from an unconfirmed boundary. Boundary setbacks are legally enforceable and a wrong position can be a demolition order." },
   { n: 2, title: "Establish the boundary offset lines",
-    mode: "tap2",
-    task: "Two blue lines have been run on the ground. One runs across the block 6.000 back from the front pegs - the front setback. One runs down the block 1.500 in from the west fence - the side setback. Everything is measured from these lines, not from the pegs in the grass.",
+    mode: "tap2", watch: "Watch: the two offset lines are on the ground. The crossing is the building corner.",
+    task: "Two blue lines have been run on the ground. One runs across the block 6.000 back from the front pegs - the front setback. One runs down the block 4.000 in from the west fence - the side setback. Everything is measured from these lines, not from the pegs in the grass.",
     how: "You are standing beside where the two lines cross. Point at the orange ring on the crossing and pull the trigger.",
     why: "The offset lines are the base lines for the whole set-out. The front line gives you the setback; the west line gives you the side clearance." },
   { n: 3, title: "Drive the first building corner - peg A",
-    mode: "place", peg: "A",
-    task: "Peg A is the front-west corner of the building: 6.000 back from the front boundary and 1.500 in from the west boundary.",
-    how: "Point at the ground near the ring. Two yellow tapes run out to the boundaries and the readout shows what each one says. Move the pointer until it reads 6.000 from the front and 1.500 from the west, then pull the trigger to drive the peg. Inside 40 mm counts as exact.",
+    mode: "place", peg: "A", watch: "Watch: the tapes run out to both boundaries. When they read 6.000 and 4.000 the peg goes in.",
+    task: "Peg A is the front-west corner of the building: 6.000 back from the front boundary and 4.000 in from the west boundary.",
+    how: "Point at the ground near the ring. Two yellow tapes run out to the boundaries and the readout shows what each one says. Move the pointer until it reads 6.000 from the front and 4.000 from the west, then pull the trigger to drive the peg. Inside 40 mm counts as exact.",
     why: "This is the critical corner peg. It sets the legal offset from the boundary. It is the one peg you never move later." },
-  { n: 4, title: "Set the 90 degree corner - isometric triangle",
-    mode: "place", peg: "B",
-    task: "To get a 90 degree corner off the front line we build an isometric triangle. First, pegs B and C: 3.000 each side of A along the front line. Drive B on the east side of A.",
+  { n: 4, title: "The 90 degree corner - what we are about to do",
+    mode: "explain", watch: "Watch: nothing goes in the ground yet. Read this one.",
+    task: "We have peg A on the front line. We need a line running back into the block at exactly 90 degrees to it - the west wall. There is no protractor big enough, so we use symmetry instead.\n\nPut two pegs, B and C, the same distance either side of A along the front line. Hook a tape on each and pull them back into the block until the two tapes read the same. Every point where two equal tapes meet is exactly the same distance from B as from C - and the only such points lie on a line through A at right angles to B-C. Drive a peg there, string it back to A, and you have your 90 degree line.\n\nThree pegs, two tapes, no maths. Then we prove it with 3:4:5.",
+    how: "Press Next.",
+    why: "The further apart B and C are, the more accurate the perpendicular. 3 m is the textbook figure; use more on a bigger building. If the side setback is too tight for a peg 3 m west of A, build the triangle at the other end of the front line, or shorten B-C - never put a peg over the boundary." },
+  { n: 4, title: "Isometric triangle - peg B",
+    mode: "place", peg: "B", watch: "Watch: one on the hook at A, one walking the tape 3.000 east along the front line. Read the tape, drive the peg.",
+    task: "Peg B: 3.000 east of A, on the front line.",
     how: "Point at the ground east of A. The tape reads from A; the second readout tells you how far off the front line you are. Trigger at 3.000 from A, on the line.",
-    why: "The further apart B and C are, the more accurate the perpendicular. 3 m is the textbook figure; use more on a bigger building." },
-  { n: 5, title: "Peg C - the other side",
-    mode: "place", peg: "C",
+    why: "The tape is hooked over the nail in peg A - not the edge of the peg. Nail to nail, every time." },
+  { n: 5, title: "Isometric triangle - peg C",
+    mode: "place", peg: "C", watch: "Watch: same tape, same hook on A, 3.000 the other way.",
     task: "Now peg C, 3.000 west of A on the same line. Both distances must be identical - same tape, both measured from A.",
     how: "Same again on the west side. 3.000 from A, zero off the line, trigger.",
     why: "Symmetry is the whole trick. Nothing else in this method matters if B and C are not equal distances from A." },
-  { n: 6, title: "Pull two tapes until they cross - peg E",
-    mode: "cross",
+  { n: 6, title: "Isometric triangle - two tapes cross at E",
+    mode: "cross", watch: "Watch: one hooks a tape on B and a tape on C. The other walks both reels back into the block and slides across until the two tapes read the same. That is E.",
     task: "A tape is hooked on B and another on C. Pull both back into the block until they cross. The crossing is directly behind A on the perpendicular.",
     how: "Point at the ground behind A, about 6 m in. Two tapes follow the pointer, one from B and one from C. Slide sideways until both read the same number, then trigger. That is peg E.",
     why: "No protractor, no trig. Two equal tapes from two equal pegs cross on the perpendicular bisector, and A is its foot. String A to E is your 90 degree line." },
+  { n: 6, title: "Prove the corner - 3:4:5",
+    mode: "check345", watch: "Watch: 3.000 along the front line is peg B already. 4.000 back along A-E gets a mark. The tape from B to that mark must read 5.000.",
+    task: "Never trust a corner you have not checked. 3 squared plus 4 squared is 9 plus 16, which is 25 - and 5 squared is 25. So if the two legs are 3.000 and 4.000, the diagonal is 5.000 only when the angle is exactly 90 degrees. Longer than 5.000, the angle is open. Shorter, it is closed.",
+    how: "Press Do this step and read the tape.",
+    why: "Scale it up when you can - 6:8:10, 9:12:15. A bigger triangle spreads the same tape error over more metres and the corner comes out truer." },
   { n: 7, title: "Remaining corners - largest rectangle first",
-    mode: "place", peg: "D",
+    mode: "place", peg: "D", watch: "Watch: 9.000 from A along the line through E.",
     task: "Measure 9.000 from A along the line A-E and drive peg D, the rear-west corner.",
     how: "Follow the orange string from A through E. The readout gives distance along the line and how far off it you are. 9.000 along, zero off, trigger.",
     why: "Every building reduces to rectangles. Set out the largest one first, always. Sub-shapes inherit its errors." },
   { n: 8, title: "Peg F - front-east corner",
-    mode: "place", peg: "F",
+    mode: "place", peg: "F", watch: "Watch: 12.000 from A along the front line.",
     task: "12.000 east of A along the front line. Drive peg F.",
     how: "Back to the front line. 12.000 from A, zero off the line, trigger.",
     why: "F is set from the front offset line, so like A it sits on a critical line." },
   { n: 9, title: "Peg G - rear-east corner",
-    mode: "place", peg: "G",
+    mode: "place", peg: "G", watch: "Watch: 12.000 from D and 9.000 from F.",
     task: "G is 12.000 from D and 9.000 from F. Two tapes again.",
     how: "Point at the ground in the rear-east corner. Slide the pointer until one tape reads 12.000 and the other 9.000, then trigger.",
     why: "You now have four corners. You do not yet know if they make a rectangle. That is what the diagonal check is for - but profiles come first." },
   { n: 10, title: "Install profiles - 1.5 m outside the excavation",
-    mode: "profiles",
+    mode: "profiles", watch: "Watch: eight hurdles go in, two at each corner, each about 2 m past the peg on the wall line.",
     task: "Corner pegs sit inside the excavation and the excavator will destroy them. Hurdle profiles store the building position outside the dig - two at each corner, one on each wall line, eight in all.",
     how: "The ring shows where the next profile goes. Point at the ground on the extension of the wall line, past the corner. The readout shows how far past the corner you are - it must be 1.5 m or more. Trigger to drive the hurdle. The game moves you to the next one.",
     why: "Minimum 1.5 m clearance for mechanical excavation, 0.5 m for manual. Profiles are your insurance: pegs get knocked, profiles don't." },
   { n: 11, title: "The golden rule - all heads level",
-    mode: "level",
+    mode: "level", watch: "Watch: the level reads each head in turn. One reads 100.945 against 100.900. It gets dropped.",
     task: "One of the eight heads is not at the same reduced level as the rest.",
     how: "Point at a profile board and the readout gives its head RL. Seven of them read 100.900. Find the one that does not and pull the trigger on it to drop it to datum.",
     why: "If one head is high the string runs on a slope, and every distance you measure is a slope distance. 10.000 m at 2 degrees reads 9.994 - a 6 mm error, enough to fail a diagonal check." },
   { n: 12, title: "Transfer the lines to the profiles",
-    mode: "transfer",
+    mode: "transfer", watch: "Watch: string through the nail, plumb up to the board, nail driven. Eight times.",
     task: "Run the string through each peg nail, plumb it up to the profile board and drive a nail there. After this the pegs can be knocked out without losing the building.",
     how: "Point at the profile in the ring and pull the trigger to drive its nail. Eight times. The game moves you round.",
     why: "Spirit level for short domestic spans, plumb bob for vertical transfer, oil bath reflector for long commercial spans." },
   { n: 13, title: "Calculate the diagonal before you measure it",
-    mode: "keypad",
+    mode: "keypad", watch: "Watch: 144 plus 81 is 225. Root of 225 is 15.000. Keyed in before the tape comes out.",
     task: "Building is 12.000 x 9.000. c = root(a squared + b squared).",
     how: "Key the diagonal you expect into the clipboard, in metres, and press Check. Do this before you measure anything.",
     why: "Write the target down before you go to the tape. A measured figure with nothing to compare it to tells you nothing." },
   { n: 14, title: "Diagonal check - profile to profile",
-    mode: "measure",
+    mode: "measure", watch: "Watch: both diagonals taped from the profile nails.",
     task: "Both diagonals, profile nail to profile nail, not string to string - strings sag. Both must be equal within 3 mm, and both should match the number you just calculated.",
     how: "Press Measure on the clipboard and read the two figures.",
     why: "This is the only proof of square. Do it before any concrete is poured. Five minutes now against $40,000 in rectification." },
   { n: 15, title: "Not square - fix it the right way",
-    mode: "quiz",
+    mode: "quiz", watch: "Watch: the rear line is the one that moves - the front and west lines hold the setbacks.",
     q: "The diagonals differ. Which line do you move?",
     options: ["The front line A-F", "The west line A-D", "The rear line D-G"], answer: 2,
     task: "Identify the critical line - the one set at the correct offset from the boundary - and the critical corner peg. Never move those. Move the non-critical line by the full difference, both pegs, same direction, then measure again.",
     how: "Pick the line on the clipboard.",
     why: "Moving the critical peg shifts the whole building off its legal setback. The rear line is the one that is free to move." },
+  { n: 15, title: "Drop the corners - plumb bob and clout nail",
+    mode: "corners", watch: "Watch: at each corner the two strings cross in the air. The plumb bob hangs from the crossing, settles, and a clout nail goes into the peg under its point.",
+    task: "The building position now lives on the profiles. To put a corner back on the ground - for the concretor, or after the pegs have been knocked - run both strings, hang the plumb bob from where they cross, let it stop dead, and drive a clout nail into the peg where the point touches. That nail is the corner.",
+    how: "Press Do this step.",
+    why: "Wait for the bob to stop completely. A bob still swinging by 5 mm marks a corner 5 mm out. Shield it from the wind with your body." },
   { n: 16, title: "Mark the wall lines and pour",
-    mode: "pour",
+    mode: "pour", watch: "Watch from the street: excavation, slab, then the frame.",
     task: "Brick veneer on slab: three nails per profile - outside face of brickwork and slab edge, outside face of frame, and the rebate formwork. Final dimension check against the plan, then the excavator comes in and the slab goes down.",
     how: "Press Pour on the clipboard and watch from the street.",
     why: "Different construction types need different nails. Cavity brick on slab needs four, strip footing cavity brick five or more. Wrong nail, wrong position for that trade." },
@@ -146,10 +161,12 @@ var STEPS = [
     mode: "done",
     task: "", why: "" }
 ];
-var voiceOn = true, stepIdx = 0, stepDone = true, quizPicked = -1, levelPicked = false, feedback = "";
+var guided = true, demoRunning = false, wrongRun = /wrong/.test(location.hash), voiceOn = true, stepIdx = 0, stepDone = true, quizPicked = -1, levelPicked = false, feedback = "";
 var tab = "setout";
-var showPlan = false;
+var showPlan = false, showSteps = false, showSheet = false, ffMode = false;
+var tours = {}, tourSheets = {};
 
+var STEPS = SETOUT_STEPS; SETOUT_STEPS.forEach(function (st, i) { st.n = i; });
 function step() { return STEPS[stepIdx]; }
 function fmt(m) { return (Math.round(m * 1000) / 1000).toFixed(3); }
 function mm(m) { return Math.round(m * 1000) + " mm"; }
@@ -204,22 +221,30 @@ function renderBoard() {
   var P = board, L = 40, W = P.cw - 80, y = 0;
   P.begin();
   // tabs
-  var tabs = [["setout", "Set-out"], ["level", "Levelling"], ["grid", "Grid survey"], ["cutfill", "Cut & fill"]];
+  var tabs = [["setout", "Set-out"], ["level", "Levelling"], ["grid", "Grid"], ["volumes", "Volumes"], ["cutfill", "Cut & fill"]];
   var bx = L;
-  tabs.forEach(function (t) { var locked = t[0] !== "setout"; P.button(bx, 28, 208, 58, t[1], t[0] === tab ? "track-on" : (locked ? "dim" : ""), locked ? null : { tab: t[0] }, 24); bx += 214; });
+  tabs.forEach(function (t) { P.button(bx, 28, 164, 58, t[1], t[0] === tab ? "track-on" : "", { tab: t[0] }, 22); bx += 171; });
   y = 130;
-  if (tab !== "setout") { P.para("This stage is the next build: two-peg test, HOC, rise and fall booking, the grid survey, contours, cut and fill and grades. It will sit here as its own game.", L, y, W, C.mute, 30); P.end(); return; }
+  if (tab !== "setout" && !tours[tab]) { renderComing(P, L, y, W); P.end(); return; }
   if (showPlan) { renderPlan(P, L, y, W); P.end(); return; }
+  if (showSteps) { renderSteps(P, L, y, W); P.end(); return; }
+  if (showSheet && tourSheets[tab]) { tourSheets[tab](P, L, y, W); P.end(); return; }
+  if (showExplain) { renderExplain(P, L, y, W); P.end(); return; }
 
   var s = step();
-  P.text(s.n === 0 ? "Before you start" : "Step " + s.n + " of 16", L, y, C.mute, 26);
+  P.text(s.n === 0 ? "Before you start" : "Step " + s.n + " of " + (STEPS.length - 2), L + 170, y, C.mute, 26);
   P.button(P.cw - L - 150, y - 36, 150, 52, "Site plan", "", { act: "plan" }, 24);
+  P.button(P.cw - L - 310, y - 36, 150, 52, "All steps", "", { act: "steps" }, 24);
+  if (tourSheets[tab]) P.button(P.cw - L - 470, y - 36, 150, 52, "Sheet", "", { act: "sheet" }, 24);
+  if (typeof EXPLAIN === "object" && explainFor(s)) P.button(L, y - 36, 150, 52, "Explain", "track-on", { act: "explain" }, 24);
   y += 64;
   y = P.para(s.title, L, y, W, C.ink, 40, "", 50); y += 6;
   P.rule(y, L, L + W); y += 44;
   if (s.mode === "done") y = renderDone(P, L, y, W);
+  else if (s.mode === "end") { y = P.para(s.task, L, y, W, C.ink, 30); }
   else {
     y = P.para(s.task, L, y, W, C.ink, 30); y += 12;
+    if (s.how && guided) s = Object.assign({}, s, { how: s.watch || "Press Do this step and watch." });
     if (s.how) { var y0 = y; y = P.para(s.how, L + 24, y, W - 24, C.blue, 29); P.ctx.fillStyle = C.blue; P.ctx.fillRect(L, y0 - 26, 6, y - y0 - 6); y += 16; }
     if (s.mode === "quiz") {
       s.options.forEach(function (o, i) {
@@ -249,22 +274,42 @@ function renderBoard() {
     if (s.mode === "pour") { P.button(L, y, 220, 62, "Pour", "bad", poured ? null : { act: "pour" }, 28); y += 90; }
     if (feedback) { P.ctx.fillStyle = feedback.indexOf("Right") === 0 || feedback.indexOf("Good") === 0 || feedback.indexOf("Square") === 0 ? C.green : C.orange; P.ctx.fillRect(L, y - 28, 6, 70); y = P.para(feedback, L + 24, y, W - 24, C.ink, 28); y += 20; }
     // why
-    P.rule(y, L, L + W); y += 40;
-    y = P.para(s.why, L, y, W, C.mute, 27, "italic");
+    if (s.why && y + 130 < P.ch - 200) { P.rule(y, L, L + W); y += 40; y = P.para(s.why, L, y, W, C.mute, 27, "italic"); }
   }
   // footer
   var fy = P.ch - 110;
   P.rule(fy - 30, L, L + W);
   if (stepIdx > 0) P.button(L, fy, 150, 60, "Back", "", { act: "back" }, 26);
-  if (s.mode !== "done") P.button(P.cw - L - 190, fy, 190, 60, "Next", stepDone ? "primary" : "dim", stepDone ? { act: "next" } : null, 26);
-  else P.button(P.cw - L - 260, fy, 260, 60, "Start again", "primary", { act: "restart" }, 26);
+  if (s.mode === "done") { P.button(P.cw - L - 220, fy, 220, 60, "Start again", "primary", { act: "restart" }, 26); if (!wrongRun) P.button(L + 170, fy, 300, 60, "Watch it go wrong", "bad", { act: "wrong" }, 24); }
+  else if (s.mode === "end") { P.button(P.cw - L - 300, fy, 300, 60, s.nextTab ? "Next: " + s.nextLabel : "Start again", "primary", s.nextTab ? { tab: s.nextTab } : { act: "restart" }, 26); }
+  else if (guided && !stepDone && s.mode !== "intro" && s.mode !== "explain") P.button(P.cw - L - 300, fy, 300, 60, demoRunning ? "Working..." : "Do this step", demoRunning ? "dim" : "primary", demoRunning ? null : { act: "demo" }, 26);
+  else P.button(P.cw - L - 190, fy, 190, 60, "Next", stepDone ? "primary" : "dim", stepDone ? { act: "next" } : null, 26);
   P.button(L, fy - 80, 220, 52, "Take me there", "", { act: "goto" }, 24);
   P.button(L + 236, fy - 80, 170, 52, voiceOn ? "Voice on" : "Voice off", voiceOn ? "on" : "", { act: "voice" }, 24);
-  if (stepIdx >= 10 && !poured && s.mode !== "pour" && s.mode !== "done") P.button(L + 170, fy, 260, 60, "Pour now anyway", "bad", { act: "pourEarly" }, 24);
+  P.button(L + 422, fy - 80, 210, 52, guided ? "Guided" : "Hands-on", guided ? "on" : "", { act: "mode" }, 24);
+  if (!guided && pegs.G && !poured && s.mode !== "pour" && s.mode !== "done") P.button(L + 170, fy, 260, 60, "Pour now anyway", "bad", { act: "pourEarly" }, 24);
   P.text(score.right + " right, " + score.missed + " missed", P.cw / 2, P.ch - 24, C.mute, 22, "", "center");
   P.end();
 }
 
+function renderSteps(P, L, y, W) {
+  P.text("Jump to a step", L, y, C.ink, 40); P.button(P.cw - L - 150, y - 34, 150, 52, "Close", "", { act: "steps" }, 24); y += 30;
+  P.para("Pick any step. The game builds the site up to that point and walks you there.", L, y, W, C.mute, 26); y += 60;
+  for (var i = 0; i < STEPS.length - 1; i++) {
+    var st = STEPS[i], col = i % 2, row = Math.floor(i / 2);
+    P.button(L + col * (W / 2 + 6), y + row * 66, W / 2 - 6, 58, (st.n === 0 ? "Start" : st.n + ". ") + (st.n === 0 ? "" : st.title).slice(0, 34), i === stepIdx ? "on" : "", { jump: i }, 22);
+  }
+}
+function renderComing(P, L, y, W) {
+  var info = {
+    level: ["Levelling", "The two-peg test before every job. Line of collimation and the height of collimation method. Backsight, intermediate, foresight and change points. Rise and fall booking with the three-way check. You will set the level up on this block, read the staff on the pegs you set out, and book it."],
+    grid: ["Grid survey and contours", "Establish a HOC from the site datum, read spot heights on a grid across the lot, book them, and draw the contour plan from the reduced levels."],
+    cutfill: ["Cut and fill, grades and levels", "From the grid: the cut and fill volumes to bring the building platform to level, then grades and levels for the drainage - falls, invert levels and the sewer section."]
+  }[tab];
+  P.text(info[0], L, y, C.ink, 40); y += 50;
+  y = P.para(info[1], L, y, W, C.ink, 30); y += 30;
+  P.para("This module is the next build. It runs on the same lot, after the set-out, so the pegs you set are the ones you level.", L, y, W, C.mute, 27, "italic");
+}
 function renderDone(P, L, y, W) {
   var r = consequence();
   if (r.ok) {
@@ -293,14 +338,14 @@ function renderPlan(P, L, y, W) {
   // dimensions
   c.strokeStyle = C.orange; c.lineWidth = 2;
   c.beginPath(); c.moveTo(bx + 30, oy); c.lineTo(bx + 30, by); c.stroke(); P.text("6.000", bx + 40, oy + JOB.front * sc / 2 + 8, C.orange, 24);
-  c.beginPath(); c.moveTo(ox, by + 30); c.lineTo(bx, by + 30); c.stroke(); P.text("1.500", ox - 4, by + 24, C.orange, 22, "", "right");
+  c.beginPath(); c.moveTo(ox, by + 30); c.lineTo(bx, by + 30); c.stroke(); P.text("4.000", ox - 4, by + 24, C.orange, 22, "", "right");
   P.text("20.000", ox + LOT.w * sc / 2, oy + LOT.d * sc + 34, C.ink, 24, "", "center");
   c.save(); c.translate(ox + LOT.w * sc + 34, oy + LOT.d * sc / 2); c.rotate(-Math.PI / 2); P.text("30.000", 0, 0, C.ink, 24, "", "center"); c.restore();
   P.text("N", ox + LOT.w * sc + 34, oy + 30, C.mute, 26, "", "center"); c.beginPath(); c.moveTo(ox + LOT.w * sc + 34, oy + 40); c.lineTo(ox + LOT.w * sc + 34, oy + 90); c.stroke();
   // corner labels
   ["A", "F", "D", "G"].forEach(function (k) { var p = TRUE[k]; P.text(k, ox + (p.x - LOT.x0) * sc + (k === "A" || k === "D" ? -22 : 10), oy + (LOT.zFront - p.z) * sc + (k === "A" || k === "F" ? -8 : 28), C.blue, 24); });
   y = oy + LOT.d * sc + 80;
-  y = P.para("Brick veneer on slab. Front setback 6.000, west side setback 1.500. Datum: TBM on the front west survey peg, RL 100.000. Diagonal to expect: work it out yourself.", L, y, W, C.mute, 26);
+  y = P.para("Brick veneer on slab. Front setback 6.000, west side setback 4.000. Datum: TBM on the front west survey peg, RL 100.000. Diagonal to expect: work it out yourself.", L, y, W, C.mute, 26);
 }
 
 // ---------- geometry of the set-out ----------
@@ -448,6 +493,76 @@ function setTapes(from) {
   from.forEach(function (f) { var g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(f.x, 0.3, f.z), new THREE.Vector3(ghost.position.x, 0.3, ghost.position.z)]); var l = new THREE.Line(g, mTape); site.add(l); tapeLines.push(l); });
 }
 
+// ---------- two workers, and simple tweens to move things ----------
+var tweens = [];
+function tween(obj, to, dur, onDone) { tweens.push({ obj: obj, from: obj.position.clone(), to: new THREE.Vector3(to.x, to.y !== undefined ? to.y : obj.position.y, to.z), t0: performance.now(), dur: dur, onDone: onDone }); }
+function tickTweens(now) {
+  for (var i = tweens.length - 1; i >= 0; i--) { var t = tweens[i], k = Math.min(1, (now - t.t0) / t.dur); k = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; t.obj.position.lerpVectors(t.from, t.to, k); if (k >= 1) { tweens.splice(i, 1); t.onDone && t.onDone(); } }
+}
+function makeWorker(vest) {
+  var g = new THREE.Group(), skin = new THREE.MeshStandardMaterial({ color: 0xd9a77c, roughness: 0.8 }), denim = new THREE.MeshStandardMaterial({ color: 0x3b4a6b, roughness: 0.9 }), hv = new THREE.MeshStandardMaterial({ color: vest, roughness: 0.6 });
+  [-0.1, 0.1].forEach(function (o) { var leg = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.8, 10), denim); leg.position.set(o, 0.4, 0); g.add(leg); });
+  var torso = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.6, 0.24), hv); torso.position.y = 1.1; g.add(torso);
+  var head = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 10), skin); head.position.y = 1.55; g.add(head);
+  var hat = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.15, 0.1, 12), new THREE.MeshStandardMaterial({ color: 0xf6f6f2 })); hat.position.y = 1.65; g.add(hat);
+  [-0.28, 0.28].forEach(function (o) { var arm = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.55, 8), skin); arm.position.set(o, 1.05, 0.1); arm.rotation.x = -0.6; g.add(arm); });
+  var hand = new THREE.Object3D(); hand.position.set(0.28, 0.85, 0.35); g.add(hand); g.userData.hand = hand;
+  g.visible = false; scene.add(g); return g;
+}
+var workerA = makeWorker(0xe8801a), workerB = makeWorker(0xd9d21a);
+var reel = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.03, 16), new THREE.MeshStandardMaterial({ color: 0x2857c4 })); reel.rotation.x = Math.PI / 2; workerB.userData.hand.add(reel);
+function faceTo(w, pt) { w.rotation.y = Math.atan2(pt.x - w.position.x, pt.z - w.position.z); }
+function standAt(w, pt, offset) { var x = pt.x + (offset ? offset.x : 0.35), z = pt.z + (offset ? offset.z : 0.35); w.visible = true; w.position.set(x, groundY(x, z), z); faceTo(w, pt); }
+function hideWorkers() { workerA.visible = false; workerB.visible = false; }
+// a worker walks a tape from one peg to a point: tape line follows the reel in the hand
+var walkTape = null;
+function walkTapeTo(w, from, to, dur, onDone) {
+  w.visible = true; w.position.set(from.x, 0, from.z); faceTo(w, to);
+  var y0 = groundY(from.x, from.z) + 0.45; var g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(from.x, y0, from.z), new THREE.Vector3(from.x, y0 + 0.4, from.z)]); var line = new THREE.Line(g, mTape); scene.add(line);
+  walkTape = { line: line, from: from, w: w, y0: y0 };
+  tween(w, { x: to.x + 0.3, z: to.z + 0.3 }, dur, function () { scene.remove(line); walkTape = null; onDone && onDone(); });
+}
+function tickWalkTape() {
+  if (!walkTape) return; var hp = new THREE.Vector3(); walkTape.w.userData.hand.getWorldPosition(hp);
+  walkTape.line.geometry.setFromPoints([new THREE.Vector3(walkTape.from.x, walkTape.y0, walkTape.from.z), hp]);
+}
+// tape close-up: a board that pops up over the peg and shows the steel tape with the string across it
+var tapeBoard = new Panel(1.1, 0.42, 1100, 420); tapeBoard.mesh.visible = false; scene.add(tapeBoard.mesh);
+var tapeBoardUntil = 0;
+function showTapeReading(pt, metres, note) {
+  var P = tapeBoard, c = P.ctx; P.begin();
+  // the tape: hooked at the 100 mm mark, so the tape reads 100 more than the distance
+  var read = metres + 0.1, cx = 560, pxPerMm = 3.6;
+  c.fillStyle = "#f2d51c"; c.fillRect(0, 150, P.cw, 150);
+  var startMm = Math.round(read * 1000) - 150;
+  for (var mmv = startMm; mmv <= startMm + 310; mmv++) {
+    var x = cx + (mmv - read * 1000) * pxPerMm; if (x < 12 || x > P.cw - 12) continue;
+    var h = mmv % 10 === 0 ? 46 : (mmv % 5 === 0 ? 30 : 16); c.fillStyle = "#1e2a44"; c.fillRect(x - 1, 150, 2, h);
+    if (mmv % 10 === 0 && mmv % 100 !== 0) { c.font = "26px " + FONT; c.fillStyle = "#1e2a44"; c.textAlign = "center"; c.fillText(String((mmv % 100) / 10 | 0), x, 226); }
+    if (mmv % 100 === 0) { c.font = "bold 40px " + FONT; c.fillStyle = "#c9302c"; c.fillText((mmv / 1000).toFixed(1), x, 282); }
+  }
+  c.textAlign = "left";
+  // the string
+  c.strokeStyle = "#ff2fa0"; c.lineWidth = 5; c.beginPath(); c.moveTo(cx - 60, 40); c.lineTo(cx + 60, 400); c.stroke();
+  P.text("Tape reads " + fmt(read) + "   less the 100 mm hook   =  " + fmt(metres), 40, 80, C.ink, 40);
+  P.text(note || "Hooked at the 100 mark, not the end - the end hook is bent and worn, the 100 line is not.", 40, 128, C.mute, 26);
+  P.text("Read it out loud. Partner repeats it back. " + fmt(metres) + ".", 40, 360, C.green, 30);
+  P.end();
+  tapeBoard.mesh.visible = true; tapeBoard.mesh.position.set(pt.x, groundY(pt.x, pt.z) + 1.55, pt.z); tapeBoardUntil = performance.now() + 4500;
+}
+// plumb bob: hangs from a string crossing, drops to the peg
+var bob = new THREE.Group();
+var bobBody = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.11, 20), new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.9, roughness: 0.25 })); bobBody.rotation.x = Math.PI; bobBody.position.y = 0.055; bob.add(bobBody);
+var bobCap = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.035, 0.05, 16), bobBody.material); bobCap.position.y = 0.135; bob.add(bobCap);
+var bobLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0.16, 0), new THREE.Vector3(0, 1.0, 0)]), new THREE.LineBasicMaterial({ color: 0xff2fa0 })); bob.add(bobLine);
+bob.visible = false; scene.add(bob);
+function dropBob(pt, fromY, toY, onDone) {
+  bob.visible = true; bob.position.set(pt.x, fromY, pt.z); bob.userData.top = fromY;
+  tween(bob, { x: pt.x, y: toY, z: pt.z }, 1400, function () { onDone && onDone(); });
+}
+function tickBob() { if (!bob.visible) return; var top = bob.userData.top || 1; bobLine.geometry.setFromPoints([new THREE.Vector3(0, 0.16, 0), new THREE.Vector3(0, top - bob.position.y, 0)]); }
+function clout(pt, y) { var n = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.02, 6), mNail); n.position.set(pt.x, y, pt.z); site.add(n); var head = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.004, 8), mNail); head.position.set(pt.x, y + 0.012, pt.z); site.add(head); thunk(); }
+
 // guide marker: an orange ring and a label at wherever the current step wants you
 var guide = new THREE.Group();
 var guideRing = new THREE.Mesh(new THREE.RingGeometry(0.45, 0.55, 40), new THREE.MeshBasicMaterial({ color: 0xe8801a, side: THREE.DoubleSide, transparent: true, opacity: 0.85 })); guideRing.rotation.x = -Math.PI / 2; guideRing.position.y = 0.02; guide.add(guideRing);
@@ -458,17 +573,21 @@ var guideLabel = new THREE.Sprite(new THREE.SpriteMaterial({ map: guideT, transp
 scene.add(guide); guide.visible = false;
 function setGuide(pt, text) {
   if (!pt) { guide.visible = false; return; }
-  guide.visible = true; guide.position.set(pt.x, 0, pt.z);
+  if (guided) text = text.replace(" goes about here", "").replace(" about here", "") + (stepDone ? " - done" : " - tap to do");
+  guide.visible = true; guide.position.set(pt.x, groundY(pt.x, pt.z), pt.z);
   guideX.clearRect(0, 0, 512, 128); guideX.fillStyle = "rgba(232,128,26,0.95)"; guideX.fillRect(0, 0, 512, 128);
   guideX.font = "44px " + FONT; guideX.fillStyle = "#ffffff"; guideX.textAlign = "center"; guideX.fillText(text, 256, 80); guideT.needsUpdate = true;
 }
 function updateGuide() {
   var s = step();
+  if (tab !== "setout") { if (s.guide && !stepDone) setGuide(s.guide.pt, s.guide.text); else setGuide(null); return; }
   if (s.mode === "tap") { var i = surveyFound.indexOf(false); setGuide(i < 0 ? null : surveyPegs[i].position, "Survey peg " + (i + 1)); return; }
   if (s.mode === "tap2") { setGuide(TRUE.A, "The lines cross here"); return; }
   if (s.mode === "place" && !stepDone) { setGuide(targetFor(s.peg), "Peg " + s.peg + " goes about here"); return; }
   if (s.mode === "cross" && !stepDone) { setGuide({ x: pegs.A.x, z: pegs.A.z - 6 }, "Tapes cross about here"); return; }
   if (s.mode === "profiles" && profiles.length < 8) { var n = null; profileSlots().some(function (sl, i) { if (!profiles.some(function (p) { return p.slot === i; })) { n = sl; return true; } }); setGuide(n ? { x: n.from.x + n.dir.x * 2, z: n.from.z + n.dir.z * 2 } : null, "Profile " + (profiles.length + 1) + " of 8"); return; }
+  if (s.mode === "check345" && !stepDone) { setGuide(pegs.A, "Prove the corner"); return; }
+  if (s.mode === "corners" && !stepDone) { setGuide(pegs.A, "Corner A"); return; }
   if (s.mode === "level" && !stepDone) { setGuide({ x: profiles[0].x, z: profiles[0].z }, "Sight along the heads"); return; }
   if (s.mode === "transfer") { var p = null; profiles.some(function (pr) { if (!pr.nail) { p = pr; return true; } }); setGuide(p, p ? "Transfer this one" : null); return; }
   setGuide(null);
@@ -492,7 +611,7 @@ function addPeg(name, pt) {
   var nail = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, 0.03, 6), mNail); nail.position.y = 0.45; g.add(nail);
   var lc = document.createElement("canvas"); lc.width = 128; lc.height = 128; var lx = lc.getContext("2d"); lx.fillStyle = "rgba(30,42,68,0.85)"; lx.beginPath(); lx.arc(64, 64, 60, 0, 7); lx.fill(); lx.font = "80px " + FONT; lx.fillStyle = "#f4f1e8"; lx.textAlign = "center"; lx.fillText(name, 64, 92);
   var lt = new THREE.CanvasTexture(lc); lt.encoding = THREE.sRGBEncoding; var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: lt, transparent: true })); sp.scale.set(0.3, 0.3, 1); sp.position.y = 0.75; g.add(sp);
-  g.position.set(pt.x, 0, pt.z); site.add(g); pegMeshes[name] = g;
+  g.position.set(pt.x, 0.35, pt.z); site.add(g); pegMeshes[name] = g; tween(g, { x: pt.x, y: 0, z: pt.z }, 450);
 }
 function addString(a, b, mat, y) { var g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(a.x, y || 0.44, a.z), new THREE.Vector3(b.x, y || 0.44, b.z)]); var l = new THREE.Line(g, mat || mString); site.add(l); stringMeshes.push(l); return l; }
 function addProfile(pt, slot, i) {
@@ -583,6 +702,7 @@ function placeAt(pt) {
     addPeg("E", placed); thunk(); addString(pegs.A, pegs.E);
     var ang = Math.abs(Math.atan2(placed.x - pegs.A.x, pegs.A.z - placed.z)) * 180 / Math.PI;
     if (diff <= TOL_SNAP) { feedback = "Right. Tapes equal, E is on the perpendicular. A to E is your 90 degree line."; markRight(); }
+    else if (wrongRun) { feedback = "Near enough - the tapes look about the same from here. E is in. Moving on."; markMiss(); }
     else { feedback = "E is in, but the tapes were " + mm(diff) + " apart, so the line A-E is " + ang.toFixed(2) + " degrees off square. Over 9 m that error is going to grow."; markMiss(); }
     stepDone = true; updateGuide();
   } else if (s.mode === "profiles") {
@@ -632,10 +752,19 @@ function rebuildProfileStrings() {
 
 function act(a) {
   var s = step();
-  if (a.tab) { tab = a.tab; }
+  if (a.tab) { switchTour(a.tab); return; }
   else if (a.act === "goto") { walkTo(); }
+  else if (a.act === "demo") { runDemo(); return; }
+  else if (a.act === "mode") { guided = !guided; }
+  else if (a.act === "wrong") { location.hash = "wrong"; location.reload(); return; }
   else if (a.act === "voice") { voiceOn = !voiceOn; if (!voiceOn) stopSpeech(); else speakStep(); }
-  else if (a.act === "plan") showPlan = !showPlan;
+  else if (a.act === "plan") { showPlan = !showPlan; showSteps = false; showSheet = false; showExplain = false; }
+  else if (a.act === "steps") { showSteps = !showSteps; showPlan = false; showSheet = false; showExplain = false; }
+  else if (a.act === "sheet") { showSheet = !showSheet; showPlan = false; showSteps = false; showExplain = false; }
+  else if (a.act === "explain") { showExplain = !showExplain; showPlan = false; showSteps = false; showSheet = false; }
+  else if (a.act === "ltToggle") { ltMode = !ltMode; }
+  else if (a.act === "readExplain") { var ex = explainFor(step()); if (ex) speak(ex.terms.map(function (t) { return t[0] + ". " + t[1]; }).join(" ") + " How it works out. " + ex.working().join(" ")); }
+  else if (a.jump !== undefined) { showSteps = false; jumpTo(a.jump); return; }
   else if (a.key) { if (a.key === "<") estimate = estimate.slice(0, -1); else if (estimate.length < 8) estimate += a.key; }
   else if (a.act === "calc") {
     var v = parseFloat(estimate); if (isNaN(v)) return;
@@ -650,12 +779,13 @@ function act(a) {
   else if (a.quiz !== undefined) {
     quizPicked = a.quiz;
     if (a.quiz === s.answer) { fixSquare(); var dd = diagonals(); feedback = "Right. A and the front line hold the legal setback; A-D holds the side setback. The rear line D-G is the one that moves - both pegs, full difference, same direction. Re-measured profile to profile: " + fmt(dd.ag) + " and " + fmt(dd.fd) + ". Square."; markRight(); stepDone = true; }
-    else { feedback = "No. " + (a.quiz === 0 ? "The front line sets the 6.000 setback. Move it and the building is off its legal position." : "A-D sets the 1.500 side setback and carries the critical corner peg A. Never move A.") ; markMiss(); }
+    else { feedback = "No. " + (a.quiz === 0 ? "The front line sets the 6.000 setback. Move it and the building is off its legal position." : "A-D sets the 4.000 side setback and carries the critical corner peg A. Never move A.") ; markMiss(); }
   }
   else if (a.act === "pour" || a.act === "pourEarly") {
+    if (poured) return;
     if (a.act === "pourEarly") { feedback = ""; markMiss(); }
-    poured = true; buildPour(); tone(60, 0, 1.2, 0.3);
-    setTimeout(function () { buildFrame(); frameDrop = 1; stepIdx = STEPS.length - 1; stepDone = false; renderBoard(); }, 2500);
+    poured = true; demoRunning = true; buildPour(); tone(60, 0, 1.2, 0.3);
+    setTimeout(function () { buildFrame(); frameDrop = 1; stepIdx = STEPS.length - 1; stepDone = false; demoRunning = false; renderBoard(); updateGuide(); walkTo(); speakStep(); }, 2500);
   }
   else if (a.act === "next") { if (!stepDone) return; advance(); }
   else if (a.act === "back") { if (stepIdx > 0) { stepIdx--; feedback = ""; stepDone = true; } }
@@ -673,31 +803,111 @@ function fixSquare() {
   checked.measured = false; checked.square = true;
 }
 function advance() {
-  var s = step(); feedback = ""; stepDone = false; quizPicked = -1;
+  var s = step(); feedback = ""; stepDone = false; quizPicked = -1; showExplain = false;
   if (s.mode === "read") { /* boundary offsets */ }
   stepIdx++;
   var n = step();
-  if (n.mode === "tap2" && !n.built) { n.built = true; ribbon({ x: LOT.x0, z: TRUE.A.z }, { x: LOT.x1, z: TRUE.A.z }, "Front offset line - 6.000 setback"); ribbon({ x: TRUE.A.x, z: LOT.zFront }, { x: TRUE.A.x, z: LOT.zRear }, "West offset line - 1.500 setback"); crossHit.visible = true; tappables.push(crossHit); }
+  if (n.mode === "tap2" && !n.built) { n.built = true; ribbon({ x: LOT.x0, z: TRUE.A.z }, { x: LOT.x1, z: TRUE.A.z }, "Front offset line - 6.000 setback"); ribbon({ x: TRUE.A.x, z: LOT.zFront }, { x: TRUE.A.x, z: LOT.zRear }, "West offset line - 4.000 setback"); crossHit.visible = true; tappables.push(crossHit); }
   if (n.mode === "tap2") stepDone = false;
-  if (n.mode === "intro") stepDone = true;
+  if (n.mode === "intro" || n.mode === "explain") stepDone = true;
+  if (n.mode === "end") { stepDone = false; }
   if (n.mode === "quiz" && checked.square) { stepIdx++; n = step(); } // skip the fix step when already square
+  if (wrongRun && n.mode === "keypad") { while (step().mode !== "pour") stepIdx++; n = step(); feedback = "This time the crew is in a hurry. Nobody calculates the diagonal, nobody measures it. The profiles are marked up and the concrete is booked."; }
   renderBoard(); updateGuide(); walkTo(); speakStep();
+}
+
+// ---------- jump to any step: the site is built up to that point, silently ----------
+function jumpTo(target) {
+  if (poured) { location.hash = ""; location.reload(); return; }
+  if (target <= stepIdx) { location.hash = "step" + target; location.reload(); return; }
+  ffMode = true; demoRunning = false;
+  var guard = 0;
+  while (stepIdx < target && guard++ < 40) { var s = step(); if (!stepDone && s.mode !== "intro" && s.mode !== "explain" && s.mode !== "pour") { runQueue(buildQueue(s)); } if (s.mode === "pour") break; stepDone = true; advance(); }
+  ffMode = false; feedback = ""; stepDone = step().mode === "intro"; renderBoard(); updateGuide(); walkTo(); speakStep();
+}
+
+// ---------- guided demo: the game does the step for you ----------
+function later(fn, ms) { return function (next) { if (ffMode) { fn(); next(); return; } setTimeout(function () { try { fn(); } catch (e) { feedback = "Something went wrong in this step: " + (e && e.message); demoRunning = false; renderBoard(); return; } next(); }, ms); }; }
+function runQueue(q, done) { var i = 0; (function step_() { if (i >= q.length) { done && done(); return; } q[i++](step_); })(); }
+function runDemo() {
+  if (demoRunning || stepDone || poured) return;
+  var s = step(), q = buildQueue(s);
+  demoRunning = true; renderBoard();
+  runQueue(q, function () { if (!poured) demoRunning = false; renderBoard(); });
+}
+function buildQueue(s) {
+  var q = [], skew = wrongRun ? 0.25 : 0;
+  if (tourDemos[tab]) { tourDemos[tab](s, q); return q; }
+  if (s.mode === "tap") { for (var i = 0; i < 4; i++) (function (i) { q.push(later(function () { updateGuide(); walkTo(); }, 200)); q.push(later(function () { tapObject({ userData: { survey: i } }); }, 1100)); })(i); }
+  else if (s.mode === "tap2") { q.push(later(function () { walkTo(); }, 200)); q.push(later(function () { tapObject({ userData: { cross: true } }); }, 1400)); }
+  else if (s.mode === "place") {
+    var tgt = targetFor(s.peg), ref = s.peg === "A" ? { x: tgt.x, z: LOT.zFront } : (s.peg === "G" ? pegs.D : pegs.A), dm = s.peg === "A" ? JOB.front : (s.peg === "D" ? JOB.depth : (s.peg === "F" || s.peg === "G" ? JOB.width : 3));
+    q.push(later(function () { walkTo(); standAt(workerA, ref, { x: 0.35, z: 0.35 }); walkTapeTo(workerB, ref, tgt, 2200); }, 200));
+    q.push(later(function () { showTapesTo(tgt); }, 2400));
+    q.push(later(function () { showTapeReading(tgt, dm); }, 700));
+    q.push(later(function () { placeAt(tgt); setTapes([]); ghost.visible = false; }, 2600));
+    q.push(later(function () { hideWorkers(); }, 1800));
+  }
+  else if (s.mode === "cross") {
+    var pt = { x: pegs.A.x + skew, z: pegs.A.z - 6 }, off = { x: pegs.A.x + skew + 1.2, z: pegs.A.z - 6 };
+    q.push(later(function () { walkTo(); standAt(workerA, pegs.B, { x: 0.35, z: 0.35 }); walkTapeTo(workerB, pegs.C, off, 2200); }, 200));
+    q.push(later(function () { showTapesTo(off); feedback = "Tape from B reads " + fmt(dist(off, pegs.B)) + ", tape from C reads " + fmt(dist(off, pegs.C)) + ". Not equal - slide across."; renderBoard(); }, 2400));
+    q.push(later(function () { tween(workerB, { x: pt.x + 0.3, z: pt.z + 0.3 }, 1600); }, 1800));
+    q.push(later(function () { showTapesTo(pt); showTapeReading(pt, dist(pt, pegs.B), "Both tapes read the same. The crossing is on the perpendicular."); }, 1800));
+    q.push(later(function () { placeAt(pt); setTapes([]); ghost.visible = false; }, 3000));
+    q.push(later(function () { hideWorkers(); }, 1800));
+  }
+  else if (s.mode === "check345") {
+    var p = perpDir(), m4 = { x: pegs.A.x + p.x * 4, z: pegs.A.z + p.z * 4 };
+    q.push(later(function () { walkTo(); standAt(workerA, pegs.A, { x: -0.35, z: 0.35 }); walkTapeTo(workerB, pegs.A, m4, 2000); }, 200));
+    q.push(later(function () { setTapes([]); var m = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 8), new THREE.MeshBasicMaterial({ color: 0xff2fa0 })); m.position.set(m4.x, 0.02, m4.z); site.add(m); showTapeReading(m4, 4, "4.000 back along A-E from the nail in A. A mark, not a peg."); }, 2200));
+    q.push(later(function () { standAt(workerA, pegs.B, { x: 0.35, z: 0.35 }); walkTapeTo(workerB, pegs.B, m4, 2000); }, 2600));
+    q.push(later(function () { var d = dist(pegs.B, m4); showTapeReading(m4, d, Math.abs(d - 5) < 0.003 ? "5.000. The corner is square." : "Not 5.000 - the corner is " + mm(Math.abs(d - 5)) + " off."); feedback = Math.abs(d - 5) < 0.003 ? "Right. B to the 4 m mark reads 5.000. 3, 4, 5 - the corner at A is square." : (wrongRun ? "It reads " + fmt(d) + ". Near enough, they say, and move on." : "It reads " + fmt(d) + " - " + mm(Math.abs(d - 5)) + " out. The corner is not square."); if (Math.abs(d - 5) < 0.003) markRight(); else markMiss(); stepDone = true; renderBoard(); updateGuide(); }, 2200));
+    q.push(later(function () { hideWorkers(); }, 2500));
+  }
+  else if (s.mode === "corners") {
+    ["A", "F", "G", "D"].forEach(function (k) {
+      q.push(later(function () { setGuide(pegs[k], "Corner " + k); walkTo(); standAt(workerA, pegs[k], { x: 0.5, z: 0.5 }); dropBob(pegs[k], 0.95, 0.47); }, 300));
+      q.push(later(function () { clout(pegs[k], 0.46); feedback = "Corner " + k + ": bob settled, clout nail in." + (k === "D" ? " Four corners on the ground, straight off the profiles." : ""); renderBoard(); }, 1900));
+      q.push(later(function () { bob.visible = false; }, 700));
+    });
+    q.push(later(function () { hideWorkers(); stepDone = true; markRight(); renderBoard(); updateGuide(); }, 300));
+  }
+  else if (s.mode === "profiles") { for (var j = 0; j < 8; j++) q.push(later(function () { updateGuide(); walkTo(); var n = null; profileSlots().some(function (sl, i) { if (!profiles.some(function (p) { return p.slot === i; })) { n = sl; return true; } }); if (n) placeAt({ x: n.from.x + n.dir.x * 2, z: n.from.z + n.dir.z * 2 }); }, 1000)); }
+  else if (s.mode === "level") { for (var k = 0; k < 8; k++) (function (k) { q.push(later(function () { var pr = profiles[k]; ghost.visible = true; ghost.position.set(pr.x, 0.5, pr.z); gpeg.visible = false; gring.visible = false; drawLabel([["head RL", 100.9 + pr.headErr]]); }, 700)); })(k); q.push(later(function () { ghost.visible = false; gpeg.visible = true; gring.visible = true; tapObject({ userData: { profile: 4 } }); }, 900)); }
+  else if (s.mode === "transfer") { for (var m = 0; m < 8; m++) q.push(later(function () { updateGuide(); walkTo(); var p = null; profiles.some(function (pr, i) { if (!pr.nail) { p = i; return true; } }); if (p !== null) tapObject({ userData: { profile: p } }); }, 900)); }
+  else if (s.mode === "keypad") { "15.000".split("").forEach(function (ch) { q.push(later(function () { act({ key: ch }); }, 250)); }); q.push(later(function () { act({ act: "calc" }); }, 600)); }
+  else if (s.mode === "measure") { q.push(later(function () { act({ act: "measure" }); }, 800)); }
+  else if (s.mode === "quiz") { q.push(later(function () { act({ quiz: s.answer }); }, 1200)); }
+  else if (s.mode === "pour") { q.push(later(function () { act({ act: "pour" }); }, 400)); }
+  return q;
+}
+var tourDemos = {};
+function showTapesTo(pt) {
+  var s = step(); ghost.visible = true; ghost.position.set(pt.x, 0, pt.z); gpeg.visible = true; gring.visible = true; drawLabel(readouts(pt));
+  var refs = [];
+  if (s.mode === "place" && s.peg === "A") refs = [{ x: pt.x, z: LOT.zFront }, { x: LOT.x0, z: pt.z }];
+  if (s.mode === "place" && (s.peg === "B" || s.peg === "C" || s.peg === "F" || s.peg === "D")) refs = [pegs.A];
+  if (s.mode === "place" && s.peg === "G") refs = [pegs.D, pegs.F];
+  if (s.mode === "cross") refs = [pegs.B, pegs.C];
+  setTapes(refs);
 }
 
 // ---------- voice ----------
 function stopSpeech() { try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {} }
 function speak(text) {
-  if (!voiceOn || !window.speechSynthesis) return;
+  if (ffMode || !voiceOn || !window.speechSynthesis) return;
   try { stopSpeech(); var u = new SpeechSynthesisUtterance(text.replace(/\n+/g, ". ")); u.lang = "en-AU"; u.rate = 0.95; var vs = speechSynthesis.getVoices(); var v = vs.find(function (x) { return /en[-_]AU/i.test(x.lang); }) || vs.find(function (x) { return /en[-_]GB/i.test(x.lang); }); if (v) u.voice = v; speechSynthesis.speak(u); } catch (e) {}
 }
-function speakStep() { var s = step(); speak((s.mode === "done" ? "" : "Step " + s.n + ". ") + s.title + ". " + (s.mode === "done" ? "" : s.task) + (s.how ? " " + s.how : "")); }
+function speakStep() { var s = step(); speak((s.mode === "done" || s.n === 0 ? "" : "Step " + s.n + ". ") + s.title + ". " + (s.mode === "done" ? "" : s.task) + (s.how ? " " + s.how : "")); }
 
 // ---------- walking you to the spot ----------
 // each step has a place to stand; the game puts you there, facing the work, when the step starts
 function vantageFor() {
   var s = step(), t = null, back = { x: 0, z: 1 }, d = 3.2;
   var bc = { x: TRUE.A.x + JOB.width / 2, z: TRUE.A.z - JOB.depth / 2 };
-  if (s.mode === "intro" || s.mode === "keypad" || s.mode === "measure" || s.mode === "quiz") { t = bc; d = 11; }
+  if (tab !== "setout" && s.vantage) { t = s.vantage.look; return { x: s.vantage.x, z: s.vantage.z, y: s.vantage.y, look: t }; }
+  if (s.mode === "intro" || s.mode === "explain" || s.mode === "keypad" || s.mode === "measure" || s.mode === "quiz" || s.mode === "end") { t = bc; d = 11; }
   else if (s.mode === "pour" || s.mode === "done") { t = bc; d = 13; }
   else if (guide.visible) { t = { x: guide.position.x, z: guide.position.z }; }
   else t = bc;
@@ -710,17 +920,19 @@ function vantageFor() {
   var px = Math.max(LOT.x0 + 0.8, Math.min(LOT.x1 - 0.8, t.x + vx * d)), pz = Math.max(LOT.zRear + 0.8, Math.min(LOT.zFront + 2.5, t.z + vz * d));
   return { x: px, z: pz, look: t };
 }
+function groundY(x, z) { return tab === "setout" ? 0 : (tab === "volumes" ? volGy(x, z) : gy(x, z)); }
 function faceAndStand(v) {
   var yawWanted = Math.atan2(-(v.look.x - v.x), -(v.look.z - v.z));
   if (renderer.xr.isPresenting) {
     var f = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); var headYaw = Math.atan2(-f.x, -f.z);
     rig.rotation.y = yawWanted - headYaw;
     var hx = camera.position.x, hz = camera.position.z, cy = Math.cos(rig.rotation.y), sy = Math.sin(rig.rotation.y);
-    rig.position.set(v.x - (hx * cy + hz * sy), 0, v.z - (-hx * sy + hz * cy));
-  } else { yaw = yawWanted; pitch = -0.25; rig.position.set(v.x, 0, v.z); }
+    rig.position.set(v.x - (hx * cy + hz * sy), v.y !== undefined ? v.y : groundY(v.x, v.z), v.z - (-hx * sy + hz * cy));
+  } else { yaw = yawWanted; pitch = v.y !== undefined ? -0.75 : -0.25; rig.position.set(v.x, v.y !== undefined ? v.y : groundY(v.x, v.z), v.z); }
+  if (typeof showDeck === "function") { if (v.y !== undefined) showDeck(v, v.y); else if (aerialDeck) aerialDeck.visible = false; }
   tone(600, 0, 0.06, 0.06);
 }
-function walkTo() { updateGuide(); var v = vantageFor(); if (v) faceAndStand(v); }
+function walkTo() { if (ffMode) return; updateGuide(); var v = vantageFor(); if (v) faceAndStand(v); }
 
 // ---------- interaction ----------
 var raycaster = new THREE.Raycaster(), tmpM = new THREE.Matrix4(), o3 = new THREE.Vector3(), d3 = new THREE.Vector3();
@@ -731,14 +943,14 @@ function castFrom(origin, dir) {
   if (hb.length && hb[0].uv) return { kind: "board", idx: board.hitAt(hb[0].uv.x, hb[0].uv.y), dist: hb[0].distance };
   var ht = raycaster.intersectObjects(tappables, false);
   if (ht.length) return { kind: "obj", obj: ht[0].object, dist: ht[0].distance };
-  var hg = raycaster.intersectObject(ground, false);
+  var hg = raycaster.intersectObject(tab === "setout" ? ground : (tab === "volumes" ? volTerrain : terrain), false);
   if (hg.length) return { kind: "ground", pt: { x: hg[0].point.x, z: hg[0].point.z }, dist: hg[0].distance };
   return null;
 }
 function updatePointer(h) {
   var newHover = h && h.kind === "board" ? h.idx : -1;
   if (newHover !== hoverIdx) { hoverIdx = newHover; board.hover = hoverIdx; renderBoard(); }
-  var s = step(), wantsGround = ["place", "cross", "profiles"].indexOf(s.mode) >= 0 && !stepDone;
+  var s = step(), wantsGround = !guided && ["place", "cross", "profiles"].indexOf(s.mode) >= 0 && !stepDone;
   if (h && h.kind === "ground" && wantsGround) {
     ghost.visible = true; ghost.position.set(h.pt.x, 0, h.pt.z);
     var r = readouts(h.pt); drawLabel(r);
@@ -758,10 +970,11 @@ function updatePointer(h) {
 function press(h) {
   if (!h) return;
   if (h.kind === "board") { if (h.idx >= 0 && board.hits[h.idx].action) { tone(1200, 0, 0.04, 0.08); act(board.hits[h.idx].action); } return; }
+  if (guided) { var s0 = step(); if (h.kind === "obj" || (h.kind === "ground" && guide.visible && Math.hypot(h.pt.x - guide.position.x, h.pt.z - guide.position.z) < 2.0)) { if (!stepDone && !demoRunning) runDemo(); else if (stepDone) act({ act: "next" }); } return; }
   if (h.kind === "obj") { tapObject(h.obj); return; }
-  if (h.kind === "ground") { var s = step(); if (["place", "cross", "profiles"].indexOf(s.mode) >= 0) placeAt(h.pt); else teleport(h.pt); }
+  if (h.kind === "ground") { var s = step(); if (["place", "cross", "profiles"].indexOf(s.mode) >= 0) placeAt(h.pt); }
 }
-function teleport(pt) { rig.position.set(pt.x, 0, pt.z); tone(600, 0, 0.06, 0.06); }
+function teleport(pt) { rig.position.set(pt.x, groundY(pt.x, pt.z), pt.z); tone(600, 0, 0.06, 0.06); }
 
 // controllers
 var controllers = [];
@@ -785,7 +998,7 @@ function pollSticks(dt) {
 }
 
 // desktop
-var mouse = new THREE.Vector2(0, 0), yaw = 0, pitch = 0, dragging = false, moved = false, lastX = 0, lastY = 0, keys = {};
+var mouse = new THREE.Vector2(0, 0), yaw = 0, pitch = -0.15, dragging = false, moved = false, lastX = 0, lastY = 0, keys = {};
 renderer.domElement.addEventListener("mousedown", function (e) { dragging = true; moved = false; lastX = e.clientX; lastY = e.clientY; });
 window.addEventListener("mouseup", function (e) { dragging = false; if (moved || renderer.xr.isPresenting) return; updateMouse(e); raycaster.setFromCamera(mouse, camera); var h = castFrom(raycaster.ray.origin, raycaster.ray.direction); if (e.button === 2) { if (h && h.kind === "ground") teleport(h.pt); } else press(h); });
 window.addEventListener("contextmenu", function (e) { e.preventDefault(); });
@@ -824,13 +1037,16 @@ renderer.setAnimationLoop(function () {
   }
   camDir.y = 0; camDir.normalize();
   // clipboard: centred, chest height, and it only re-centres once you have turned or walked well away from it
-  boardTarget.copy(camPos).addScaledVector(camDir, 0.95); boardTarget.y = camPos.y - 0.55;
+  var vr = renderer.xr.isPresenting, rightV = new THREE.Vector3(-camDir.z, 0, camDir.x);
+  boardTarget.copy(camPos).addScaledVector(camDir, vr ? 1.0 : 1.3).addScaledVector(rightV, vr ? 0 : 0.55); boardTarget.y = camPos.y - (vr ? 0.45 : 0.2);
   var toBoard = new THREE.Vector3().subVectors(board.mesh.position, camPos); toBoard.y = 0; var dBoard = toBoard.length(); toBoard.normalize();
   var ang = Math.acos(Math.max(-1, Math.min(1, toBoard.dot(camDir))));
   if (!boardInit || ang > 0.6 || dBoard > 1.6 || dBoard < 0.5) boardFollow = true;
   if (boardFollow) { board.mesh.position.lerp(boardTarget, boardInit ? 0.08 : 1); if (board.mesh.position.distanceTo(boardTarget) < 0.03) boardFollow = false; boardInit = true; }
   board.mesh.lookAt(camPos.x, camPos.y - 0.1, camPos.z);
   guideRing.scale.setScalar(1 + 0.12 * Math.sin(now / 250));
+  tickTweens(now); tickWalkTape(); tickBob(); if (typeof _tickExtra === "function") _tickExtra(now, camPos);
+  if (tapeBoard.mesh.visible) { if (now > tapeBoardUntil) tapeBoard.mesh.visible = false; else tapeBoard.mesh.lookAt(camPos.x, tapeBoard.mesh.position.y, camPos.z); }
   // frame drops onto the slab
   if (frameDrop > 0 && frameMesh) { frameMesh.position.y = Math.max(0, frameMesh.position.y - 3 * dt); if (frameMesh.position.y === 0 && frameDrop === 1) { frameDrop = 2; thunk(); } }
   renderer.render(scene, camera);
@@ -838,6 +1054,615 @@ renderer.setAnimationLoop(function () {
 
 renderBoard();
 updateGuide();
+(function () { var m = /step(\d+)/.exec(location.hash); if (m) { location.hash = ""; var t = parseInt(m[1], 10); if (t > 0) jumpTo(t); } })();
+
+
+// =====================================================================
+// THE NATURAL SITE - terrain, datum, grid, level and staff
+// The other three tours happen here, before the platform is cut.
+// =====================================================================
+
+var DATUM = { x: LOT.x0, z: LOT.zFront, rl: 100.000 };     // TBM: nail in the front-west survey peg
+function RL(x, z) {
+  var back = Math.max(0, LOT.zFront - z), f = Math.min(1, back / 6);
+  return 100.0 + 0.06 * back + 0.03 * (x + 10) * f + 0.18 * Math.sin((x + 10) / 6) * Math.cos(z / 7) * f;
+}
+function gy(x, z) { return RL(x, z) - 100.0; }
+function r3(v) { return Math.round(v * 1000) / 1000; }
+
+// terrain mesh
+var terrainGeo = new THREE.PlaneGeometry(240, 240, 160, 160); terrainGeo.rotateX(-Math.PI / 2);
+(function () { var p = terrainGeo.attributes.position; for (var i = 0; i < p.count; i++) { var x = p.getX(i), z = p.getZ(i); p.setY(i, gy(x, z)); } terrainGeo.computeVertexNormals(); })();
+var terrain = new THREE.Mesh(terrainGeo, new THREE.MeshStandardMaterial({ map: groundTexture(), roughness: 1 }));
+terrain.visible = false; scene.add(terrain);
+
+// grid: A-D east at 3 m, rows 1-4 rearward at 3 m, A1 on the future peg A
+var GRID = { x0: TRUE.A.x, z0: TRUE.A.z, sp: 3, cols: ["A", "B", "C", "D"], rows: [1, 2, 3, 4] };
+function gridPt(c, r) { return { x: GRID.x0 + c * GRID.sp, z: GRID.z0 - r * GRID.sp, name: GRID.cols[c] + GRID.rows[r] }; }
+var gridPts = []; for (var gr = 0; gr < 4; gr++) for (var gc = 0; gc < 4; gc++) gridPts.push(gridPt(gc, gr));
+gridPts.forEach(function (p) { p.rl = r3(RL(p.x, p.z)); });
+var PLATFORM = 100.950;
+
+var natural = new THREE.Group(); natural.visible = false; scene.add(natural);   // everything built on the natural site
+function ySprite(text, w, h, bg) { var c = document.createElement("canvas"); c.width = 256; c.height = 128; var x = c.getContext("2d"); x.fillStyle = bg || "rgba(30,42,68,0.9)"; x.fillRect(0, 0, 256, 128); x.font = "70px " + FONT; x.fillStyle = "#f4f1e8"; x.textAlign = "center"; x.fillText(text, 128, 90); var t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true })); sp.scale.set(w || 0.5, h || 0.25, 1); return sp; }
+function gridPeg(p) {
+  var g = new THREE.Group(); var body = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.45, 0.04), mPeg); body.position.y = 0.2; g.add(body);
+  var top = new THREE.Mesh(new THREE.BoxGeometry(0.042, 0.04, 0.042), new THREE.MeshStandardMaterial({ color: 0xe8801a })); top.position.y = 0.42; g.add(top);
+  var lab = ySprite(p.name, 0.5, 0.25); lab.position.y = 0.7; g.add(lab);
+  g.position.set(p.x, gy(p.x, p.z), p.z); g.visible = false; natural.add(g); return g;
+}
+var gridMeshes = gridPts.map(gridPeg);
+
+// dumpy level on a tripod, and the staff
+var level = new THREE.Group();
+[0, 2.094, 4.189].forEach(function (a) { var leg = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 1.4, 8), mSteel); leg.position.set(Math.sin(a) * 0.35, 0.7, Math.cos(a) * 0.35); leg.rotation.z = Math.cos(a) * 0.25; leg.rotation.x = -Math.sin(a) * 0.25; level.add(leg); });
+var lvHead = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.05, 20), new THREE.MeshStandardMaterial({ color: 0x2b2b2b })); lvHead.position.y = 1.4; level.add(lvHead);
+var lvScope = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.24, 16), new THREE.MeshStandardMaterial({ color: 0xd9d21a })); lvScope.rotation.x = Math.PI / 2; lvScope.position.y = 1.47; level.add(lvScope);
+var lvEye = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.04, 12), new THREE.MeshStandardMaterial({ color: 0x111111 })); lvEye.rotation.x = Math.PI / 2; lvEye.position.set(0, 1.47, 0.14); level.add(lvEye);
+level.visible = false; natural.add(level);
+var INSTR_H = 1.45;
+function placeLevel(pt, lookAt) { level.visible = true; level.position.set(pt.x, gy(pt.x, pt.z), pt.z); if (lookAt) level.rotation.y = Math.atan2(lookAt.x - pt.x, lookAt.z - pt.z) + Math.PI; level.userData.hoc = RL(pt.x, pt.z) + INSTR_H; }
+function reading(pt) { return r3(level.userData.hoc - RL(pt.x, pt.z)); }
+
+var staff = new THREE.Group();
+(function () { var c = document.createElement("canvas"); c.width = 64; c.height = 1024; var x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, 64, 1024); for (var i = 0; i < 40; i++) { x.fillStyle = Math.floor(i / 10) % 2 ? "#c9302c" : "#1e2a44"; if (i % 2 === 0) x.fillRect(0, 1024 - (i + 1) * 25.6, 40, 25.6); } var t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; var m = new THREE.Mesh(new THREE.BoxGeometry(0.06, 4.0, 0.03), new THREE.MeshStandardMaterial({ map: t })); m.position.y = 2.0; staff.add(m); })();
+staff.visible = false; natural.add(staff);
+function placeStaff(pt) { staff.visible = true; staff.position.set(pt.x, gy(pt.x, pt.z), pt.z); }
+
+// staff close-up: the eyepiece view, crosshair on the reading
+var staffBoard = new Panel(0.6, 0.6, 600, 600); staffBoard.mesh.visible = false; scene.add(staffBoard.mesh); var staffBoardUntil = 0;
+function showStaffReading(pt, val, label) {
+  var P = staffBoard, c = P.ctx; P.begin();
+  c.save(); c.beginPath(); c.arc(300, 300, 270, 0, 7); c.clip(); c.fillStyle = "#e8eef4"; c.fillRect(0, 0, 600, 600);
+  var pxPerMm = 2.2, cx = 300, cy = 300;
+  for (var mmv = Math.round(val * 1000) - 140; mmv <= Math.round(val * 1000) + 140; mmv++) {
+    var y = cy + (mmv - val * 1000) * pxPerMm;
+    if (mmv % 10 === 0) { var blk = Math.floor(mmv / 10) % 2 === 0; c.fillStyle = Math.floor(mmv / 100) % 2 ? "#c9302c" : "#1e2a44"; if (blk) c.fillRect(230, y - 10 * pxPerMm, 60, 10 * pxPerMm); if (mmv % 100 === 0) { c.font = "bold 44px " + FONT; c.textAlign = "left"; c.fillText((mmv / 1000).toFixed(1), 300, y + 14); } }
+  }
+  c.restore(); c.lineWidth = 4; c.strokeStyle = "#1e2a44"; c.beginPath(); c.arc(300, 300, 270, 0, 7); c.stroke();
+  c.strokeStyle = "#111"; c.lineWidth = 3; c.beginPath(); c.moveTo(40, cy); c.lineTo(560, cy); c.moveTo(cx, 40); c.lineTo(cx, 560); c.stroke();
+  c.strokeStyle = "#888"; c.lineWidth = 2; c.beginPath(); c.moveTo(200, cy - 30); c.lineTo(400, cy - 30); c.moveTo(200, cy + 30); c.lineTo(400, cy + 30); c.stroke();
+  c.fillStyle = "#c9302c"; c.font = "bold 44px " + FONT; c.textAlign = "center"; c.fillText(fmt(val), 300, 560);
+  c.fillStyle = C.ink; c.font = "26px " + FONT; c.fillText(label || "centre hair, not the stadia line", 300, 590);
+  P.end(); P.mesh.visible = true; P.mesh.position.set(pt.x, gy(pt.x, pt.z) + 2.6, pt.z); staffBoardUntil = performance.now() + 4500;
+}
+
+// =====================================================================
+// LEVELLING TOUR
+// =====================================================================
+var LV = { pegP: { x: -8, z: 12 }, pegQ: { x: 8, z: 12 }, st1: { x: 0, z: 12 }, st2: { x: 11, z: 12 }, cp: { x: -2, z: 4 }, stA: { x: -7, z: 7 }, stB: { x: 2, z: -3 } };
+var lvSheet = [];   // booking rows: {pt, bs, is, fs, rise, fall, rl, note}
+var twoPeg = { a1: 0, b1: 0, a2: 0, b2: 0 };
+function bookRow(r) { lvSheet.push(r); }
+function reduceSheet() {
+  var prev = null; lvSheet.forEach(function (r, i) { var cur = r.is !== undefined ? r.is : (r.fs !== undefined ? r.fs : undefined); if (i === 0) { r.rl = DATUM.rl; prev = r.bs; return; } var d = prev - cur; if (d >= 0) r.rise = r3(d); else r.fall = r3(-d); r.rl = r3(lvSheet[i - 1].rl + d); prev = r.bs !== undefined ? r.bs : cur; });
+}
+function sums() { var bs = 0, fs = 0, rs = 0, fl = 0; lvSheet.forEach(function (r) { bs += r.bs || 0; fs += r.fs || 0; rs += r.rise || 0; fl += r.fall || 0; }); return { bs: r3(bs), fs: r3(fs), rise: r3(rs), fall: r3(fl) }; }
+
+var LEVEL_STEPS = [
+  { title: "Levelling: datum, the level plane, and the booking sheet", mode: "intro", vantage: { x: -6, z: 20, look: { x: 0, z: 5 } },
+    task: "This is the natural site, before any earthworks. It falls toward the street and it rolls. Every height on this job is measured against one point: the TBM, a nail in the front-west survey peg, RL 100.000.\\n\\nThe level projects an invisible horizontal plane - think of a sheet of glass at instrument height. Every staff reading is how far the ground is below that glass. Big reading, low ground. Small reading, high ground.\\n\\nWhat you will do: check the instrument, run a two-peg test, set up, read the TBM, read pegs, move the instrument through a change point, and close the loop back to the TBM. Then the arithmetic has to balance three ways." },
+  { title: "Bubble check - two minutes that save a re-survey", mode: "bubble", vantage: { x: 2, z: 15, look: LV.st1 }, guide: { pt: LV.st1, text: "Instrument" },
+    watch: "Watch: instrument set up, bubble centred, then the telescope turned through 180 degrees. If the bubble stays centred, the vial is true.",
+    task: "Before any reading: set the tripod firm, centre the bubble, then rotate the telescope 180 degrees. The bubble must stay centred. If it drifts, the instrument needs adjusting - stop.",
+    why: "Systematic errors are the dangerous ones. They repeat on every reading and pass every arithmetic check. The only defence is testing the instrument before you trust it." },
+  { title: "Two-peg test - part one, the true difference", mode: "twopeg1", vantage: { x: 0, z: 17, look: LV.st1 }, guide: { pt: LV.st1, text: "Midpoint" },
+    watch: "Watch: pegs P and Q 16 m apart, the level exactly midway. Staff on P, read. Staff on Q, read. The difference is the true height difference - any tilt in the telescope cancels because the sights are equal.",
+    task: "Two pegs, P and Q. Instrument set up exactly halfway between them. Read the staff on each. Because both sights are the same length, any collimation error is the same on both readings and cancels in the subtraction. That difference is the truth.",
+    why: "Equal sight lengths are the whole point. Pace it if you have to, but get the instrument in the middle." },
+  { title: "Two-peg test - part two, expose the error", mode: "twopeg2", vantage: { x: 9, z: 16, look: LV.st2 }, guide: { pt: LV.st2, text: "Beyond Q" },
+    watch: "Watch: the level moves to just beyond Q. Now one sight is short and one is long. Read both again. Compare this difference with the true one.",
+    task: "Move the instrument to a point beyond one peg, so the sights are unequal. Read both pegs again. If the telescope is tilted, the long sight carries more of the error and the difference changes. Difference of differences is the collimation error over 16 m. More than 3 mm - the instrument goes for service.",
+    why: "Difference of the differences. Students forget the last subtraction and report the wrong number." },
+  { title: "Set up and read the TBM - backsight", mode: "bs", vantage: { x: -9, z: 11, look: LV.stA }, guide: { pt: DATUM, text: "TBM" },
+    watch: "Watch: station 1 set up. First reading is a backsight to the TBM. Height of collimation = RL of the TBM + the backsight.",
+    task: "Station 1. The first reading from any new station is a backsight to a point of known RL - here the TBM at 100.000. Add the reading to the RL and you have the height of the glass: the height of collimation, HOC.",
+    why: "HOC = RL of TBM + BS. Everything read from this station is HOC minus the reading. No rise or fall is worked on the TBM line - it only sets the height." },
+  { title: "Intermediate sights - the grid corners", mode: "is", vantage: { x: -9, z: 11, look: gridPts[0] }, guide: { pt: gridPts[0], text: "A1" },
+    watch: "Watch: the staff goes to A1, then D1, then A4. Each is an intermediate sight, booked in the IS column, one line per peg.",
+    task: "Intermediate sights: readings between the backsight and the foresight. The staff walks to each point, the instrument does not move. Book the reading first, on its own line. Do the arithmetic after.",
+    why: "Readings are evidence. Write them down in the order they happen. Calculate later, when you are sure you have them all." },
+  { title: "Change point - foresight, move, backsight", mode: "cp", vantage: { x: -4, z: 1, look: LV.cp }, guide: { pt: LV.cp, text: "Change point" },
+    watch: "Watch: the last reading from station 1 is a foresight to the change point. The instrument moves to station 2. The first reading from station 2 is a backsight to the same change point. One line on the sheet holds both.",
+    task: "The far corner cannot be read from station 1, so the instrument has to move. A change point carries the height across: foresight to it from the old station, backsight to it from the new. The staff does not move between those two readings. The CP is one line on the sheet, with an FS and a BS on it.",
+    why: "The change point is the relay baton. If the peg moves between the FS and the BS, the whole run after it is wrong." },
+  { title: "Read D4 and close back on the TBM", mode: "close", vantage: { x: 4, z: -4, look: gridPts[15] }, guide: { pt: gridPts[15], text: "D4" },
+    watch: "Watch: from station 2, an intermediate sight to D4, then a foresight back to the TBM. The loop is closed.",
+    task: "From station 2 read D4, then finish with a foresight back to the TBM. The run started on the TBM and ends on it, so the last RL should come out at 100.000. The difference is the misclose.",
+    why: "Closing the loop proves the field work, not just the maths. An arithmetic check cannot catch a misread staff. A closed loop can." },
+  { title: "Reduce the sheet - rise and fall", mode: "reduce", vantage: { x: -6, z: 20, look: { x: 0, z: 5 } },
+    watch: "Watch: the sheet fills in. Each reading is compared to the one above it: previous minus current. Positive is a rise, negative is a fall. RL = previous RL plus rise or minus fall.",
+    task: "Rise and fall: compare each reading with the one immediately above it. Previous minus current. Positive, the ground rose. Negative, it fell. Carry the RL down the sheet. Do not reset at the change point - the comparison runs straight through it.",
+    why: "If the next reading is smaller the ground went up. If it is bigger the ground went down. Say it out loud until it is automatic." },
+  { title: "The three-way check", mode: "check3", vantage: { x: -6, z: 20, look: { x: 0, z: 5 } },
+    watch: "Watch: sum of backsights minus sum of foresights, sum of rises minus sum of falls, last RL minus first RL. All three must be the same number.",
+    task: "Total the columns. Sum BS minus sum FS must equal sum rise minus sum fall, and both must equal last RL minus first RL. If they do not, there is a booking or arithmetic error - find it now, on site, not back at the office.",
+    why: "It is a bank reconciliation. It balances or it does not. Never do it in your head." },
+  { title: "Levelling complete", mode: "end", nextTab: "grid", nextLabel: "Grid survey",
+    task: "Instrument tested, TBM read, pegs reduced through a change point, loop closed, sheet balanced three ways. The RLs on this sheet are the ground truth for everything that follows.\\n\\nNext: the grid survey - the same method across sixteen pegs, to draw the ground." }
+];
+
+tourDemos.level = function (s, q) {
+  if (s.mode === "bubble") {
+    q.push(later(function () { walkTo(); placeLevel(LV.st1, LV.pegP); standAt(workerA, LV.st1, { x: 0.6, z: 0.6 }); feedback = "Tripod feet pushed in. Bubble centred."; renderBoard(); }, 300));
+    q.push(later(function () { level.rotation.y += Math.PI; feedback = "Turned 180 degrees. Bubble still centred - the vial is true. Carry on."; renderBoard(); stepDone = true; markRight(); updateGuide(); }, 1800));
+  }
+  if (s.mode === "twopeg1") {
+    q.push(later(function () { walkTo(); placeLevel(LV.st1, LV.pegP); standAt(workerA, LV.st1, { x: 0.6, z: 0.6 }); placeStaff(LV.pegP); standAt(workerB, LV.pegP, { x: 0.4, z: 0.4 }); }, 300));
+    q.push(later(function () { twoPeg.a1 = reading(LV.pegP); showStaffReading(LV.pegP, twoPeg.a1, "P from the midpoint"); feedback = "P reads " + fmt(twoPeg.a1) + "."; renderBoard(); }, 1500));
+    q.push(later(function () { placeStaff(LV.pegQ); standAt(workerB, LV.pegQ, { x: 0.4, z: 0.4 }); level.rotation.y += Math.PI; }, 2600));
+    q.push(later(function () { twoPeg.b1 = reading(LV.pegQ); showStaffReading(LV.pegQ, twoPeg.b1, "Q from the midpoint"); feedback = "Q reads " + fmt(twoPeg.b1) + ". True difference P minus Q = " + fmt(twoPeg.a1 - twoPeg.b1) + "."; renderBoard(); stepDone = true; markRight(); updateGuide(); }, 1500));
+  }
+  if (s.mode === "twopeg2") {
+    var err = 0.002; // the instrument's collimation, expressed over 16 m
+    q.push(later(function () { walkTo(); placeLevel(LV.st2, LV.pegP); level.userData.hoc = RL(LV.st2.x, LV.st2.z) + INSTR_H; standAt(workerA, LV.st2, { x: 0.6, z: 0.6 }); placeStaff(LV.pegP); standAt(workerB, LV.pegP, { x: 0.4, z: 0.4 }); }, 300));
+    q.push(later(function () { twoPeg.a2 = r3(reading(LV.pegP) + err * (19 / 16)); showStaffReading(LV.pegP, twoPeg.a2, "P - the long sight, 19 m"); feedback = "P from beyond Q reads " + fmt(twoPeg.a2) + "."; renderBoard(); }, 1500));
+    q.push(later(function () { placeStaff(LV.pegQ); standAt(workerB, LV.pegQ, { x: 0.4, z: 0.4 }); }, 2600));
+    q.push(later(function () { twoPeg.b2 = r3(reading(LV.pegQ) + err * (3 / 16)); showStaffReading(LV.pegQ, twoPeg.b2, "Q - the short sight, 3 m"); var d1 = r3(twoPeg.a1 - twoPeg.b1), d2 = r3(twoPeg.a2 - twoPeg.b2), e = Math.abs(r3(d2 - d1)); feedback = "Q reads " + fmt(twoPeg.b2) + ". Difference here " + fmt(d2) + ", true difference " + fmt(d1) + ". Difference of differences " + mm(e) + " over 16 m - " + (e <= 0.003 ? "inside 3 mm. Instrument passes." : "outside 3 mm. Instrument fails."); renderBoard(); stepDone = true; markRight(); updateGuide(); }, 1500));
+  }
+  if (s.mode === "bs") {
+    q.push(later(function () { walkTo(); lvSheet = []; placeLevel(LV.stA, DATUM); standAt(workerA, LV.stA, { x: 0.6, z: 0.6 }); placeStaff(DATUM); standAt(workerB, DATUM, { x: 0.4, z: -0.4 }); }, 300));
+    q.push(later(function () { var bs = reading(DATUM); bookRow({ pt: "TBM", bs: bs, rl: DATUM.rl, note: "HOC " + fmt(DATUM.rl + bs) }); showStaffReading(DATUM, bs, "backsight to TBM"); feedback = "Backsight " + fmt(bs) + ". HOC = 100.000 + " + fmt(bs) + " = " + fmt(DATUM.rl + bs) + "."; renderBoard(); stepDone = true; markRight(); updateGuide(); }, 1600));
+  }
+  if (s.mode === "is") {
+    [gridPts[0], gridPts[3], gridPts[12]].forEach(function (p, i) {
+      q.push(later(function () { gridMeshes[gridPts.indexOf(p)].visible = true; placeStaff(p); standAt(workerB, p, { x: 0.4, z: 0.4 }); level.rotation.y = Math.atan2(p.x - LV.stA.x, p.z - LV.stA.z) + Math.PI; setGuide(p, p.name); }, i === 0 ? 300 : 2400));
+      q.push(later(function () { var v = reading(p); bookRow({ pt: p.name, is: v }); showStaffReading(p, v, "IS " + p.name); feedback = p.name + " reads " + fmt(v) + ". RL = HOC minus reading = " + fmt(level.userData.hoc - v) + "."; renderBoard(); }, 1500));
+    });
+    q.push(later(function () { stepDone = true; markRight(); updateGuide(); renderBoard(); }, 2000));
+  }
+  if (s.mode === "cp") {
+    q.push(later(function () { walkTo(); placeStaff(LV.cp); standAt(workerB, LV.cp, { x: 0.4, z: 0.4 }); level.rotation.y = Math.atan2(LV.cp.x - LV.stA.x, LV.cp.z - LV.stA.z) + Math.PI; }, 300));
+    q.push(later(function () { var fs = reading(LV.cp); bookRow({ pt: "CP", fs: fs }); showStaffReading(LV.cp, fs, "FS to the change point"); feedback = "Foresight to the change point " + fmt(fs) + ". Staff stays put. Instrument moves."; renderBoard(); }, 1500));
+    q.push(later(function () { placeLevel(LV.stB, LV.cp); standAt(workerA, LV.stB, { x: 0.6, z: 0.6 }); }, 2600));
+    q.push(later(function () { var bs = reading(LV.cp); lvSheet[lvSheet.length - 1].bs = bs; showStaffReading(LV.cp, bs, "BS to the same change point"); feedback = "Backsight from station 2 " + fmt(bs) + ", on the same line as the foresight. New HOC = RL of CP + " + fmt(bs) + "."; renderBoard(); stepDone = true; markRight(); updateGuide(); }, 1800));
+  }
+  if (s.mode === "close") {
+    var d4 = gridPts[15];
+    q.push(later(function () { walkTo(); gridMeshes[15].visible = true; placeStaff(d4); standAt(workerB, d4, { x: 0.4, z: 0.4 }); level.rotation.y = Math.atan2(d4.x - LV.stB.x, d4.z - LV.stB.z) + Math.PI; }, 300));
+    q.push(later(function () { var v = reading(d4); bookRow({ pt: "D4", is: v }); showStaffReading(d4, v, "IS D4"); feedback = "D4 reads " + fmt(v) + "."; renderBoard(); }, 1500));
+    q.push(later(function () { placeStaff(DATUM); standAt(workerB, DATUM, { x: 0.4, z: -0.4 }); level.rotation.y = Math.atan2(DATUM.x - LV.stB.x, DATUM.z - LV.stB.z) + Math.PI; setGuide(DATUM, "TBM"); }, 2600));
+    q.push(later(function () { var v = reading(DATUM); bookRow({ pt: "TBM", fs: v }); showStaffReading(DATUM, v, "FS back to the TBM - loop closed"); feedback = "Foresight to the TBM " + fmt(v) + ". Loop closed. Now reduce the sheet."; renderBoard(); stepDone = true; markRight(); updateGuide(); }, 1500));
+  }
+  if (s.mode === "reduce") {
+    q.push(later(function () { walkTo(); hideWorkers(); reduceSheet(); showSheet = true; var last = lvSheet[lvSheet.length - 1]; feedback = "Reduced. Last RL " + fmt(last.rl) + " against the TBM at 100.000 - misclose " + mm(Math.abs(last.rl - 100)) + ". Sheet is on the clipboard."; renderBoard(); stepDone = true; markRight(); }, 500));
+  }
+  if (s.mode === "check3") {
+    q.push(later(function () { reduceSheet(); var t = sums(), a = r3(t.bs - t.fs), b = r3(t.rise - t.fall), c = r3(lvSheet[lvSheet.length - 1].rl - lvSheet[0].rl); showSheet = true; feedback = "Sum BS " + fmt(t.bs) + " minus sum FS " + fmt(t.fs) + " = " + fmt(a) + ". Sum rise " + fmt(t.rise) + " minus sum fall " + fmt(t.fall) + " = " + fmt(b) + ". Last RL minus first RL = " + fmt(c) + ". " + (Math.abs(a - b) < 0.0015 && Math.abs(b - c) < 0.0015 ? "All three agree. The sheet balances." : "They do not agree - find the error."); renderBoard(); stepDone = true; markRight(); }, 500));
+  }
+};
+tourSheets.level = function (P, L, y, W) {
+  P.text("Rise and fall booking sheet", L, y, C.ink, 36); P.button(P.cw - L - 150, y - 34, 150, 52, "Close", "", { act: "sheet" }, 24); y += 50;
+  var cols = ["Point", "BS", "IS", "FS", "Rise", "Fall", "RL"], cw = [130, 115, 115, 115, 115, 115, 145], x = L;
+  cols.forEach(function (c, i) { P.text(c, x, y, C.mute, 24); x += cw[i]; }); y += 12; P.rule(y, L, L + W); y += 36;
+  lvSheet.forEach(function (r) { x = L; [r.pt, r.bs, r.is, r.fs, r.rise, r.fall, r.rl].forEach(function (v, i) { P.text(v === undefined ? "" : (typeof v === "number" ? fmt(v) : v), x, y, i === 6 ? C.green : C.ink, 26); x += cw[i]; }); y += 40; });
+  if (lvSheet.length && lvSheet[lvSheet.length - 1].rl !== undefined) { var t = sums(); P.rule(y - 20, L, L + W); x = L; ["Sum", t.bs, "", t.fs, t.rise, t.fall, ""].forEach(function (v, i) { P.text(typeof v === "number" ? fmt(v) : v, x, y + 10, C.mute, 24); x += cw[i]; }); y += 60; P.para("BS - FS = " + fmt(t.bs - t.fs) + "     Rise - Fall = " + fmt(t.rise - t.fall) + "     Last - First = " + fmt(lvSheet[lvSheet.length - 1].rl - lvSheet[0].rl), L, y, W, C.ink, 26); }
+  if (twoPeg.a1) { y += 50; P.rule(y - 20, L, L + W); P.text("Two-peg test", L, y + 10, C.ink, 28); y += 46; P.para("Midpoint:   P " + fmt(twoPeg.a1) + "   Q " + fmt(twoPeg.b1) + "   diff " + fmt(twoPeg.a1 - twoPeg.b1) + (twoPeg.a2 ? "\nBeyond Q:   P " + fmt(twoPeg.a2) + "   Q " + fmt(twoPeg.b2) + "   diff " + fmt(twoPeg.a2 - twoPeg.b2) + "\nError " + mm(Math.abs((twoPeg.a2 - twoPeg.b2) - (twoPeg.a1 - twoPeg.b1))) + " over 16 m" : ""), L, y, W, C.ink, 25); }
+};
+
+// =====================================================================
+// GRID SURVEY TOUR
+// =====================================================================
+var gridSheet = [], contourLines = [];
+var GRID_STEPS = [
+  { title: "Grid survey: turning ground into a drawing", mode: "intro", vantage: { x: -12, z: 14, look: { x: -1, z: 4 } },
+    task: "You cannot draw a hill from one reading. The grid method: peg a regular grid across the site, level every peg, then work out where the contours must cross between them.\\n\\nThis is the assessment grid - 9 m by 9 m, 3 m spacing, columns A to D, rows 1 to 4. Sixteen pegs, sixteen RLs, one contour plan." },
+  { title: "Peg the base line - tape held horizontal", mode: "gbase", vantage: { x: -8, z: 13, look: gridPts[1] }, guide: { pt: gridPts[0], text: "A1" },
+    watch: "Watch: from A1 the tape is pulled east along the base line, held level, with a plumb bob dropping the 3 m mark to the ground. B1, C1, D1.",
+    task: "The base line runs along the front of the grid. Every grid distance is a plan distance - horizontal, never along the slope. On falling ground, one end of the tape is held up level and a plumb bob drops the mark to the peg.",
+    why: "This is the single most expensive mistake in the topic. A 10 m tape laid on a slope is less than 10 m in plan. Every volume off that grid is wrong." },
+  { title: "Turn 90 degrees and fill the grid", mode: "gfill", vantage: { x: -9, z: 3, look: gridPts[8] }, guide: { pt: gridPts[4], text: "A2" },
+    watch: "Watch: a 3:4:5 off A1 gives the A column. Then rows 2, 3 and 4 are pegged at 3 m, every intersection labelled.",
+    task: "A quick 3:4:5 turns the second line off the base. Peg the far side, then every interior intersection. Label every peg - letter and number - before you leave it.",
+    why: "A grid without labels is useless. Labels are how the field data becomes a plan." },
+  { title: "Level every peg from one station", mode: "gread", vantage: { x: -10, z: 9, look: LV.stA }, guide: { pt: DATUM, text: "TBM" },
+    watch: "Watch: backsight to the TBM, then the staff walks every peg A1 to D4. Sixteen intermediate sights, booked in order.",
+    task: "Set up where every peg can be seen. Backsight to the TBM for the HOC, then intermediate sights to all sixteen pegs, then a foresight back to the TBM to close. HOC minus each reading is the RL of that peg.",
+    why: "Closed loop, always. The grid RLs feed the contour plan and the cut and fill - an error here is an error in the truck count." },
+  { title: "Interpolate - where does the contour cross?", mode: "ginterp", vantage: { x: -9, z: 3, look: gridPts[8] }, guide: { pt: gridPts[8], text: "A3 to B3" },
+    watch: "Watch: A3 and B3 have different RLs. The contour crosses the line between them in proportion to the rise.",
+    task: "A contour crosses a grid line where the RL equals the contour value. Between two pegs, assume the ground is a straight slope and find the crossing in proportion: (contour minus lower RL) divided by (upper RL minus lower RL), times the grid spacing.",
+    why: "Ruler, radial graph or arithmetic - three methods, one idea. The maths is the one you can do in the truck." },
+  { title: "Draw the contours - on the ground and on the plan", mode: "gcontour", vantage: { x: -12, z: 14, look: { x: -1, z: 4 } },
+    watch: "Watch: the 0.1 m contours appear across the grid, and the plan on the clipboard fills in.",
+    task: "Join the crossings with smooth curves. Four rules: every contour is continuous, none cross, none split, every point on one is the same height. Close spacing is steep ground; wide is gentle.",
+    why: "Trace each contour with your finger. If the dots do not justify the curve, find out why before you ink it." },
+  { title: "Grid survey complete", mode: "end", nextTab: "cutfill", nextLabel: "Cut & fill",
+    task: "Sixteen RLs, closed loop, contours drawn. The shape of the ground is on paper.\\n\\nNext: the same sixteen numbers become a quantity take-off - how much dirt comes out and how much goes in." }
+];
+function drawContours() {
+  contourLines.forEach(function (l) { natural.remove(l); }); contourLines = [];
+  var x0 = GRID.x0, x1 = GRID.x0 + 9, z0 = GRID.z0 - 9, z1 = GRID.z0, n = 36, lo = Math.floor(RL(x0, z1) * 10) / 10, hi = Math.ceil(RL(x1, z0) * 10) / 10;
+  for (var lv = lo; lv <= hi + 0.001; lv = r3(lv + 0.1)) {
+    var pts = [];
+    for (var i = 0; i < n; i++) for (var j = 0; j < n; j++) {
+      var ax = x0 + i * 9 / n, az = z0 + j * 9 / n, bx = ax + 9 / n, bz = az + 9 / n;
+      var c = [[ax, az], [bx, az], [bx, bz], [ax, bz]], v = c.map(function (p) { return RL(p[0], p[1]) - lv; }), seg = [];
+      for (var k = 0; k < 4; k++) { var p1 = c[k], p2 = c[(k + 1) % 4], v1 = v[k], v2 = v[(k + 1) % 4]; if ((v1 < 0) !== (v2 < 0)) { var t = v1 / (v1 - v2); seg.push([p1[0] + (p2[0] - p1[0]) * t, p1[1] + (p2[1] - p1[1]) * t]); } }
+      if (seg.length >= 2) pts.push(new THREE.Vector3(seg[0][0], gy(seg[0][0], seg[0][1]) + 0.03, seg[0][1]), new THREE.Vector3(seg[1][0], gy(seg[1][0], seg[1][1]) + 0.03, seg[1][1]));
+    }
+    if (!pts.length) continue;
+    var line = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: Math.round(lv * 10) % 5 === 0 ? 0xc9302c : 0x2857c4 })); natural.add(line); contourLines.push(line);
+    var lab = ySprite(lv.toFixed(1), 0.5, 0.25, "rgba(201,48,44,0.9)"); lab.position.copy(pts[0]); lab.position.y += 0.2; natural.add(lab); contourLines.push(lab);
+  }
+}
+tourDemos.grid = function (s, q) {
+  if (s.mode === "gbase") {
+    [1, 2, 3].forEach(function (c, i) { q.push(later(function () { if (i === 0) walkTo(); gridMeshes[0].visible = true; var from = gridPts[c - 1], to = gridPts[c]; standAt(workerA, from, { x: -0.4, z: 0.4 }); walkTapeTo(workerB, from, to, 1600, function () { gridMeshes[c].visible = true; thunk(); }); setGuide(to, to.name); }, i === 0 ? 300 : 2000)); q.push(later(function () { showTapeReading(gridPts[c], 3, "Tape held level. Bob dropped to the peg."); }, 1700)); });
+    q.push(later(function () { hideWorkers(); stepDone = true; markRight(); updateGuide(); renderBoard(); }, 2500));
+  }
+  if (s.mode === "gfill") {
+    var order = [4, 8, 12, 5, 6, 7, 9, 10, 11, 13, 14, 15];
+    q.push(later(function () { walkTo(); standAt(workerA, gridPts[0], { x: -0.4, z: 0.4 }); walkTapeTo(workerB, gridPts[0], gridPts[4], 1400); feedback = "3:4:5 off A1 - the A column runs back at 90 degrees."; renderBoard(); }, 300));
+    order.forEach(function (i, k) { q.push(later(function () { gridMeshes[i].visible = true; thunk(); setGuide(gridPts[i], gridPts[i].name); if (k % 3 === 2) walkTo(); }, 550)); });
+    q.push(later(function () { hideWorkers(); feedback = "Sixteen pegs, A1 to D4, all labelled."; stepDone = true; markRight(); updateGuide(); renderBoard(); }, 800));
+  }
+  if (s.mode === "gread") {
+    q.push(later(function () { walkTo(); gridSheet = []; placeLevel(LV.stA, DATUM); standAt(workerA, LV.stA, { x: 0.6, z: 0.6 }); placeStaff(DATUM); standAt(workerB, DATUM, { x: 0.4, z: -0.4 }); }, 300));
+    q.push(later(function () { var bs = reading(DATUM); gridSheet.push({ pt: "TBM", bs: bs, rl: 100 }); showStaffReading(DATUM, bs, "BS to TBM"); feedback = "HOC " + fmt(100 + bs) + "."; renderBoard(); }, 1500));
+    gridPts.forEach(function (p, i) { q.push(later(function () { placeStaff(p); standAt(workerB, p, { x: 0.4, z: 0.4 }); level.rotation.y = Math.atan2(p.x - LV.stA.x, p.z - LV.stA.z) + Math.PI; var v = reading(p); gridSheet.push({ pt: p.name, is: v, rl: r3(level.userData.hoc - v) }); showStaffReading(p, v, p.name + "  RL " + fmt(level.userData.hoc - v)); setGuide(p, p.name + "  " + fmt(level.userData.hoc - v)); feedback = p.name + " reads " + fmt(v) + " - RL " + fmt(level.userData.hoc - v) + "."; renderBoard(); }, i === 0 ? 1500 : 1100)); });
+    q.push(later(function () { placeStaff(DATUM); standAt(workerB, DATUM, { x: 0.4, z: -0.4 }); var v = reading(DATUM); gridSheet.push({ pt: "TBM", fs: v, rl: r3(level.userData.hoc - v) }); showStaffReading(DATUM, v, "FS to TBM - closed"); showSheet = true; feedback = "Closed on the TBM at " + fmt(level.userData.hoc - v) + ". Sixteen RLs booked - sheet on the clipboard."; hideWorkers(); stepDone = true; markRight(); updateGuide(); renderBoard(); }, 1500));
+  }
+  if (s.mode === "ginterp") {
+    var a = gridPts[8], b = gridPts[9], lo = Math.min(a.rl, b.rl), hi = Math.max(a.rl, b.rl), cv = Math.ceil(lo * 10) / 10, low = a.rl < b.rl ? a : b, t = (cv - lo) / (hi - lo), pt = { x: low.x + (low === a ? 1 : -1) * t * 3, z: a.z };
+    q.push(later(function () { walkTo(); var m = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 10), new THREE.MeshBasicMaterial({ color: 0xc9302c })); m.position.set(pt.x, gy(pt.x, pt.z) + 0.05, pt.z); natural.add(m); setGuide(pt, cv.toFixed(1) + " crosses here"); feedback = "A3 is " + fmt(a.rl) + ", B3 is " + fmt(b.rl) + ". Rise " + fmt(hi - lo) + ". The " + cv.toFixed(1) + " contour is " + fmt(cv - lo) + " above the lower peg: " + fmt(cv - lo) + " / " + fmt(hi - lo) + " x 3.000 = " + fmt(t * 3) + " m from " + low.name + "."; renderBoard(); stepDone = true; markRight(); }, 500));
+  }
+  if (s.mode === "gcontour") {
+    q.push(later(function () { walkTo(); drawContours(); showPlan = true; feedback = "Contours at 0.1 m, red every 0.5. Read the spacing: tight at the rear-east, gentle at the front."; renderBoard(); stepDone = true; markRight(); }, 500));
+  }
+};
+tourSheets.grid = function (P, L, y, W) {
+  P.text("Grid booking sheet", L, y, C.ink, 36); P.button(P.cw - L - 150, y - 34, 150, 52, "Close", "", { act: "sheet" }, 24); y += 50;
+  var cols = ["Point", "BS", "IS", "FS", "RL"], cw = [150, 150, 150, 150, 200], x = L;
+  cols.forEach(function (c, i) { P.text(c, x, y, C.mute, 24); x += cw[i]; }); y += 12; P.rule(y, L, L + W); y += 34;
+  gridSheet.forEach(function (r) { x = L; [r.pt, r.bs, r.is, r.fs, r.rl].forEach(function (v, i) { P.text(v === undefined ? "" : (typeof v === "number" ? fmt(v) : v), x, y, i === 4 ? C.green : C.ink, 25); x += cw[i]; }); y += 36; });
+};
+// plan view for the natural site: the grid with RLs and contours
+function renderGridPlan(P, L, y, W) {
+  P.text("Grid plan - 9 x 9 at 3 m", L, y, C.ink, 40); P.button(P.cw - L - 150, y - 34, 150, 52, "Close", "", { act: "plan" }, 24); y += 60;
+  var sc = 66, ox = L + 90, oy = y + 40, c = P.ctx;
+  c.fillStyle = "#e6efd8"; c.fillRect(ox, oy, 9 * sc, 9 * sc);
+  if (contourLines.length) { var n = 60; for (var lv = 100.2; lv <= 101.9; lv = r3(lv + 0.1)) { c.strokeStyle = Math.round(lv * 10) % 5 === 0 ? C.red : C.blue; c.lineWidth = 2; c.beginPath(); for (var i = 0; i < n; i++) for (var j = 0; j < n; j++) { var ax = GRID.x0 + i * 9 / n, az = GRID.z0 - j * 9 / n, bx = ax + 9 / n, bz = az - 9 / n; var cc = [[ax, az], [bx, az], [bx, bz], [ax, bz]], v = cc.map(function (p) { return RL(p[0], p[1]) - lv; }), seg = []; for (var k = 0; k < 4; k++) { var p1 = cc[k], p2 = cc[(k + 1) % 4], v1 = v[k], v2 = v[(k + 1) % 4]; if ((v1 < 0) !== (v2 < 0)) { var t = v1 / (v1 - v2); seg.push([p1[0] + (p2[0] - p1[0]) * t, p1[1] + (p2[1] - p1[1]) * t]); } } if (seg.length >= 2) { c.moveTo(ox + (seg[0][0] - GRID.x0) * sc, oy + (GRID.z0 - seg[0][1]) * sc); c.lineTo(ox + (seg[1][0] - GRID.x0) * sc, oy + (GRID.z0 - seg[1][1]) * sc); } } c.stroke(); } }
+  c.strokeStyle = C.ink; c.lineWidth = 2; for (var g = 0; g <= 3; g++) { c.beginPath(); c.moveTo(ox + g * 3 * sc, oy); c.lineTo(ox + g * 3 * sc, oy + 9 * sc); c.moveTo(ox, oy + g * 3 * sc); c.lineTo(ox + 9 * sc, oy + g * 3 * sc); c.stroke(); }
+  gridPts.forEach(function (p) { var px = ox + (p.x - GRID.x0) * sc, py = oy + (GRID.z0 - p.z) * sc; c.fillStyle = C.ink; c.beginPath(); c.arc(px, py, 5, 0, 7); c.fill(); P.text(p.name, px + 8, py - 8, C.ink, 22); if (gridSheet.length) P.text(fmt(p.rl), px + 8, py + 22, C.green, 20); if (tab === "cutfill" && cfDepths.length) { var d = cfDepths.find(function (q) { return q.name === p.name; }); if (d) P.text((d.depth >= 0 ? "cut " : "fill ") + Math.abs(d.depth).toFixed(3), px + 8, py + 44, d.depth >= 0 ? C.red : C.blue, 20); } });
+  P.text("Street this way", ox + 4.5 * sc, oy - 12, C.mute, 22, "", "center");
+  y = oy + 9 * sc + 90; P.para("TBM: nail in the front-west survey peg, RL 100.000. Platform RL " + fmt(PLATFORM) + ".", L, y, W, C.mute, 24);
+}
+
+// =====================================================================
+// CUT AND FILL TOUR
+// =====================================================================
+var cfDepths = [], cfResult = null, platformPlane = null, earthworksDone = false;
+var CF_STEPS = [
+  { title: "Cut and fill: the three RLs", mode: "intro", vantage: { x: -12, z: 14, look: { x: -1, z: 4 } },
+    task: "The slab needs a level platform. High ground comes out - cut. Low ground is built up - fill. Three RLs define the job: the head of the cut, the platform, and the toe of the fill.\\n\\nCut depth = ground RL minus platform RL. Fill depth = platform RL minus ground RL. Same grid, same sixteen pegs, one more subtraction each." },
+  { title: "Set the platform RL", mode: "cfplat", vantage: { x: -12, z: 14, look: { x: -1, z: 4 } },
+    watch: "Watch: the platform appears as a level plane through the ground at RL " + fmt(PLATFORM) + ". Where the ground is above it - cut. Below it - fill.",
+    task: "The engineer sets the platform at " + fmt(PLATFORM) + " to suit the drainage and to balance the dirt. Everything above that plane comes out; everything below is made up.",
+    why: "On a simple job the platform matches the highest corner and it is all cut. On a real job it is chosen so the cut roughly makes the fill, and the trucks stay off the road." },
+  { title: "Depth at every peg", mode: "cfdepth", vantage: { x: -10, z: 9, look: gridPts[5] }, guide: { pt: gridPts[0], text: "A1" },
+    watch: "Watch: each peg gets a depth - RL minus platform. Positive is cut, negative is fill.",
+    task: "For each grid point subtract the platform from the RL. That number is the depth of cut at that peg, or, if negative, the depth of fill.",
+    why: "Mixing up which RL subtracts from which is the classic error. Ground minus platform. Positive means dirt above the platform, and dirt above the platform comes out." },
+  { title: "Prism by prism - uses and collective depth", mode: "cfvol", vantage: { x: -12, z: 14, look: { x: -1, z: 4 } },
+    watch: "Watch: the nine grid squares are prisms. A corner peg is used once, an edge peg twice, an interior peg four times. Depth times uses, summed, divided by total uses, times area.",
+    task: "Each 3 m square is a prism. Its volume is average depth of its four corners times 9 square metres. Rather than do nine prisms, count how many prisms each peg touches: corners once, edges twice, interior four times. Depth times uses gives the collective. Sum the collective, divide by total uses, multiply by the whole area. Cut and fill are kept separate.",
+    why: "Self-check: total uses must equal four times the number of prisms. Nine prisms, thirty-six uses." },
+  { title: "Bulking, compaction and the balance", mode: "cfbulk", vantage: { x: -12, z: 14, look: { x: -1, z: 4 } },
+    watch: "Watch: bank volume becomes loose volume on the truck, and the fill has to be compacted back down.",
+    task: "The grid gives bank volume - dirt as it sits in the ground. Dug up, it bulks by about 22 percent - that is what goes on the truck. Placed and rolled as fill it compacts to 85 to 90 percent of bank. So the cut does not simply equal the fill. The balance tells you whether you import or cart away, before the excavator arrives.",
+    why: "Bank is the size of the hole. Loose is the truck count. Students lose marks when the answer is in the wrong state." },
+  { title: "Do the earthworks", mode: "cfdig", vantage: { x: -12, z: 16, look: { x: -1, z: 4 } },
+    watch: "Watch: the ground is cut down and built up to the platform. Batters run off the edges.",
+    task: "Topsoil stripped and stockpiled. Cut taken down to the platform, fill placed and compacted in layers. The result is the level pad the set-out happens on.",
+    why: "Fill under a slab is engineered fill - compacted in layers, tested. Uncontrolled fill is why slabs crack." },
+  { title: "Platform ready", mode: "end", nextTab: "setout", nextLabel: "Set-out",
+    task: "Surveyed, calculated, cut and filled. The pad is at RL " + fmt(PLATFORM) + ". Now the plan becomes the building.\\n\\nNext: set-out on the finished platform." }
+];
+function cfCompute() {
+  cfDepths = gridPts.map(function (p, i) { var c = i % 4, r = Math.floor(i / 4), uses = ((c === 0 || c === 3) ? 1 : 2) * ((r === 0 || r === 3) ? 1 : 2); return { name: p.name, rl: p.rl, depth: r3(p.rl - PLATFORM), uses: uses }; });
+  var cut = 0, fill = 0;
+  for (var r = 0; r < 3; r++) for (var c = 0; c < 3; c++) { var ids = [r * 4 + c, r * 4 + c + 1, (r + 1) * 4 + c, (r + 1) * 4 + c + 1], avg = ids.reduce(function (a, i) { return a + cfDepths[i].depth; }, 0) / 4, v = avg * 9; if (v >= 0) cut += v; else fill -= v; }
+  var uses = cfDepths.reduce(function (a, d) { return a + d.uses; }, 0), coll = cfDepths.reduce(function (a, d) { return a + d.depth * d.uses; }, 0);
+  cfResult = { cut: cut, fill: fill, net: cut - fill, uses: uses, coll: coll, avg: coll / uses, loose: cut * 1.22, fillBank: fill / 0.9 };
+}
+function morphTerrain(k) {
+  var p = terrainGeo.attributes.position;
+  for (var i = 0; i < p.count; i++) { var x = p.getX(i), z = p.getZ(i); var dx = Math.max(0, Math.max(GRID.x0 - x, x - (GRID.x0 + 9))), dz = Math.max(0, Math.max((GRID.z0 - 9) - z, z - GRID.z0)); var d = Math.hypot(dx, dz), nat = gy(x, z), plat = PLATFORM - 100; var w = d <= 0 ? 1 : Math.max(0, 1 - d / 2.5); var target = nat + (plat - nat) * w; p.setY(i, nat + (target - nat) * k); }
+  p.needsUpdate = true; terrainGeo.computeVertexNormals();
+}
+tourDemos.cutfill = function (s, q) {
+  if (s.mode === "cfplat") {
+    q.push(later(function () { walkTo(); if (!platformPlane) { platformPlane = new THREE.Mesh(new THREE.PlaneGeometry(9.6, 9.6), new THREE.MeshBasicMaterial({ color: 0xe8801a, transparent: true, opacity: 0.35, side: THREE.DoubleSide })); platformPlane.rotation.x = -Math.PI / 2; platformPlane.position.set(GRID.x0 + 4.5, PLATFORM - 100, GRID.z0 - 4.5); natural.add(platformPlane); } gridMeshes.forEach(function (m) { m.visible = true; }); var head = Math.max.apply(null, gridPts.map(function (p) { return p.rl; })), toe = Math.min.apply(null, gridPts.map(function (p) { return p.rl; })); feedback = "Head of cut " + fmt(head) + " at D4. Toe of fill " + fmt(toe) + " at A1. Platform " + fmt(PLATFORM) + ". Cut " + fmt(head - PLATFORM) + " at the top, fill " + fmt(PLATFORM - toe) + " at the bottom."; renderBoard(); stepDone = true; markRight(); }, 500));
+  }
+  if (s.mode === "cfdepth") {
+    cfCompute();
+    cfDepths.forEach(function (d, i) { q.push(later(function () { var p = gridPts[i]; setGuide(p, p.name + (d.depth >= 0 ? "  cut " : "  fill ") + Math.abs(d.depth).toFixed(3)); if (i % 4 === 0) walkTo(); feedback = p.name + ": " + fmt(d.rl) + " minus " + fmt(PLATFORM) + " = " + (d.depth >= 0 ? "+" : "") + fmt(d.depth) + (d.depth >= 0 ? " cut." : " fill."); renderBoard(); }, i === 0 ? 300 : 700)); });
+    q.push(later(function () { showPlan = true; feedback = "Sixteen depths. Cut in red, fill in blue - on the plan."; stepDone = true; markRight(); updateGuide(); renderBoard(); }, 900));
+  }
+  if (s.mode === "cfvol") {
+    q.push(later(function () { walkTo(); cfCompute(); showSheet = true; feedback = "Total uses " + cfResult.uses + " - four times nine prisms. Prism by prism: cut " + cfResult.cut.toFixed(1) + " m3, fill " + cfResult.fill.toFixed(1) + " m3, over 81 m2."; renderBoard(); stepDone = true; markRight(); }, 500));
+  }
+  if (s.mode === "cfbulk") {
+    q.push(later(function () { cfCompute(); showSheet = true; var trucks = Math.ceil(cfResult.loose / 10); feedback = "Cut " + cfResult.cut.toFixed(1) + " m3 bank becomes " + cfResult.loose.toFixed(1) + " m3 loose - " + trucks + " ten-metre truck loads. Fill " + cfResult.fill.toFixed(1) + " m3 compacted needs " + cfResult.fillBank.toFixed(1) + " m3 of bank material. Balance: " + (cfResult.cut - cfResult.fillBank >= 0 ? "surplus " + (cfResult.cut - cfResult.fillBank).toFixed(1) + " m3 to cart away." : "import " + (cfResult.fillBank - cfResult.cut).toFixed(1) + " m3."); renderBoard(); stepDone = true; markRight(); }, 500));
+  }
+  if (s.mode === "cfdig") {
+    q.push(later(function () { walkTo(); if (platformPlane) platformPlane.visible = false; gridMeshes.forEach(function (m) { m.visible = false; }); contourLines.forEach(function (l) { l.visible = false; }); standAt(workerA, { x: GRID.x0 - 2, z: GRID.z0 + 2 }, { x: 0, z: 0 }); }, 300));
+    for (var k = 1; k <= 20; k++) (function (k) { q.push(later(function () { morphTerrain(k / 20); }, 120)); })(k);
+    q.push(later(function () { earthworksDone = true; hideWorkers(); feedback = "Platform at " + fmt(PLATFORM) + ", batters run off. Compaction tested. Ready for set-out."; stepDone = true; markRight(); renderBoard(); }, 400));
+  }
+};
+tourSheets.cutfill = function (P, L, y, W) {
+  P.text("Cut and fill take-off", L, y, C.ink, 36); P.button(P.cw - L - 150, y - 34, 150, 52, "Close", "", { act: "sheet" }, 24); y += 50;
+  if (!cfDepths.length) cfCompute();
+  var cols = ["Point", "RL", "Platform", "Depth", "Uses", "Collective"], cw = [110, 130, 140, 150, 100, 170], x = L;
+  cols.forEach(function (c, i) { P.text(c, x, y, C.mute, 24); x += cw[i]; }); y += 12; P.rule(y, L, L + W); y += 32;
+  cfDepths.forEach(function (d) { x = L; [d.name, fmt(d.rl), fmt(PLATFORM), (d.depth >= 0 ? "+" : "") + fmt(d.depth), String(d.uses), (d.depth * d.uses >= 0 ? "+" : "") + fmt(d.depth * d.uses)].forEach(function (v, i) { P.text(v, x, y, i === 3 ? (d.depth >= 0 ? C.red : C.blue) : C.ink, 24); x += cw[i]; }); y += 33; });
+  P.rule(y - 16, L, L + W); y += 14;
+  var r = cfResult;
+  y = P.para("Uses " + r.uses + " (= 4 x 9 prisms).  Collective " + fmt(r.coll) + ".  Average " + fmt(r.avg) + " x 81 m2 = net " + (r.avg * 81).toFixed(1) + " m3.", L, y, W, C.ink, 24);
+  y = P.para("Prism by prism:  cut " + r.cut.toFixed(1) + " m3 bank,  fill " + r.fill.toFixed(1) + " m3.   Loose (x1.22): " + r.loose.toFixed(1) + " m3.   Fill at 0.90 needs " + r.fillBank.toFixed(1) + " m3 bank.", L, y, W, C.ink, 24);
+};
+
+// =====================================================================
+// TOUR REGISTRY AND SWITCHING
+// =====================================================================
+tours.setout = { steps: SETOUT_STEPS, idx: 0, done: true, plan: null };
+tours.level = { steps: LEVEL_STEPS, idx: 0, done: true, plan: renderGridPlan };
+tours.grid = { steps: GRID_STEPS, idx: 0, done: true, plan: renderGridPlan };
+tours.cutfill = { steps: CF_STEPS, idx: 0, done: true, plan: renderGridPlan };
+[LEVEL_STEPS, GRID_STEPS, CF_STEPS].forEach(function (st) { st.forEach(function (s, i) { s.n = i; if (!s.how && s.mode !== "intro" && s.mode !== "end") s.how = "Press Do this step."; }); });
+var _renderPlanSetout = renderPlan;
+renderPlan = function (P, L, y, W) { if (tours[tab] && tours[tab].plan) tours[tab].plan(P, L, y, W); else _renderPlanSetout(P, L, y, W); };
+function switchTour(to) {
+  if (to === tab) return;
+  tours[tab].idx = stepIdx; tours[tab].done = stepDone;
+  stopSpeech(); tab = to; STEPS = tours[tab].steps; stepIdx = tours[tab].idx; stepDone = tours[tab].done; feedback = ""; demoRunning = false; showPlan = false; showSteps = false; showSheet = false; showExplain = false;
+  var nat = tab === "level" || tab === "grid" || tab === "cutfill", vol = tab === "volumes";
+  natural.visible = nat; terrain.visible = nat; volWorld.visible = vol; ground.visible = tab === "setout"; site.visible = tab === "setout"; road.visible = !vol; kerb.visible = !vol; if (typeof aerialDeck !== "undefined" && aerialDeck) aerialDeck.visible = false; surveyPegs.forEach(function (g) { g.visible = true; }); guide.visible = false; ghost.visible = false; tapeBoard.mesh.visible = false; staffBoard.mesh.visible = false; hideWorkers(); bob.visible = false;
+  if (!nat && earthworksDone) { /* the platform is cut; the flat world is the platform */ }
+  renderBoard(); updateGuide(); walkTo(); speakStep();
+}
+// keep the staff close-up facing you, and the workers on the ground
+var _tickExtra = function (now, camPos) { if (staffBoard.mesh.visible) { if (now > staffBoardUntil) staffBoard.mesh.visible = false; else staffBoard.mesh.lookAt(camPos.x, staffBoard.mesh.position.y, camPos.z); } if (tab !== "setout") { [workerA, workerB].forEach(function (w) { if (w.visible) w.position.y = groundY(w.position.x, w.position.z); }); } };
+
+
+// =====================================================================
+// EXPLAIN PAGE - terminology and worked calculations for every step
+// =====================================================================
+var showExplain = false;
+function T(term, def) { return [term, def]; }
+function A() { return pegs.A || TRUE.A; }
+
+var EXPLAIN = {
+  // ---------------- set-out ----------------
+  "setout:intro": { terms: [T("Set-out", "Marking the position of the building on the ground from the plan - the pegs, string lines and profiles the trades build to."), T("Survey peg", "A timber peg with a white top and a nail, driven by a licensed surveyor at each boundary corner. The nail is the legal corner of the lot."), T("Setback", "The distance the building must sit back from a boundary. On this plan: 6.000 from the front, 4.000 from the west side."), T("Profile (hurdle)", "Two stakes and a cross board set outside the excavation. Nails in the board hold the wall lines so pegs can be lost without losing the building."), T("Diagonal check", "Measuring both corner-to-corner diagonals of a rectangle. Equal diagonals prove it is square.")], working: function () { return ["Plan says: building 12.000 wide x 9.000 deep.", "Front setback 6.000, side setback 4.000.", "Lot is 20.000 wide x 30.000 deep.", "So the building sits 4.000 to 16.000 across, and 6.000 to 15.000 back from the street."]; } },
+  "setout:tap": { terms: [T("Cadastral survey", "The legal survey of the lot boundaries. Done by a licensed surveyor, marked with pegs. The builder does not do this."), T("Lot", "The parcel of land. Lot 12 here. Lot numbers get transposed - 12 and 21 sit side by side."), T("Boundary", "The legal edge of the lot. A fence is not a boundary; the survey pegs are.")], working: function () { return ["Peg at the front-west corner: found.", "Peg at the front-east corner: found - 20.000 along the street.", "Two rear pegs: found - 30.000 back.", "Four pegs, lot 12, 20 x 30. Matches the plan. Proceed."]; } },
+  "setout:tap2": { terms: [T("Offset line", "A string line set a fixed distance in from a boundary - here the setback distance - so you measure from a straight, visible line rather than from pegs in the grass."), T("Base line", "The offset line you build everything else from. Here, the front offset line."), T("Front offset", "The line 6.000 back from the front boundary. The front wall of the building sits on it."), T("Side offset", "The line 4.000 in from the west boundary. The west wall sits on it.")], working: function () { return ["Front boundary is at the street. Front wall = boundary + 6.000 back.", "West boundary is the west fence line. West wall = boundary + 4.000 in.", "Where the two offset lines cross is the front-west corner of the building.", "That crossing becomes peg A."]; } },
+  "setout:place:A": { terms: [T("Critical corner peg", "The peg that fixes the building's legal position - set directly off the boundary setbacks. Never moved afterwards."), T("Tape", "A steel measuring tape, hooked on a nail. We read it at the 100 mm mark, not the end, because the end hook wears."), T("Nail", "The small nail in the top of a peg. It marks the exact point; the peg just holds the nail up.")], working: function () { return ["Tape 1 from the front boundary: must read 6.000.", "Tape 2 from the west boundary: must read 4.000.", "Hooked at 100: the tape shows 6.100 and 4.100. Subtract 100 from each.", "Both correct at the same point -> drive peg A, nail on the point."]; } },
+  "setout:explain": { terms: [T("Perpendicular", "A line at exactly 90 degrees to another line. The west wall must be perpendicular to the front wall."), T("Isometric triangle", "A triangle with two equal sides (isosceles). Two equal tapes from two pegs equal distances from A meet on the perpendicular through A."), T("Perpendicular bisector", "The line that cuts B-C in half at 90 degrees. Every point on it is the same distance from B as from C. A is its foot."), T("3:4:5", "A right-angled triangle with sides in that ratio. Because 3 squared + 4 squared = 5 squared, a 3-4-5 triangle always has a 90 degree corner.")], working: function () { return ["1. B and C at 3.000 each side of A on the front line.", "2. Tape from B and tape from C, same length, pulled into the block.", "3. Where they read the same they cross at E. E is the same distance from B and from C.", "4. All such points lie on the line through A at 90 degrees to the front. So A-E is the west wall line.", "5. Prove it: 3 along the front (that is B), 4 back along A-E, diagonal must be 5.000."]; } },
+  "setout:place:B": { terms: [T("Peg B", "One of the two helper pegs for the triangle. Not a building corner - it comes out later.")], working: function () { return ["Hook the tape on the nail in A.", "Walk east along the front line. Tape hooked at 100 reads 3.100.", "3.100 - 0.100 = 3.000. Peg B goes in on the line."]; } },
+  "setout:place:C": { terms: [T("Peg C", "The second helper peg, the same distance from A on the other side. B and C must be equal - that equality is what makes the method work.")], working: function () { return ["Same tape, same hook on A, walk west.", "Reads 3.100 -> 3.000. Peg C.", "Check: A to B = 3.000, A to C = 3.000. Equal."]; } },
+  "setout:cross": { terms: [T("Peg E", "The peg where the two equal tapes cross. It sits on the perpendicular through A. With A it defines the west wall line."), T("Crossing", "The point where two tapes meet. Only when both tapes read the same is the crossing on the perpendicular.")], working: function () { var b = pegs.B || { x: A().x + 3, z: A().z }, c = pegs.C || { x: A().x - 3, z: A().z }, e = pegs.E || { x: A().x, z: A().z - 6 }; return ["Tape from B and tape from C, both pulled about 6.7 m into the block.", "Worker slides sideways until both read the same: " + fmt(dist(e, b)) + " and " + fmt(dist(e, c)) + ".", "Equal -> the crossing is exactly behind A. Drive peg E.", "String A to E. That is the 90 degree line."]; } },
+  "setout:check345": { terms: [T("Hypotenuse", "The longest side of a right-angled triangle, opposite the right angle."), T("Pythagoras", "In a right-angled triangle, the square of the hypotenuse equals the sum of the squares of the other two sides: c squared = a squared + b squared."), T("Square (adjective)", "Builders' word for 'at exactly 90 degrees'.")], working: function () { return ["a = 3.000 along the front line (peg B).", "b = 4.000 back along A-E (a mark).", "a squared = 3 x 3 = 9.   b squared = 4 x 4 = 16.", "9 + 16 = 25.   Square root of 25 = 5.", "So the tape from B to the mark must read 5.000. It does -> the corner is 90 degrees."]; } },
+  "setout:place:D": { terms: [T("Peg D", "The rear-west corner of the building. Measured from A along the proven 90 degree line."), T("Along / off the line", "Two readouts: how far you have come along the string, and how far sideways you are off it. The second must be zero.")], working: function () { return ["Hook on A. Walk back along the A-E string.", "Depth on the plan = 9.000. Tape reads 9.100 -> 9.000.", "Off the line: 0.000. Drive peg D."]; } },
+  "setout:place:F": { terms: [T("Peg F", "The front-east corner. Measured from A along the front offset line, so it sits on a critical line too.")], working: function () { return ["Hook on A. Walk east along the front line.", "Width on the plan = 12.000. Tape reads 12.100 -> 12.000.", "On the line. Drive peg F."]; } },
+  "setout:place:G": { terms: [T("Peg G", "The rear-east corner. Fixed by two tapes at once - 12.000 from D and 9.000 from F."), T("Largest rectangle first", "Set out the biggest rectangle in the plan before any bump-outs or returns. Every sub-shape inherits its errors.")], working: function () { return ["Tape 1 from D must read 12.000.", "Tape 2 from F must read 9.000.", "One point satisfies both. Drive peg G.", "Four corners. Not yet proven square - that comes at the diagonal check."]; } },
+  "setout:profiles": { terms: [T("Profile / hurdle", "Two stakes with a board across, set beyond each corner on the line of each wall. The board carries nails that hold the wall lines."), T("Excavation zone", "The area the excavator will disturb - the building footprint plus working room. Anything inside it will be destroyed."), T("Clearance", "How far past the corner the profile sits. Minimum 1.5 m for machine excavation, 0.5 m if dug by hand.")], working: function () { return ["Each corner has two wall lines running through it.", "Extend each line past the corner by 1.5 to 3 m and drive a profile across it.", "4 corners x 2 lines = 8 profiles.", "Boards parallel to the wall lines, stakes braced, heads all at one level."]; } },
+  "setout:level": { terms: [T("Reduced level (RL)", "A height above the datum. All the profile heads should be at the same RL."), T("Datum", "The reference height everything is measured from. Here 100.000 at the TBM."), T("Slope distance", "A distance measured along a slope rather than horizontally. It is always longer than the plan distance.")], working: function () { return ["Sight each head through the level. Seven read 100.900.", "One reads 100.945 - 45 mm high.", "If the string ran to that head it would slope. 10.000 m at 2 degrees measures 9.994 - 6 mm short.", "Drop the board to 100.900. All heads level."]; } },
+  "setout:transfer": { terms: [T("Transfer", "Moving a line from the pegs (which will be lost) up onto the profile boards (which will not)."), T("Plumb bob", "A pointed weight on a string. Hanging still, the string is exactly vertical - so a point on the ground can be carried straight up, or a point in the air straight down."), T("Spirit level", "Held vertical against a string, it does the same job over short distances.")], working: function () { return ["Run the string through the nail in the peg and out past the profile.", "Plumb from the string up to the board (or spirit level held vertical).", "Drive a nail in the board where the plumb touches.", "8 profiles, 8 nails. The building now lives on the boards."]; } },
+  "setout:keypad": { terms: [T("Diagonal", "The distance from one corner of the rectangle to the opposite corner."), T("Calculated vs measured", "Work out what the diagonal should be from the plan first. Then measure. A measurement with no expected value to compare it with proves nothing.")], working: function () { return ["a = 12.000 (width), b = 9.000 (depth).", "a squared = 12 x 12 = 144.", "b squared = 9 x 9 = 81.", "144 + 81 = 225.", "Square root of 225 = 15. Expected diagonal 15.000."]; } },
+  "setout:measure": { terms: [T("Tolerance", "The largest error the industry accepts for the job. Diagonal check on domestic work: 3 mm."), T("Profile to profile", "Measure the diagonals between the nails on the profile boards, not between the strings - strings sag and blow.")], working: function () { var d = diagonals(); return ["Tape from the A profile nail to the G profile nail: " + fmt(d.ag) + ".", "Tape from F to D: " + fmt(d.fd) + ".", "Difference: " + mm(Math.abs(d.ag - d.fd)) + ". Tolerance 3 mm.", "Both against the calculated 15.000."]; } },
+  "setout:quiz": { terms: [T("Critical line", "A wall line fixed directly off a boundary setback. Moving it moves the building off its legal position."), T("Non-critical line", "A wall line fixed only by measurement from other pegs. Free to move to square the rectangle.")], working: function () { return ["Front line A-F: set 6.000 off the front boundary. Critical.", "West line A-D: set 4.000 off the west boundary. Critical. Carries peg A.", "Rear line D-G: fixed only by the 9.000 measurement. Non-critical.", "Move D and G by the full difference, same direction. Re-measure both diagonals."]; } },
+  "setout:corners": { terms: [T("Clout nail", "A short, wide-headed nail. Driven into the peg top where the plumb bob point touches - it becomes the exact corner."), T("Settle", "Letting the plumb bob stop swinging completely before you mark. Shield it from wind.")], working: function () { return ["At each corner two profile strings cross in the air.", "Hang the plumb bob from the crossing. Wait for it to stop.", "Clout nail into the peg under the point.", "4 corners, 4 nails - the building outline back on the ground."]; } },
+  "setout:pour": { terms: [T("Brick veneer", "A timber or steel frame carrying the roof, with a single skin of brick outside it. The bricks are cladding, not structure."), T("Rebate", "A step down in the slab edge so the bottom course of bricks sits below floor level and only the face shows."), T("Wall line nails", "Separate nails on each profile for the outside face of brickwork, the outside face of frame, and the rebate formwork.")], working: function () { return ["On each profile board: nail 1 = brick face and slab edge.", "Nail 2 = frame face, 110 to 150 mm inside nail 1 (brick + cavity).", "Nail 3 = rebate formwork.", "Final check every dimension against the plan. Then dig and pour."]; } },
+  "setout:done": { terms: [T("Rectification", "Fixing work that was built wrong. Paid for by whoever got it wrong - the builder, if the set-out was theirs.")], working: function () { var r = consequence(); return ["Frame is 12.000 x 9.000, made square in the factory.", "Slab as pegged: diagonals " + fmt(r.d.ag) + " and " + fmt(r.d.fd) + ".", r.ok ? "Frame sits on the slab. Set-out proven." : "Worst corner overhang " + mm(r.max) + ". That gap is the unchecked diagonal."]; } },
+
+  // ---------------- levelling ----------------
+  "level:intro": { terms: [T("Levelling", "Finding the height of points on the ground relative to a datum, using a level and a staff."), T("Datum", "The reference height. Can be Australian Height Datum (sea level) or a site datum the surveyor nominates - here 100.000."), T("TBM - temporary bench mark", "A fixed point on site with a known RL that all levelling starts from. Here the nail in the front-west survey peg."), T("RL - reduced level", "The height of a point above the datum, in metres to three decimals."), T("Level (instrument)", "A telescope on a tripod that only looks exactly horizontally once its bubble is centred."), T("Staff", "A tall graduated ruler held vertical on the point being measured. Read where the horizontal crosshair cuts it."), T("Line of collimation", "The horizontal line of sight through the telescope - the 'sheet of glass'.")], working: function () { return ["Big staff reading = the ground is a long way below the glass = low ground.", "Small reading = high ground.", "Every RL on this job = height of the glass - staff reading."]; } },
+  "level:bubble": { terms: [T("Bubble / vial", "The spirit level built into the instrument. Centred bubble = telescope horizontal."), T("Systematic error", "An error the instrument makes the same way every time. It does not show up in arithmetic checks - only in testing.")], working: function () { return ["Set up. Centre the bubble with the foot screws.", "Turn the telescope 180 degrees.", "Bubble still centred -> vial is true.", "Bubble moved -> the instrument is out of adjustment. Do not use it."]; } },
+  "level:twopeg1": { terms: [T("Two-peg test", "The test for collimation error: read two pegs from the midpoint, then again from beyond one peg, and compare."), T("Collimation error", "The line of sight not being truly horizontal - tilted up or down a fraction. It grows with distance."), T("Midpoint", "Exactly halfway between the pegs. Equal sight lengths cancel the error.")], working: function () { return ["Pegs P and Q 16.000 apart. Instrument at 8.000 from each.", "Read P: " + fmt(twoPeg.a1) + ".   Read Q: " + fmt(twoPeg.b1) + ".", "True difference = P - Q = " + fmt(twoPeg.a1 - twoPeg.b1) + ".", "Any tilt adds the same amount to both readings, so it disappears in the subtraction."]; } },
+  "level:twopeg2": { terms: [T("Difference of differences", "The test result: (far-station difference) - (midpoint difference). That is the collimation error over the peg spacing."), T("Service tolerance", "3 mm over the test distance for an optical level. Beyond that, send it for adjustment.")], working: function () { return ["Instrument 3.000 beyond Q: sights are 19.000 to P and 3.000 to Q.", "Read P: " + fmt(twoPeg.a2) + ".   Read Q: " + fmt(twoPeg.b2) + ".   Difference = " + fmt(twoPeg.a2 - twoPeg.b2) + ".", "Midpoint difference was " + fmt(twoPeg.a1 - twoPeg.b1) + ".", "Error = " + fmt(twoPeg.a2 - twoPeg.b2) + " - " + fmt(twoPeg.a1 - twoPeg.b1) + " = " + mm(Math.abs((twoPeg.a2 - twoPeg.b2) - (twoPeg.a1 - twoPeg.b1))) + ".", "3 mm or less: pass."]; } },
+  "level:bs": { terms: [T("Station", "A place the instrument is set up. Station 1, station 2."), T("Backsight (BS)", "The first reading from a station, taken to a point whose RL is already known. It tells you how high the glass is."), T("HOC - height of collimation", "The RL of the line of sight. HOC = RL of the known point + the backsight reading.")], working: function () { var r = lvSheet[0]; return r ? ["TBM RL = 100.000 (known).", "Backsight to the TBM reads " + fmt(r.bs) + ".", "HOC = 100.000 + " + fmt(r.bs) + " = " + fmt(100 + r.bs) + ".", "The glass is at " + fmt(100 + r.bs) + " above datum."] : ["HOC = RL of TBM + backsight."]; } },
+  "level:is": { terms: [T("Intermediate sight (IS)", "Any reading taken between the backsight and the foresight, without moving the instrument."), T("Booking", "Writing the readings on the sheet in the order they are taken, one line per point, before doing any arithmetic.")], working: function () { var rows = lvSheet.filter(function (r) { return r.is !== undefined; }); var hoc = lvSheet[0] ? 100 + lvSheet[0].bs : 0; return rows.length ? rows.map(function (r) { return r.pt + ": HOC " + fmt(hoc) + " - " + fmt(r.is) + " = RL " + fmt(hoc - r.is) + "."; }) : ["RL = HOC - staff reading, for every intermediate sight."]; } },
+  "level:cp": { terms: [T("Foresight (FS)", "The last reading from a station before the instrument moves. Taken to the change point."), T("Change point (CP)", "A firm point the staff sits on while the instrument moves. It gets a foresight from the old station and a backsight from the new one - on the same line of the sheet."), T("New HOC", "RL of the change point + the new backsight.")], working: function () { var cp = lvSheet.find(function (r) { return r.pt === "CP"; }); return cp ? ["Foresight to CP from station 1: " + fmt(cp.fs) + ".", "RL of CP = old HOC - " + fmt(cp.fs) + " = " + fmt(100 + lvSheet[0].bs - cp.fs) + ".", "Instrument moves. Backsight to the same CP: " + fmt(cp.bs) + ".", "New HOC = " + fmt(100 + lvSheet[0].bs - cp.fs) + " + " + fmt(cp.bs) + " = " + fmt(100 + lvSheet[0].bs - cp.fs + cp.bs) + "."] : ["FS to the CP, move, BS to the CP. One line, two readings."]; } },
+  "level:close": { terms: [T("Closed loop", "A levelling run that starts and finishes on the same bench mark. The finishing RL should equal the starting RL."), T("Misclose", "The difference between the finishing RL and the known RL of the bench mark. Small is normal; large means a mistake."), T("Allowable misclose", "For Class LD work: 18 x square root of the distance in kilometres, in millimetres.")], working: function () { var last = lvSheet[lvSheet.length - 1]; return ["Intermediate sight to D4, then foresight back to the TBM.", "The run began on the TBM at 100.000.", last && last.rl !== undefined ? "It finishes at " + fmt(last.rl) + ". Misclose " + mm(Math.abs(last.rl - 100)) + "." : "After reduction, the last RL is compared with 100.000."]; } },
+  "level:reduce": { terms: [T("Rise", "The ground went up between two consecutive points. The reading got smaller."), T("Fall", "The ground went down. The reading got bigger."), T("Previous minus current", "The rule for every line: take the reading on the line above and subtract this line's reading. Positive = rise, negative = fall.")], working: function () { reduceSheet(); var out = []; for (var i = 1; i < lvSheet.length; i++) { var p = lvSheet[i - 1], c = lvSheet[i], prev = p.bs !== undefined && i > 1 ? p.bs : (p.bs !== undefined ? p.bs : (p.is !== undefined ? p.is : p.fs)), cur = c.is !== undefined ? c.is : c.fs; out.push(lvSheet[i - 1].pt + " -> " + c.pt + ": " + fmt(prev) + " - " + fmt(cur) + " = " + (c.rise !== undefined ? "+" + fmt(c.rise) + " rise" : "-" + fmt(c.fall) + " fall") + ".  RL " + fmt(c.rl) + "."); } return out; } },
+  "level:check3": { terms: [T("Three-way check", "Three totals that must all give the same answer: sum BS - sum FS, sum rise - sum fall, last RL - first RL."), T("Arithmetic check", "This proves the sheet was reduced correctly. It cannot prove a reading was right - only the closed loop does that.")], working: function () { reduceSheet(); var t = sums(); return ["Sum of BS = " + fmt(t.bs) + ".   Sum of FS = " + fmt(t.fs) + ".   Difference " + fmt(t.bs - t.fs) + ".", "Sum of rise = " + fmt(t.rise) + ".   Sum of fall = " + fmt(t.fall) + ".   Difference " + fmt(t.rise - t.fall) + ".", "Last RL " + fmt(lvSheet[lvSheet.length - 1].rl) + " - first RL 100.000 = " + fmt(lvSheet[lvSheet.length - 1].rl - 100) + ".", "All three the same -> the sheet balances."]; } },
+  "level:end": { terms: [], working: function () { return ["Tested, read, reduced, closed, balanced."]; } },
+
+  // ---------------- grid survey ----------------
+  "grid:intro": { terms: [T("Topography", "The shape of the ground - where it is high, low, steep and flat."), T("Contour", "A line joining points of equal height. Every point on the 101.0 contour is at RL 101.000."), T("Contour interval", "The height difference between neighbouring contours. Here 0.1 m."), T("Grid method", "Peg a regular grid, level every peg, then work out where the contours cross between pegs."), T("Spot height", "The RL of one point on the ground - one grid peg.")], working: function () { return ["Grid 9 x 9 m, pegs every 3 m.", "Columns A B C D across, rows 1 2 3 4 back from the street.", "16 pegs, 16 spot heights, 9 squares."]; } },
+  "grid:gbase": { terms: [T("Base line", "The first line of the grid, along one side of the site. Everything is set from it."), T("Plan distance", "The horizontal distance - what the drawing shows. Never the distance along the slope."), T("Horizontal taping", "Holding the downhill end of the tape up until it is level, and plumbing the mark down to the ground.")], working: function () { return ["A1 is the origin. Tape held level, 3.000 east: B1.", "Plumb bob drops the 3 m mark to the ground.", "Again to C1, again to D1.", "On a slope a tape laid on the ground would give less than 3.000 in plan - the grid would be wrong."]; } },
+  "grid:gfill": { terms: [T("Grid label", "Letter and number - B3 is column B, row 3. The label is how the field reading finds its place on the plan.")], working: function () { return ["3:4:5 off A1 to turn the A column at 90 degrees.", "A2, A3, A4 at 3.000 back.", "Then every intersection: B2 ... D4.", "16 pegs, each labelled before moving on."]; } },
+  "grid:gread": { terms: [T("HOC", "Height of collimation - RL of the TBM plus the backsight."), T("Intermediate sight", "Each grid peg is read as an IS from the one station."), T("Closed loop", "Foresight back to the TBM at the end to prove nothing moved.")], working: function () { var hoc = gridSheet[0] ? 100 + gridSheet[0].bs : 0; var rows = gridSheet.filter(function (r) { return r.is !== undefined; }); return rows.length ? ["HOC = 100.000 + " + fmt(gridSheet[0].bs) + " = " + fmt(hoc) + "."].concat(rows.map(function (r) { return r.pt + ": " + fmt(hoc) + " - " + fmt(r.is) + " = " + fmt(r.rl) + "."; })) : ["RL of each peg = HOC - staff reading."]; } },
+  "grid:ginterp": { terms: [T("Interpolation", "Estimating where a contour crosses between two known heights, assuming the ground is a straight slope between them."), T("Proportion", "The fraction of the way along the grid line, equal to the fraction of the height difference.")], working: function () { var a = gridPts[8], b = gridPts[9], lo = Math.min(a.rl, b.rl), hi = Math.max(a.rl, b.rl), cv = Math.ceil(lo * 10) / 10; return ["A3 = " + fmt(a.rl) + ", B3 = " + fmt(b.rl) + ". Rise between them = " + fmt(hi - lo) + ".", "Contour wanted: " + cv.toFixed(1) + ". It is " + fmt(cv - lo) + " above the lower peg.", "Fraction = " + fmt(cv - lo) + " / " + fmt(hi - lo) + " = " + (((cv - lo) / (hi - lo))).toFixed(3) + ".", "Distance = " + (((cv - lo) / (hi - lo))).toFixed(3) + " x 3.000 = " + fmt((cv - lo) / (hi - lo) * 3) + " m from the lower peg."]; } },
+  "grid:gcontour": { terms: [T("Index contour", "Every fifth contour, drawn heavier and labelled. Here the red ones, every 0.5 m."), T("Steep / gentle", "Contours close together = steep. Far apart = gentle. Same height change over less ground.")], working: function () { return ["Find every crossing on every grid line.", "Join crossings of the same value with a smooth curve.", "Check: continuous, never crossing, never splitting.", "Label the index contours with the RL."]; } },
+  "grid:end": { terms: [], working: function () { return ["16 spot heights -> contour plan."]; } },
+
+  // ---------------- cut and fill ----------------
+  "cutfill:intro": { terms: [T("Cut", "Removing ground that is above the finished level."), T("Fill", "Placing material where the ground is below the finished level."), T("Platform", "The flat finished surface the slab is built on. Its RL is set by the engineer."), T("Head of cut", "The highest natural ground on the platform area - the deepest cut."), T("Toe of fill", "The lowest natural ground - the deepest fill."), T("Batter", "The sloping edge of a cut or a fill, running from the platform down or up to natural ground.")], working: function () { return ["Cut depth at a peg = ground RL - platform RL (positive).", "Fill depth at a peg = platform RL - ground RL (positive).", "Or simply: depth = ground - platform; positive is cut, negative is fill."]; } },
+  "cutfill:cfplat": { terms: [T("Platform RL", "The design height of the finished pad - " + fmt(PLATFORM) + " here.")], working: function () { var head = Math.max.apply(null, gridPts.map(function (p) { return p.rl; })), toe = Math.min.apply(null, gridPts.map(function (p) { return p.rl; })); return ["Highest peg (head) = " + fmt(head) + ".  Cut there = " + fmt(head) + " - " + fmt(PLATFORM) + " = " + fmt(head - PLATFORM) + ".", "Lowest peg (toe) = " + fmt(toe) + ".  Fill there = " + fmt(PLATFORM) + " - " + fmt(toe) + " = " + fmt(PLATFORM - toe) + ".", "Everything else is in between."]; } },
+  "cutfill:cfdepth": { terms: [T("Depth", "How far the natural ground is above (cut) or below (fill) the platform at a peg.")], working: function () { if (!cfDepths.length) cfCompute(); return cfDepths.map(function (d) { return d.name + ": " + fmt(d.rl) + " - " + fmt(PLATFORM) + " = " + (d.depth >= 0 ? "+" : "") + fmt(d.depth) + (d.depth >= 0 ? " cut" : " fill"); }); } },
+  "cutfill:cfvol": { terms: [T("Prism", "One grid square treated as a block with a flat sloping top. Volume = average of its four corner depths x its base area."), T("Uses", "How many prisms share a peg: a corner peg 1, an edge peg 2, an interior peg 4."), T("Collective depth", "A peg's depth multiplied by its uses. Summing these across the grid does all nine prisms at once."), T("Average depth", "Total collective divided by total uses.")], working: function () { if (!cfResult) cfCompute(); var r = cfResult; return ["Each square = 3 x 3 = 9 m2. Nine squares = 81 m2.", "Uses: 4 corners x 1 + 8 edges x 2 + 4 interior x 4 = 4 + 16 + 16 = 36. Check: 9 prisms x 4 = 36.", "Collective (depth x uses, summed) = " + fmt(r.coll) + ".", "Average depth = " + fmt(r.coll) + " / 36 = " + fmt(r.avg) + ".", "Net volume = " + fmt(r.avg) + " x 81 = " + (r.avg * 81).toFixed(1) + " m3 (cut minus fill).", "Prism by prism, keeping signs apart: cut " + r.cut.toFixed(1) + " m3, fill " + r.fill.toFixed(1) + " m3."]; } },
+  "cutfill:cfbulk": { terms: [T("Bank volume", "Dirt as it sits undisturbed in the ground. What the grid gives you."), T("Loose volume", "The same dirt after digging - it expands. Bank x about 1.22. This is what fills trucks."), T("Compacted volume", "Dirt after it has been placed as fill and rolled. Bank x about 0.90. Less than it was."), T("Balance", "Whether the cut, once compacted, makes the fill - or whether you cart away or import.")], working: function () { if (!cfResult) cfCompute(); var r = cfResult; return ["Cut " + r.cut.toFixed(1) + " m3 bank x 1.22 = " + r.loose.toFixed(1) + " m3 loose.", "Trucks at 10 m3: " + r.loose.toFixed(1) + " / 10 = " + Math.ceil(r.loose / 10) + " loads.", "Fill needed " + r.fill.toFixed(1) + " m3 compacted. Bank needed = " + r.fill.toFixed(1) + " / 0.90 = " + r.fillBank.toFixed(1) + " m3.", "Cut " + r.cut.toFixed(1) + " - needed " + r.fillBank.toFixed(1) + " = " + (r.cut - r.fillBank).toFixed(1) + " m3 " + (r.cut - r.fillBank >= 0 ? "surplus to cart away." : "shortfall to import.")]; } },
+  "cutfill:cfdig": { terms: [T("Topsoil strip", "Removing the organic top layer first and stockpiling it. It is not fill material."), T("Engineered fill", "Fill placed in layers of about 150 to 200 mm, each compacted and tested, so it will carry a slab.")], working: function () { return ["Strip topsoil, stockpile.", "Cut the high side down to " + fmt(PLATFORM) + ".", "Place fill on the low side in layers, compact each, test.", "Trim to level. Batters at the edges."]; } },
+  "cutfill:end": { terms: [], working: function () { return ["Platform at " + fmt(PLATFORM) + "."]; } }
+};
+function explainKey(s) { return tab + ":" + s.mode + (s.peg ? ":" + s.peg : ""); }
+function explainFor(s) { return EXPLAIN[explainKey(s)] || EXPLAIN[tab + ":" + s.mode] || null; }
+
+function renderExplain(P, L, y, W) {
+  var s = step(), ex = explainFor(s);
+  P.text("Explain - step " + s.n, L, y, C.mute, 26); P.button(P.cw - L - 150, y - 36, 150, 52, "Close", "", { act: "explain" }, 24); y += 50;
+  y = P.para(s.title, L, y, W, C.ink, 34, "", 42); y += 10; P.rule(y, L, L + W); y += 40;
+  if (!ex) { P.para("Nothing extra on this step.", L, y, W, C.mute, 28); return; }
+  if (ex.terms.length) { P.text("What the words mean", L, y, C.orange, 28); y += 40; ex.terms.forEach(function (t) { if (y > P.ch - 360) return; P.text(t[0], L, y, C.ink, 27, "bold"); y += 34; y = P.para(t[1], L + 24, y, W - 24, C.ink, 25, "", 32) + 10; }); y += 10; }
+  if (y < P.ch - 200) { P.rule(y, L, L + W); y += 40; P.text("How it works out", L, y, C.orange, 28); y += 40; var lines = ex.working(); for (var i = 0; i < lines.length; i++) { if (y > P.ch - 130) { P.text("...", L, y, C.mute, 25); break; } y = P.para(lines[i], L, y, W, C.blue, 25, "", 33) + 4; } }
+  P.button(L, P.ch - 100, 220, 52, "Read aloud", "", { act: "readExplain" }, 24);
+}
+
+
+// =====================================================================
+// DETERMINING VOLUMES - the textbook site (Lot 57, Oak Road), full scale
+// =====================================================================
+// Figure 10.110: grid A-F at 10 m, rows 1-5 at 10 m. RLs as printed.
+var VG = { cols: ["A", "B", "C", "D", "E", "F"], rows: [1, 2, 3, 4, 5], sp: 10, x0: -25, z0: 20 };  // A1 at (-25, 20); rows go north = -z
+var VRL = [
+  [114.5, 114.7, 115.5, 116.2, 116.7, 116.9],   // row 1
+  [113.6, 114.2, 115.4, 115.5, 115.6, 115.6],   // row 2
+  [112.5, 112.7, 113.5, 114.4, 114.6, 114.7],   // row 3
+  [111.4, 111.9, 112.3, 112.7, 112.8, 112.8],   // row 4
+  [111.2, 111.5, 112.1, 112.5, 112.6, 112.6]    // row 5
+];
+var VOL_BASE = 111.0;   // world y = RL - 111
+function vgPt(c, r) { return { x: VG.x0 + c * VG.sp, z: VG.z0 - r * VG.sp, name: VG.cols[c] + VG.rows[r], rl: VRL[r][c] }; }
+function volRL(x, z) { // bilinear inside the grid, clamped outside
+  var u = (x - VG.x0) / VG.sp, v = (VG.z0 - z) / VG.sp; u = Math.max(0, Math.min(4.999, u)); v = Math.max(0, Math.min(3.999, v));
+  var c = Math.floor(u), r = Math.floor(v), fu = u - c, fv = v - r;
+  return VRL[r][c] * (1 - fu) * (1 - fv) + VRL[r][c + 1] * fu * (1 - fv) + VRL[r + 1][c] * (1 - fu) * fv + VRL[r + 1][c + 1] * fu * fv;
+}
+function volGy(x, z) { return volRL(x, z) - VOL_BASE; }
+var volWorld = new THREE.Group(); volWorld.visible = false; scene.add(volWorld);
+var volTerrainGeo = new THREE.PlaneGeometry(160, 160, 160, 160); volTerrainGeo.rotateX(-Math.PI / 2);
+(function () { var p = volTerrainGeo.attributes.position; for (var i = 0; i < p.count; i++) p.setY(i, volGy(p.getX(i), p.getZ(i))); volTerrainGeo.computeVertexNormals(); })();
+var volTerrain = new THREE.Mesh(volTerrainGeo, new THREE.MeshStandardMaterial({ map: groundTexture(), roughness: 1 })); volWorld.add(volTerrain);
+// Oak Road along the west, grid lines, pegs
+var oak = new THREE.Mesh(new THREE.PlaneGeometry(8, 60), new THREE.MeshStandardMaterial({ color: 0x4d4f52 })); oak.rotation.x = -Math.PI / 2; oak.position.set(-33, 0.02, 0); volWorld.add(oak);
+(function () { var p = oak.geometry.attributes.position; for (var i = 0; i < p.count; i++) { var wx = p.getX(i) - 33, wz = -p.getY(i); p.setZ(i, volGy(wx, wz) - 0 + 0.03); } oak.geometry.attributes.position.needsUpdate = true; })();
+var volPegs = [], volLabels = [];
+for (var vr = 0; vr < 5; vr++) for (var vc = 0; vc < 6; vc++) (function (p) {
+  var g = new THREE.Group(); var body = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.6, 0.08), mPeg); body.position.y = 0.3; g.add(body);
+  var lab = ySprite(p.name + "  " + p.rl.toFixed(1), 1.6, 0.8); lab.position.y = 1.3; g.add(lab);
+  g.position.set(p.x, volGy(p.x, p.z), p.z); volWorld.add(g); volPegs.push(g);
+})(vgPt(vc, vr));
+(function () { var mat = new THREE.LineBasicMaterial({ color: 0x1e2a44 }); for (var c = 0; c < 6; c++) { var pts = []; for (var t = 0; t <= 40; t++) { var x = VG.x0 + c * VG.sp, z = VG.z0 - t; pts.push(new THREE.Vector3(x, volGy(x, z) + 0.05, z)); } volWorld.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat)); } for (var r = 0; r < 5; r++) { var pts2 = []; for (var t2 = 0; t2 <= 50; t2++) { var x2 = VG.x0 + t2, z2 = VG.z0 - r * VG.sp; pts2.push(new THREE.Vector3(x2, volGy(x2, z2) + 0.05, z2)); } volWorld.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts2), mat)); } })();
+// contours at 1 m, 112 to 116
+var volContours = new THREE.Group(); volContours.visible = false; volWorld.add(volContours);
+(function () { var n = 100; for (var lv = 112; lv <= 116; lv++) { var pts = []; for (var i = 0; i < n; i++) for (var j = 0; j < n * 0.8; j++) { var ax = VG.x0 + i * 50 / n, az = VG.z0 - j * 40 / (n * 0.8), bx = ax + 50 / n, bz = az - 40 / (n * 0.8); var c = [[ax, az], [bx, az], [bx, bz], [ax, bz]], v = c.map(function (p) { return volRL(p[0], p[1]) - lv; }), seg = []; for (var k = 0; k < 4; k++) { var p1 = c[k], p2 = c[(k + 1) % 4], v1 = v[k], v2 = v[(k + 1) % 4]; if ((v1 < 0) !== (v2 < 0)) { var t = v1 / (v1 - v2); seg.push([p1[0] + (p2[0] - p1[0]) * t, p1[1] + (p2[1] - p1[1]) * t]); } } if (seg.length >= 2) pts.push(new THREE.Vector3(seg[0][0], volGy(seg[0][0], seg[0][1]) + 0.08, seg[0][1]), new THREE.Vector3(seg[1][0], volGy(seg[1][0], seg[1][1]) + 0.08, seg[1][1])); } if (pts.length) { volContours.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0x2857c4 }))); var lab = ySprite(String(lv), 1.8, 0.9, "rgba(40,87,196,0.9)"); lab.position.copy(pts[Math.floor(pts.length / 2)]); lab.position.y += 0.6; volContours.add(lab); } } })();
+// the excavation: B2 to D4 (20 x 20), platform 112.07 (Figure 10.113) and, for Table 10.1, 111.5
+var EXC = { c0: 1, c1: 3, r0: 1, r1: 3 };   // columns B..D, rows 2..4
+var PLAT_FIG = 112.07, PLAT_TAB = 111.5;
+var excOutline = null, prismGroup = new THREE.Group(), platformMesh = null, aerialDeck = null; volWorld.add(prismGroup);
+function prismMesh(c, r, platform, colour) {
+  var pts = [vgPt(c, r), vgPt(c + 1, r), vgPt(c + 1, r + 1), vgPt(c, r + 1)];   // clockwise from the south-west in plan
+  var py = platform - VOL_BASE, verts = [], idx = [];
+  pts.forEach(function (p) { verts.push(p.x, py, p.z); }); pts.forEach(function (p) { verts.push(p.x, p.rl - VOL_BASE, p.z); });
+  idx.push(0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7); for (var i = 0; i < 4; i++) { var a = i, b = (i + 1) % 4; idx.push(a, b, b + 4, a, b + 4, a + 4); }
+  var g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.Float32BufferAttribute(verts, 3)); g.setIndex(idx); g.computeVertexNormals();
+  var m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: colour || 0xe8801a, transparent: true, opacity: 0.55, side: THREE.DoubleSide }));
+  m.add(new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({ color: 0x1e2a44 })));
+  m.userData.pts = pts; m.userData.platform = platform; m.userData.home = new THREE.Vector3();
+  pts.forEach(function (p) { var h = p.rl - platform; var lab = ySprite(h.toFixed(2), 1.4, 0.7, "rgba(201,48,44,0.9)"); lab.position.set(p.x, p.rl - VOL_BASE + 0.5, p.z); m.add(lab); });
+  return m;
+}
+function clearPrisms() { while (prismGroup.children.length) prismGroup.remove(prismGroup.children[0]); }
+function showPlatform(rl) { if (platformMesh) volWorld.remove(platformMesh); var a = vgPt(EXC.c0, EXC.r0), b = vgPt(EXC.c1, EXC.r1); platformMesh = new THREE.Mesh(new THREE.PlaneGeometry(Math.abs(b.x - a.x), Math.abs(a.z - b.z)), new THREE.MeshBasicMaterial({ color: 0x2857c4, transparent: true, opacity: 0.35, side: THREE.DoubleSide })); platformMesh.rotation.x = -Math.PI / 2; platformMesh.position.set((a.x + b.x) / 2, rl - VOL_BASE, (a.z + b.z) / 2); volWorld.add(platformMesh); }
+function showOutline() { if (excOutline) return; var a = vgPt(EXC.c0, EXC.r0), b = vgPt(EXC.c1, EXC.r1), pts = []; for (var t = 0; t <= 80; t++) { var f = t / 80, x, z; if (t <= 20) { x = a.x + (b.x - a.x) * f * 4; z = a.z; } else if (t <= 40) { x = b.x; z = a.z + (b.z - a.z) * (f - 0.25) * 4; } else if (t <= 60) { x = b.x - (b.x - a.x) * (f - 0.5) * 4; z = b.z; } else { x = a.x; z = b.z - (b.z - a.z) * (f - 0.75) * 4; } pts.push(new THREE.Vector3(x, volGy(x, z) + 0.15, z)); } excOutline = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineDashedMaterial({ color: 0xe8801a, dashSize: 0.6, gapSize: 0.4, linewidth: 2 })); excOutline.computeLineDistances(); volWorld.add(excOutline); }
+// an aerial deck to stand on for the view from above
+function showDeck(pt, y) { if (!aerialDeck) { aerialDeck = new THREE.Mesh(new THREE.CylinderGeometry(2.5, 2.5, 0.1, 24), new THREE.MeshStandardMaterial({ color: 0x5f6670, metalness: 0.5, transparent: true, opacity: 0.7 })); var rail = new THREE.Mesh(new THREE.TorusGeometry(2.5, 0.03, 8, 40), mSteel); rail.rotation.x = Math.PI / 2; rail.position.y = 1.0; aerialDeck.add(rail); volWorld.add(aerialDeck); } aerialDeck.visible = true; aerialDeck.position.set(pt.x, y - 0.05, pt.z); }
+var CENTRE = { x: 0, z: 0 }, EXC_C = { x: -5, z: -5 };
+var AERIAL = { x: -5, z: 22, y: 30, look: EXC_C }, GROUNDV = { x: -18, z: 12, look: EXC_C };
+
+// Table 10.1 and Learning Task 10.3
+function table101() { var rows = [], uses = 0, coll = 0; for (var r = EXC.r0; r <= EXC.r1; r++) for (var c = EXC.c0; c <= EXC.c1; c++) { var p = vgPt(c, r), u = ((c === EXC.c0 || c === EXC.c1) ? 1 : 2) * ((r === EXC.r0 || r === EXC.r1) ? 1 : 2), d = r3(p.rl - PLAT_TAB); rows.push({ name: p.name, rl: p.rl, depth: d, uses: u, coll: r3(d * u) }); uses += u; coll += d * u; } return { rows: rows, uses: uses, coll: r3(coll), avg: coll / uses, area: 400, vol: r3(coll / uses) * 400 }; }
+var LT = { bmAHD: 39.470, bmRL: 10.000, platAHD: 34.760, area: 30 * 31.5, cols: ["B", "C", "D", "E"], rows: [1, 2, 3, 4], rl: { B: [10.450, 10.570, 10.750, 10.900], C: [11.500, 11.800, 11.180, 11.250], D: [11.900, 12.300, 12.650, 11.800], E: [13.650, 14.400, 13.700, 13.400] } };
+function ltPlatform() { return r3(LT.bmRL + (LT.platAHD - LT.bmAHD)); }
+function ltTable() { var plat = ltPlatform(), rows = [], uses = 0, coll = 0; LT.cols.forEach(function (c, ci) { LT.rows.forEach(function (r, ri) { var rl = LT.rl[c][ri], u = ((ci === 0 || ci === 3) ? 1 : 2) * ((ri === 0 || ri === 3) ? 1 : 2), d = r3(rl - plat); rows.push({ name: c + r, rl: rl, depth: d, uses: u, coll: r3(d * u) }); uses += u; coll += d * u; }); }); return { plat: plat, rows: rows, uses: uses, coll: r3(coll), avg: coll / uses, area: LT.area, vol: r3(coll / uses) * LT.area }; }
+
+var VOL_STEPS = [
+  { title: "Determining volumes: what we are working out, and where", mode: "intro", vantage: AERIAL,
+    task: "You are 30 metres in the air over Lot 57, Oak Road - the site from the textbook, built at full size. Below you is a grid of pegs, A to F across and 1 to 5 up the page, 10 metres apart. Every peg has a reduced level - the numbers on the flags.\\n\\nThe job: an excavation is planned in the middle of the site, down to a flat platform. How many cubic metres of ground come out? That number decides the trucks, the days and the price.\\n\\nWe will go from the grid, to contours, to the platform, to one solid block, to all the blocks, to a single table that does the whole site." },
+  { title: "The ground, read from the pegs", mode: "vground", vantage: GROUNDV, guide: { pt: vgPt(1, 1), text: "B2 - 114.2" },
+    watch: "Watch: the game takes you down onto the ground at B2. Look east up the slope to E2, then down to the road.",
+    task: "From the ground the slope is obvious - up to the east, down to Oak Road on the west. The pegs turn that into numbers: A2 is 113.6, B2 is 114.2, C2 is 115.4. Each RL is a height above the datum.",
+    why: "The grid is a set of samples of a surface. Everything that follows assumes the ground runs straight between neighbouring pegs." },
+  { title: "Contours on the grid", mode: "vcontour", vantage: AERIAL,
+    watch: "Watch: from above, the contours appear - 112 through 116 - threading between the pegs exactly as in Figure 10.110.",
+    task: "A contour joins points of equal height. Between two pegs it crosses in proportion to the rise, and the line is drawn as a smooth curve through the crossings. Continuous, never crossing, never splitting.",
+    why: "Close contours are steep ground. Here they bunch on the east side - that is where the deep cut will be." },
+  { title: "The excavation and the platform RL", mode: "vexc", vantage: AERIAL,
+    watch: "Watch: the excavation outline appears - B2 to D4, 20 by 20 - and a blue plane at the platform level of 112.07.",
+    task: "The designer wants a flat platform 20 by 20 metres. The platform RL is set at the north-west corner of the excavation, where the 112 contour runs close to the grid. From Figure 10.112: the corner is one-tenth of the way from the 112 contour to the 112.7 peg, so its RL is 112 + 0.7 divided by 10 = 112.07. That is the floor everything is measured down to.",
+    why: "Interpolation again - the same proportion trick used for the contours, now used to find one spot height where there is no peg." },
+  { title: "One prism: the four corner heights", mode: "vprism", vantage: { x: -19, z: 14, look: { x: -10, z: 5 } }, guide: { pt: vgPt(1, 2), text: "B3" },
+    watch: "Watch: the block over square B2-C2-C3-B3 rises out of the ground. Its floor is the platform; its top is the ground. The red numbers are the corner heights.",
+    task: "One grid square of the excavation is a prism: a block with a flat floor at the platform and a top that follows the ground. Corner height = spot height minus platform. B3: 112.7 - 112.07 = 0.63. C3: 113.5 - 112.07 = 1.43. B2: 114.2 - 112.07 = 2.13. C2: 115.4 - 112.07 = 3.33. That is Figure 10.113, standing in front of you.",
+    why: "Walk round it. The high corner is at C2, the shallow corner at B3. The volume is the dirt between the top and the floor." },
+  { title: "Volume of one prism - average height times base", mode: "vone", vantage: { x: -19, z: 14, look: { x: -10, z: 5 } },
+    watch: "Watch: the block flattens to its average height. Same volume, now a plain box you can multiply.",
+    task: "Average the four corner heights: (0.63 + 1.43 + 2.13 + 3.33) divided by 4 = 7.52 divided by 4 = 1.88 m. Volume = average height times base area = 1.88 times 10 times 10 = 188.0 cubic metres.",
+    why: "It is not an approximation of the block - a block with a flat sloping top really does have the volume of its average height times its base. The approximation is in assuming the ground is flat between the pegs." },
+  { title: "All four prisms - and the pegs they share", mode: "vall", vantage: AERIAL,
+    watch: "Watch: all four prisms of the excavation come up, then pull apart in the air - Figure 10.114. Watch how many blocks each peg belongs to.",
+    task: "The excavation is four prisms. Doing each one separately means writing some corner heights four times: C3 in the middle is a corner of every prism. B2 at the outside corner belongs to one. B3 on an edge belongs to two.",
+    why: "Corner peg: 1 use. Edge peg: 2. Interior peg: 4. Check: total uses = 4 times the number of prisms." },
+  { title: "Table 10.1 - the whole site in one table", mode: "vtable", vantage: AERIAL,
+    watch: "Watch: the table fills in for a platform of 111.5 - the book's Table 10.1.",
+    task: "For the table the book sets the platform at 111.5. Each peg: depth = RL - 111.5. Multiply by its uses to get its collective depth. Add the collectives, divide by the total uses, and you have the average depth of the whole excavation. Times the whole area.",
+    why: "Nine lines replace four separate prism calculations - and on a big job, dozens." },
+  { title: "Bank, loose and the trucks", mode: "vbulk", vantage: AERIAL,
+    watch: "Watch: 847.6 bank becomes loose on the truck.",
+    task: "847.6 cubic metres is bank volume - the size of the hole. Dug up, the same dirt bulks by about 22 percent. That is what you cart. Loose volume divided by the truck size is the number of loads.",
+    why: "Make the answer match the question. Hole size is bank. Truck count is loose." },
+  { title: "Learning Task 10.3 - a new site, worked through", mode: "vlt", vantage: AERIAL,
+    watch: "Watch: the task's grid and readings go on the sheet, the platform is converted from AHD to the site datum, and the volume comes out.",
+    task: "The task: bench mark AHD 39.470 is called RL 10.000 on site. The excavation floor must be AHD 34.760 everywhere. The shaded area is 30 by 31.5 m, pegs B to E and 1 to 4. First convert the platform to site RL: 10.000 + (34.760 - 39.470) = 5.290. Then every reading minus 5.290 is a depth, uses as before, collective, average, times 945 square metres. No bulking - the task says so.",
+    why: "Two datums on one job is normal. Convert once, at the start, and write the site RL of the platform at the top of the sheet." },
+  { title: "Volumes complete", mode: "end", nextTab: "cutfill", nextLabel: "Cut & fill",
+    task: "Grid to contours, contours to a platform RL, platform to corner heights, corner heights to one prism, prisms to a table, table to trucks.\\n\\nNext: the same method on our own lot - cut and fill on the 9 by 9 grid." }
+];
+tourDemos.volumes = function (s, q) {
+  if (s.mode === "vground") { q.push(later(function () { walkTo(); standAt(workerA, vgPt(1, 1), { x: 0.8, z: 0.8 }); feedback = "A2 113.6, B2 114.2, C2 115.4, D2 115.5, E2 115.6. Rising to the east, 2 metres over 40."; renderBoard(); stepDone = true; markRight(); updateGuide(); }, 400)); }
+  if (s.mode === "vcontour") { q.push(later(function () { walkTo(); volContours.visible = true; feedback = "Five contours, 112 to 116. Look where each one crosses a grid line and compare with the peg values either side."; renderBoard(); stepDone = true; markRight(); }, 500)); }
+  if (s.mode === "vexc") { q.push(later(function () { walkTo(); showOutline(); showPlatform(PLAT_FIG); feedback = "Excavation B2 to D4. Platform 112.07 - the blue plane. Everything above it comes out."; renderBoard(); stepDone = true; markRight(); }, 500)); }
+  if (s.mode === "vprism") { q.push(later(function () { walkTo(); clearPrisms(); var m = prismMesh(1, 1, PLAT_FIG); m.position.y = -3; prismGroup.add(m); tween(m, { x: 0, y: 0, z: 0 }, 1800); feedback = "Corner heights: B3 0.63, C3 1.43, B2 2.13, C2 3.33 - each is RL minus 112.07."; renderBoard(); stepDone = true; markRight(); updateGuide(); }, 500)); }
+  if (s.mode === "vone") { q.push(later(function () { clearPrisms(); var box = new THREE.Mesh(new THREE.BoxGeometry(10, 1.88, 10), new THREE.MeshStandardMaterial({ color: 0x2f8f5b, transparent: true, opacity: 0.6 })); var p = vgPt(1, 1); box.position.set(p.x + 5, PLAT_FIG - VOL_BASE + 0.94, p.z - 5); box.add(new THREE.LineSegments(new THREE.EdgesGeometry(box.geometry), new THREE.LineBasicMaterial({ color: 0x1e2a44 }))); var lab = ySprite("1.88 x 10 x 10 = 188.0 m3", 6, 3, "rgba(47,143,91,0.9)"); lab.position.set(p.x + 5, PLAT_FIG - VOL_BASE + 3.5, p.z - 5); prismGroup.add(box); prismGroup.add(lab); feedback = "(0.63 + 1.43 + 2.13 + 3.33) / 4 = 1.88. 1.88 x 100 = 188.0 m3."; renderBoard(); stepDone = true; markRight(); }, 500)); }
+  if (s.mode === "vall") {
+    q.push(later(function () { walkTo(); clearPrisms(); for (var r = EXC.r0; r < EXC.r1; r++) for (var c = EXC.c0; c < EXC.c1; c++) { var m = prismMesh(c, r, PLAT_FIG, (c + r) % 2 ? 0xe8801a : 0xd9d21a); prismGroup.add(m); } feedback = "Four prisms: B2-C3, C2-D3, B3-C4, C3-D4."; renderBoard(); }, 500));
+    q.push(later(function () { prismGroup.children.forEach(function (m) { var pts = m.userData.pts, cx = (pts[0].x + pts[2].x) / 2, cz = (pts[0].z + pts[2].z) / 2; tween(m, { x: (cx - EXC_C.x) * 0.5, y: 4, z: (cz - EXC_C.z) * 0.5 }, 1800); }); feedback = "Pulled apart. Count: C3 appears on all four blocks - 4 uses. B3 on two. B2 on one."; renderBoard(); stepDone = true; markRight(); }, 2200));
+  }
+  if (s.mode === "vtable") { q.push(later(function () { walkTo(); clearPrisms(); showPlatform(PLAT_TAB); showSheet = true; var t = table101(); feedback = "Uses " + t.uses + ", collective " + fmt(t.coll) + ". Average " + fmt(t.coll) + " / " + t.uses + " = " + t.avg.toFixed(3) + ". x 400 m2 = " + t.vol.toFixed(1) + " m3."; renderBoard(); stepDone = true; markRight(); }, 500)); }
+  if (s.mode === "vbulk") { q.push(later(function () { var t = table101(); feedback = t.vol.toFixed(1) + " m3 bank x 1.22 = " + (t.vol * 1.22).toFixed(0) + " m3 loose. At 10 m3 a load, " + Math.ceil(t.vol * 1.22 / 10) + " truck loads."; renderBoard(); stepDone = true; markRight(); }, 500)); }
+  if (s.mode === "vlt") { q.push(later(function () { showSheet = true; ltMode = true; var t = ltTable(); feedback = "Platform site RL 10.000 + (34.760 - 39.470) = " + fmt(t.plat) + ". Uses " + t.uses + ", collective " + fmt(t.coll) + ", average " + t.avg.toFixed(3) + ", x " + t.area + " m2 = " + t.vol.toFixed(0) + " m3 of spoil. No bulking."; renderBoard(); stepDone = true; markRight(); }, 500)); }
+};
+var ltMode = false;
+tourSheets.volumes = function (P, L, y, W) {
+  var t = ltMode ? ltTable() : table101();
+  P.text(ltMode ? "Learning Task 10.3 - platform RL " + fmt(t.plat) : "Table 10.1 - platform RL " + fmt(PLAT_TAB), L, y, C.ink, 34); P.button(P.cw - L - 150, y - 34, 150, 52, "Close", "", { act: "sheet" }, 24); P.button(P.cw - L - 380, y - 34, 210, 52, ltMode ? "Show Table 10.1" : "Show Task 10.3", "", { act: "ltToggle" }, 22); y += 50;
+  var cols = ["Point", "RL", "Platform", "Depth", "Uses", "Collective"], cw = [110, 130, 140, 150, 100, 170], x = L;
+  cols.forEach(function (c, i) { P.text(c, x, y, C.mute, 24); x += cw[i]; }); y += 12; P.rule(y, L, L + W); y += 32;
+  t.rows.forEach(function (d) { x = L; [d.name, d.rl.toFixed(ltMode ? 3 : 1), (ltMode ? t.plat : PLAT_TAB).toFixed(ltMode ? 3 : 1), d.depth.toFixed(ltMode ? 3 : 1), String(d.uses), d.coll.toFixed(ltMode ? 3 : 1)].forEach(function (v, i) { P.text(v, x, y, i === 3 ? C.red : C.ink, 24); x += cw[i]; }); y += 32; });
+  P.rule(y - 16, L, L + W); y += 14;
+  y = P.para("Totals: uses " + t.uses + ", collective " + fmt(t.coll) + ".   Average depth = " + fmt(t.coll) + " / " + t.uses + " = " + t.avg.toFixed(3) + " m.", L, y, W, C.ink, 24);
+  y = P.para("Area " + t.area + " m2.   Volume = " + t.avg.toFixed(3) + " x " + t.area + " = " + t.vol.toFixed(1) + " m3 bank.", L, y, W, C.green, 26);
+};
+function renderVolPlan(P, L, y, W) {
+  P.text("Lot 57 - grid at 10 m", L, y, C.ink, 40); P.button(P.cw - L - 150, y - 34, 150, 52, "Close", "", { act: "plan" }, 24); y += 60;
+  var sc = 14, ox = L + 70, oy = y + 30, c = P.ctx;
+  c.fillStyle = "#e6efd8"; c.fillRect(ox, oy, 50 * sc, 40 * sc);
+  c.strokeStyle = C.ink; c.lineWidth = 2; for (var g = 0; g <= 5; g++) { c.beginPath(); c.moveTo(ox + g * 10 * sc, oy); c.lineTo(ox + g * 10 * sc, oy + 40 * sc); c.stroke(); } for (var r = 0; r <= 4; r++) { c.beginPath(); c.moveTo(ox, oy + r * 10 * sc); c.lineTo(ox + 50 * sc, oy + r * 10 * sc); c.stroke(); }
+  for (var rr = 0; rr < 5; rr++) for (var cc = 0; cc < 6; cc++) { var p = vgPt(cc, rr), px = ox + cc * 10 * sc, py = oy + (4 - rr) * 10 * sc; c.fillStyle = C.ink; c.beginPath(); c.arc(px, py, 4, 0, 7); c.fill(); P.text(p.rl.toFixed(1), px + 5, py - 6, C.ink, 20); }
+  c.setLineDash([8, 6]); c.strokeStyle = C.orange; c.lineWidth = 3; c.strokeRect(ox + 10 * sc, oy + 10 * sc, 20 * sc, 20 * sc); c.setLineDash([]);
+  P.text("A", ox, oy + 40 * sc + 28, C.mute, 22); P.text("F", ox + 50 * sc - 10, oy + 40 * sc + 28, C.mute, 22); c.save(); c.translate(ox - 40, oy + 20 * sc); c.rotate(-Math.PI / 2); P.text("Oak Road", 0, 0, C.mute, 20, "", "center"); c.restore();
+  P.text("5", ox - 30, oy + 8, C.mute, 22); P.text("1", ox - 30, oy + 40 * sc, C.mute, 22);
+  y = oy + 40 * sc + 70; P.para("Excavation B2-D4 (dashed). Platform 112.07 (Figure 10.113) or 111.5 (Table 10.1).", L, y, W, C.mute, 24);
+}
+tours.volumes = { steps: VOL_STEPS, idx: 0, done: true, plan: renderVolPlan };
+VOL_STEPS.forEach(function (s, i) { s.n = i; if (!s.how && s.mode !== "intro" && s.mode !== "end") s.how = "Press Do this step."; });
+
+// explain pages for the volumes tour
+EXPLAIN["volumes:intro"] = { terms: [T("Volume", "How much space something takes up - here, how much ground comes out, in cubic metres (m3)."), T("Spot height", "The RL of one point on the ground - one peg."), T("Grid", "Pegs set in straight rows at a fixed spacing, each labelled letter-and-number, each with a spot height."), T("Excavation", "The hole to be dug. Its floor is the platform."), T("Platform", "The flat finished floor of the excavation, at one RL everywhere.")], working: function () { return ["Lot 57: 6 columns x 5 rows = 30 pegs, 10 m apart.", "Lowest RL 111.2 at A5 (north-west), highest 116.9 at F1 (south-east).", "Excavation: B2 to D4, 20 x 20 = 400 m2."]; } };
+EXPLAIN["volumes:vground"] = { terms: [T("RL - reduced level", "Height above the datum, metres, three decimals."), T("Datum", "The zero everything is measured from. It only matters that every RL on the job uses the same one.")], working: function () { return ["Row 2 west to east: 113.6, 114.2, 115.4, 115.5, 115.6, 115.6.", "Rise A to F = 115.6 - 113.6 = 2.0 m over 50 m."]; } };
+EXPLAIN["volumes:vcontour"] = { terms: [T("Contour", "A line of equal height. Every point on the 114 contour is at RL 114.000."), T("Interpolation", "Finding where the contour crosses a grid line: (contour - lower RL) / (upper RL - lower RL) x grid spacing from the lower peg.")], working: function () { return ["Between B3 (112.7) and C3 (113.5): rise 0.8.", "113 crosses (113 - 112.7) / 0.8 = 0.375 of the way = 3.75 m from B3.", "Repeat on every line, join the crossings smoothly."]; } };
+EXPLAIN["volumes:vexc"] = { terms: [T("Platform RL", "The design floor level. Here taken as the RL of the excavation's north-west corner."), T("Off-grid corner", "A corner of the excavation that does not sit on a peg. Its RL has to be interpolated.")], working: function () { return ["Nearest contour to the corner: 112. Nearest peg beyond it: 112.7.", "The corner is about one-tenth of the way from the contour to the peg.", "Corner RL = 112 + (0.7 / 10) = 112 + 0.07 = 112.07."]; } };
+EXPLAIN["volumes:vprism"] = { terms: [T("Prism", "A solid with a flat base and straight sides. Here the base is a grid square at the platform, and the top follows the ground."), T("Corner height", "How far the ground is above the platform at one peg: spot height - platform RL.")], working: function () { return ["B3: 112.7 - 112.07 = 0.63.", "C3: 113.5 - 112.07 = 1.43.", "B2: 114.2 - 112.07 = 2.13.", "C2: 115.4 - 112.07 = 3.33."]; } };
+EXPLAIN["volumes:vone"] = { terms: [T("Average height", "Add the four corner heights and divide by 4."), T("Base area", "Length x width of the grid square: 10 x 10 = 100 m2."), T("Cubic metre (m3)", "A block 1 m x 1 m x 1 m. Volume is always area x height.")], working: function () { return ["0.63 + 1.43 + 2.13 + 3.33 = 7.52.", "7.52 / 4 = 1.88 m average.", "1.88 x 10 x 10 = 188.0 m3."]; } };
+EXPLAIN["volumes:vall"] = { terms: [T("Uses", "The number of prisms a peg is a corner of. Outer corner 1, edge 2, interior 4."), T("Duplication", "The same peg height counted once for every prism it belongs to. Instead of writing it four times, multiply by 4.")], working: function () { return ["Four prisms x 4 corners = 16 corner entries.", "B2 1, C2 2, D2 1, B3 2, C3 4, D3 2, B4 1, C4 2, D4 1.", "1+2+1+2+4+2+1+2+1 = 16. Matches."]; } };
+EXPLAIN["volumes:vtable"] = { terms: [T("Collective depth", "A peg's depth x its uses. The peg's share of all the prisms it touches."), T("Average depth of excavation", "Total collective / total uses."), T("Total volume", "Average depth x total area of the excavation.")], working: function () { var t = table101(); return t.rows.map(function (r) { return r.name + ": " + r.rl.toFixed(1) + " - 111.5 = " + r.depth.toFixed(1) + " x " + r.uses + " = " + r.coll.toFixed(1); }).concat(["Total collective " + fmt(t.coll) + " / " + t.uses + " = " + t.avg.toFixed(3) + " m.", t.avg.toFixed(3) + " x 400 = " + t.vol.toFixed(1) + " m3."]); } };
+EXPLAIN["volumes:vbulk"] = { terms: [T("Bank", "Dirt undisturbed in the ground. What the table gives."), T("Loose", "Dug dirt - it swells. Bank x about 1.22."), T("Bulking factor", "The multiplier from bank to loose. Depends on the soil; 1.22 is typical.")], working: function () { var t = table101(); return [t.vol.toFixed(1) + " x 1.22 = " + (t.vol * 1.22).toFixed(1) + " m3 loose.", (t.vol * 1.22).toFixed(1) + " / 10 = " + (t.vol * 1.22 / 10).toFixed(1) + " -> " + Math.ceil(t.vol * 1.22 / 10) + " loads of 10 m3."]; } };
+EXPLAIN["volumes:vlt"] = { terms: [T("AHD - Australian Height Datum", "The national datum, roughly mean sea level. Survey plans quote it."), T("Site datum", "A convenient number given to the bench mark for the job - here AHD 39.470 is called 10.000."), T("Bench mark (BM)", "The fixed point the site RLs start from.")], working: function () { var t = ltTable(); return ["Platform AHD 34.760 - BM AHD 39.470 = -4.710.", "Site RL of platform = 10.000 - 4.710 = " + fmt(t.plat) + ".", "Each reading - " + fmt(t.plat) + " = depth. Corners x1, edges x2, interior x4.", "Collective " + fmt(t.coll) + " / " + t.uses + " uses = " + t.avg.toFixed(3) + " m.", t.avg.toFixed(3) + " x (30 x 31.5 = 945) = " + t.vol.toFixed(0) + " m3. No bulking allowance."]; } };
+EXPLAIN["volumes:end"] = { terms: [], working: function () { return ["Grid -> contours -> platform -> prisms -> table -> trucks."]; } };
 
 </script>
 </body>
