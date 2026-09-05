@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Site Set-Out VR</title>
+<style>
+  body { margin: 0; overflow: hidden; background: #cfe0ee; font: 17px/1.5 Georgia, "Times New Roman", serif; color: #1e2a44; }
+  canvas { display: block; }
+  #ui { position: fixed; left: 0; right: 0; bottom: 24px; text-align: center; pointer-events: none; }
+  #ui > * { pointer-events: auto; }
+  #enter { display: none; font: inherit; font-size: 22px; padding: 12px 34px; border: 3px solid #1e2a44; background: #1e2a44; color: #f4f1e8; border-radius: 3px; cursor: pointer; }
+  #enter:hover { background: #e8801a; border-color: #e8801a; }
+  #note { margin: 10px auto 0; max-width: 62ch; font-size: 15px; color: #f4f1e8; background: rgba(30,42,68,0.8); padding: 6px 14px; border-radius: 3px; }
+  h1 { position: fixed; top: 16px; left: 22px; margin: 0; font-weight: normal; font-size: 22px; }
+</style>
+</head>
+<body>
+<h1>Site Set-Out</h1>
+<div id="ui"><button id="enter">Enter VR</button><p id="note">Loading the site.</p></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+
+// =====================================================================
+// SITE SET-OUT — CPCCBC4018 in VR. Stage 1: Standard set-out, ten steps.
+// Content follows the MBAWA "Standard Set Out Procedures" deck.
+// =====================================================================
+
+var C = { ink: "#1e2a44", paper: "#f4f1e8", ply: "#c9a978", orange: "#e8801a", green: "#2f8f5b", red: "#c9302c", blue: "#2857c4", mute: "#6f7480", rule: "#cfc9b9", white: "#ffffff" };
+var FONT = "Georgia, 'Noto Serif', 'Times New Roman', serif";
+
+// ---------- the job ----------
+// Lot 12: 20.000 wide x 30.000 deep. Street frontage on the +z side.
+// Building: 12.000 wide x 9.000 deep, brick veneer on slab.
+// Front setback 6.000, west side setback 1.500. Diagonal = root(144 + 81) = 15.000.
+var LOT = { w: 20, d: 30, x0: -10, x1: 10, zRear: -15, zFront: 15 };
+var JOB = { front: 6.0, side: 1.5, width: 12.0, depth: 9.0 };
+var TRUE = {
+  A: { x: LOT.x0 + JOB.side, z: LOT.zFront - JOB.front },          // front-west, the critical corner
+  D: { x: LOT.x0 + JOB.side, z: LOT.zFront - JOB.front - JOB.depth }, // rear-west
+  F: { x: LOT.x0 + JOB.side + JOB.width, z: LOT.zFront - JOB.front },  // front-east
+  G: { x: LOT.x0 + JOB.side + JOB.width, z: LOT.zFront - JOB.front - JOB.depth } // rear-east
+};
+var DIAG = Math.sqrt(JOB.width * JOB.width + JOB.depth * JOB.depth);
+var TOL_SNAP = 0.04;   // inside this, the peg is exactly right
+var TOL_CARRY = 0.30;  // inside this, the peg goes in where you put it and the error carries
+var TOL_DIAG = 0.003;  // acceptable diagonal difference, domestic work
+
+// what the player has actually put in the ground
+var pegs = {};        // A, B, C, E, D, F, G  -> {x,z}
+var profiles = [];    // 8 hurdles -> {x,z,rot,slot,headErr,nail}
+var checked = { calc: false, measured: false, square: false, fixed: false };
+var poured = false, score = { right: 0, missed: 0 };
+var estimate = "";
+
+// ---------- the steps ----------
+// mode: read | place | cross | tap | keypad | measure | quiz | pour | done
+var STEPS = [
+  { n: 0, title: wrongRun ? "Watch it go wrong" : "Set-out: the ten steps",
+    mode: "intro",
+    task: "You are on the verge outside Lot 12. The plan is on the clipboard. Before anything goes in the ground, here is the whole sequence you are about to walk through - the same order every job, no skipping:\n\n1  Confirm the block and the survey pegs\n2  Boundary offset lines\n3  First building corner - peg A\n4  A 90 degree corner - isometric triangle\n5  Remaining corners, largest rectangle first\n6  Profiles, 1.5 m outside the dig, all heads level\n7  Transfer lines to the profiles\n8  Diagonal check, within 3 mm, before any concrete\n9  Wall lines on the profiles\n10  Final dimension check, then pour\n\nAt each step the game will walk you to the spot and tell you what to do. Press Next to start.",
+    why: "Set out is where the plan becomes the building. A 2 degree error at the start is 420 mm out of position after 12 metres." },
+  { n: 1, title: "Confirm the block and find the survey pegs",
+    mode: "tap", watch: "Watch: the game walks you to each survey peg and confirms it. Four white tops, four nails - that is the boundary.", targets: ["survey"],
+    task: "Four survey pegs mark the boundary. A licensed surveyor put them there - that is the cadastral survey, and you cannot start without it. Check the lot number on the plan is the lot you are standing on, then confirm each peg.",
+    how: "Look for the white-topped peg inside the orange ring at your feet. Point the controller at it and pull the trigger. The game will then move you to the next one.",
+    why: "If you cannot find a survey peg - stop and call a surveyor. Never set out from an unconfirmed boundary. Boundary setbacks are legally enforceable and a wrong position can be a demolition order." },
+  { n: 2, title: "Establish the boundary offset lines",
+    mode: "tap2", watch: "Watch: the two offset lines are on the ground. The crossing is the building corner.",
+    task: "Two blue lines have been run on the ground. One runs across the block 6.000 back from the front pegs - the front setback. One runs down the block 1.500 in from the west fence - the side setback. Everything is measured from these lines, not from the pegs in the grass.",
+    how: "You are standing beside where the two lines cross. Point at the orange ring on the crossing and pull the trigger.",
+    why: "The offset lines are the base lines for the whole set-out. The front line gives you the setback; the west line gives you the side clearance." },
+  { n: 3, title: "Drive the first building corner - peg A",
+    mode: "place", peg: "A", watch: "Watch: the tapes run out to both boundaries. When they read 6.000 and 1.500 the peg goes in.",
+    task: "Peg A is the front-west corner of the building: 6.000 back from the front boundary and 1.500 in from the west boundary.",
+    how: "Point at the ground near the ring. Two yellow tapes run out to the boundaries and the readout shows what each one says. Move the pointer until it reads 6.000 from the front and 1.500 from the west, then pull the trigger to drive the peg. Inside 40 mm counts as exact.",
+    why: "This is the critical corner peg. It sets the legal offset from the boundary. It is the one peg you never move later." },
+  { n: 4, title: "Set the 90 degree corner - isometric triangle",
+    mode: "place", peg: "B", watch: "Watch: 3.000 along the front line from A, and the peg goes in.",
+    task: "To get a 90 degree corner off the front line we build an isometric triangle. First, pegs B and C: 3.000 each side of A along the front line. Drive B on the east side of A.",
+    how: "Point at the ground east of A. The tape reads from A; the second readout tells you how far off the front line you are. Trigger at 3.000 from A, on the line.",
+    why: "The further apart B and C are, the more accurate the perpendicular. 3 m is the textbook figure; use more on a bigger building." },
+  { n: 5, title: "Peg C - the other side",
+    mode: "place", peg: "C", watch: "Watch: 3.000 the other way. Same tape, same distance.",
+    task: "Now peg C, 3.000 west of A on the same line. Both distances must be identical - same tape, both measured from A.",
+    how: "Same again on the west side. 3.000 from A, zero off the line, trigger.",
+    why: "Symmetry is the whole trick. Nothing else in this method matters if B and C are not equal distances from A." },
+  { n: 6, title: "Pull two tapes until they cross - peg E",
+    mode: "cross", watch: "Watch: two tapes from B and C, pulled back until they read the same. Where they cross, peg E.",
+    task: "A tape is hooked on B and another on C. Pull both back into the block until they cross. The crossing is directly behind A on the perpendicular.",
+    how: "Point at the ground behind A, about 6 m in. Two tapes follow the pointer, one from B and one from C. Slide sideways until both read the same number, then trigger. That is peg E.",
+    why: "No protractor, no trig. Two equal tapes from two equal pegs cross on the perpendicular bisector, and A is its foot. String A to E is your 90 degree line." },
+  { n: 7, title: "Remaining corners - largest rectangle first",
+    mode: "place", peg: "D", watch: "Watch: 9.000 from A along the line through E.",
+    task: "Measure 9.000 from A along the line A-E and drive peg D, the rear-west corner.",
+    how: "Follow the orange string from A through E. The readout gives distance along the line and how far off it you are. 9.000 along, zero off, trigger.",
+    why: "Every building reduces to rectangles. Set out the largest one first, always. Sub-shapes inherit its errors." },
+  { n: 8, title: "Peg F - front-east corner",
+    mode: "place", peg: "F", watch: "Watch: 12.000 from A along the front line.",
+    task: "12.000 east of A along the front line. Drive peg F.",
+    how: "Back to the front line. 12.000 from A, zero off the line, trigger.",
+    why: "F is set from the front offset line, so like A it sits on a critical line." },
+  { n: 9, title: "Peg G - rear-east corner",
+    mode: "place", peg: "G", watch: "Watch: 12.000 from D and 9.000 from F.",
+    task: "G is 12.000 from D and 9.000 from F. Two tapes again.",
+    how: "Point at the ground in the rear-east corner. Slide the pointer until one tape reads 12.000 and the other 9.000, then trigger.",
+    why: "You now have four corners. You do not yet know if they make a rectangle. That is what the diagonal check is for - but profiles come first." },
+  { n: 10, title: "Install profiles - 1.5 m outside the excavation",
+    mode: "profiles", watch: "Watch: eight hurdles go in, two at each corner, each about 2 m past the peg on the wall line.",
+    task: "Corner pegs sit inside the excavation and the excavator will destroy them. Hurdle profiles store the building position outside the dig - two at each corner, one on each wall line, eight in all.",
+    how: "The ring shows where the next profile goes. Point at the ground on the extension of the wall line, past the corner. The readout shows how far past the corner you are - it must be 1.5 m or more. Trigger to drive the hurdle. The game moves you to the next one.",
+    why: "Minimum 1.5 m clearance for mechanical excavation, 0.5 m for manual. Profiles are your insurance: pegs get knocked, profiles don't." },
+  { n: 11, title: "The golden rule - all heads level",
+    mode: "level", watch: "Watch: the level reads each head in turn. One reads 100.945 against 100.900. It gets dropped.",
+    task: "One of the eight heads is not at the same reduced level as the rest.",
+    how: "Point at a profile board and the readout gives its head RL. Seven of them read 100.900. Find the one that does not and pull the trigger on it to drop it to datum.",
+    why: "If one head is high the string runs on a slope, and every distance you measure is a slope distance. 10.000 m at 2 degrees reads 9.994 - a 6 mm error, enough to fail a diagonal check." },
+  { n: 12, title: "Transfer the lines to the profiles",
+    mode: "transfer", watch: "Watch: string through the nail, plumb up to the board, nail driven. Eight times.",
+    task: "Run the string through each peg nail, plumb it up to the profile board and drive a nail there. After this the pegs can be knocked out without losing the building.",
+    how: "Point at the profile in the ring and pull the trigger to drive its nail. Eight times. The game moves you round.",
+    why: "Spirit level for short domestic spans, plumb bob for vertical transfer, oil bath reflector for long commercial spans." },
+  { n: 13, title: "Calculate the diagonal before you measure it",
+    mode: "keypad", watch: "Watch: 144 plus 81 is 225. Root of 225 is 15.000. Keyed in before the tape comes out.",
+    task: "Building is 12.000 x 9.000. c = root(a squared + b squared).",
+    how: "Key the diagonal you expect into the clipboard, in metres, and press Check. Do this before you measure anything.",
+    why: "Write the target down before you go to the tape. A measured figure with nothing to compare it to tells you nothing." },
+  { n: 14, title: "Diagonal check - profile to profile",
+    mode: "measure", watch: "Watch: both diagonals taped from the profile nails.",
+    task: "Both diagonals, profile nail to profile nail, not string to string - strings sag. Both must be equal within 3 mm, and both should match the number you just calculated.",
+    how: "Press Measure on the clipboard and read the two figures.",
+    why: "This is the only proof of square. Do it before any concrete is poured. Five minutes now against $40,000 in rectification." },
+  { n: 15, title: "Not square - fix it the right way",
+    mode: "quiz", watch: "Watch: the rear line is the one that moves - the front and west lines hold the setbacks.",
+    q: "The diagonals differ. Which line do you move?",
+    options: ["The front line A-F", "The west line A-D", "The rear line D-G"], answer: 2,
+    task: "Identify the critical line - the one set at the correct offset from the boundary - and the critical corner peg. Never move those. Move the non-critical line by the full difference, both pegs, same direction, then measure again.",
+    how: "Pick the line on the clipboard.",
+    why: "Moving the critical peg shifts the whole building off its legal setback. The rear line is the one that is free to move." },
+  { n: 16, title: "Mark the wall lines and pour",
+    mode: "pour", watch: "Watch from the street: excavation, slab, then the frame.",
+    task: "Brick veneer on slab: three nails per profile - outside face of brickwork and slab edge, outside face of frame, and the rebate formwork. Final dimension check against the plan, then the excavator comes in and the slab goes down.",
+    how: "Press Pour on the clipboard and watch from the street.",
+    why: "Different construction types need different nails. Cavity brick on slab needs four, strip footing cavity brick five or more. Wrong nail, wrong position for that trade." },
+  { n: 17, title: "The frame goes on",
+    mode: "done",
+    task: "", why: "" }
+];
+var guided = true, demoRunning = false, wrongRun = /wrong/.test(location.hash), voiceOn = true, stepIdx = 0, stepDone = true, quizPicked = -1, levelPicked = false, feedback = "";
+var tab = "setout";
+var showPlan = false;
+
+function step() { return STEPS[stepIdx]; }
+function fmt(m) { return (Math.round(m * 1000) / 1000).toFixed(3); }
+function mm(m) { return Math.round(m * 1000) + " mm"; }
+function dist(a, b) { return Math.hypot(a.x - b.x, a.z - b.z); }
+
+// ---------- canvas panel (same class as Cold Start VR) ----------
+function Panel(wM, hM, cw, ch) {
+  this.cw = cw; this.ch = ch; this.wM = wM; this.hM = hM;
+  this.canvas = document.createElement("canvas"); this.canvas.width = cw; this.canvas.height = ch;
+  this.ctx = this.canvas.getContext("2d");
+  this.tex = new THREE.CanvasTexture(this.canvas); this.tex.minFilter = THREE.LinearFilter; this.tex.anisotropy = 8; this.tex.encoding = THREE.sRGBEncoding;
+  this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(wM, hM), new THREE.MeshBasicMaterial({ map: this.tex, transparent: false }));
+  this.mesh.userData.panel = this; this.hits = []; this.hover = -1;
+}
+Panel.prototype.begin = function () { var x = this.ctx; this.hits = []; x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = C.paper; x.fillRect(0, 0, this.cw, this.ch); x.lineWidth = 10; x.strokeStyle = C.ink; x.strokeRect(5, 5, this.cw - 10, this.ch - 10); };
+Panel.prototype.end = function () { this.tex.needsUpdate = true; };
+Panel.prototype.font = function (px, style) { this.ctx.font = (style || "") + " " + px + "px " + FONT; };
+Panel.prototype.text = function (s, x, y, color, px, style, align) { this.font(px, style); this.ctx.fillStyle = color || C.ink; this.ctx.textAlign = align || "left"; this.ctx.fillText(s, x, y); this.ctx.textAlign = "left"; };
+Panel.prototype.para = function (s, x, y, maxW, color, px, style, lh) {
+  var ctx = this.ctx; this.font(px, style); ctx.fillStyle = color || C.ink; ctx.textAlign = "left"; lh = lh || Math.round(px * 1.42);
+  String(s).split("\n").forEach(function (p) {
+    if (p === "") { y += lh * 0.5; return; }
+    var words = p.split(" "), line = "";
+    for (var i = 0; i < words.length; i++) { var t = line ? line + " " + words[i] : words[i]; if (ctx.measureText(t).width > maxW && line) { ctx.fillText(line, x, y); y += lh; line = words[i]; } else line = t; }
+    if (line) { ctx.fillText(line, x, y); y += lh; }
+  });
+  return y;
+};
+Panel.prototype.rule = function (y, x1, x2) { var c = this.ctx; c.strokeStyle = C.rule; c.lineWidth = 3; c.beginPath(); c.moveTo(x1, y); c.lineTo(x2, y); c.stroke(); };
+Panel.prototype.button = function (x, y, w, h, label, kind, action, px) {
+  var c = this.ctx, idx = this.hits.length, hov = this.hover === idx;
+  this.hits.push({ x: x, y: y, w: w, h: h, action: action });
+  var fill = C.paper, stroke = C.ink, color = C.ink, alpha = 1;
+  if (kind === "on" || kind === "primary") { fill = C.ink; color = C.paper; }
+  if (kind === "track-on") { fill = C.orange; stroke = C.orange; color = C.white; }
+  if (kind === "good") { fill = C.green; stroke = C.green; color = C.white; }
+  if (kind === "bad") { fill = C.red; stroke = C.red; color = C.white; }
+  if (kind === "dim") alpha = 0.4;
+  if (hov && action && kind === "") fill = C.white;
+  c.globalAlpha = alpha; c.fillStyle = fill; c.fillRect(x, y, w, h); c.lineWidth = 4; c.strokeStyle = stroke; c.strokeRect(x, y, w, h);
+  if (hov && action) { c.lineWidth = 6; c.strokeStyle = C.orange; c.strokeRect(x - 6, y - 6, w + 12, h + 12); }
+  if (label) { this.font(px || 28); c.fillStyle = color; c.textAlign = "center"; c.fillText(label, x + w / 2, y + h / 2 + (px || 28) * 0.36); c.textAlign = "left"; }
+  c.globalAlpha = 1; return idx;
+};
+Panel.prototype.hitAt = function (u, v) { var px = u * this.cw, py = (1 - v) * this.ch; for (var i = 0; i < this.hits.length; i++) { var r = this.hits[i]; if (px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h) return i; } return -1; };
+
+// ---------- the clipboard ----------
+var board = new Panel(0.62, 0.80, 930, 1200);
+
+function renderBoard() {
+  if (feedback && feedback !== lastSpoken) { lastSpoken = feedback; speak(feedback); }
+  var P = board, L = 40, W = P.cw - 80, y = 0;
+  P.begin();
+  // tabs
+  var tabs = [["setout", "Set-out"], ["level", "Levelling"], ["grid", "Grid survey"], ["cutfill", "Cut & fill"]];
+  var bx = L;
+  tabs.forEach(function (t) { var locked = t[0] !== "setout"; P.button(bx, 28, 208, 58, t[1], t[0] === tab ? "track-on" : (locked ? "dim" : ""), locked ? null : { tab: t[0] }, 24); bx += 214; });
+  y = 130;
+  if (tab !== "setout") { P.para("This stage is the next build: two-peg test, HOC, rise and fall booking, the grid survey, contours, cut and fill and grades. It will sit here as its own game.", L, y, W, C.mute, 30); P.end(); return; }
+  if (showPlan) { renderPlan(P, L, y, W); P.end(); return; }
+
+  var s = step();
+  P.text(s.n === 0 ? "Before you start" : "Step " + s.n + " of 16", L, y, C.mute, 26);
+  P.button(P.cw - L - 150, y - 36, 150, 52, "Site plan", "", { act: "plan" }, 24);
+  y += 64;
+  y = P.para(s.title, L, y, W, C.ink, 40, "", 50); y += 6;
+  P.rule(y, L, L + W); y += 44;
+  if (s.mode === "done") y = renderDone(P, L, y, W);
+  else {
+    y = P.para(s.task, L, y, W, C.ink, 30); y += 12;
+    if (s.how && guided) s = Object.assign({}, s, { how: s.watch || "Press Do this step and watch." });
+    if (s.how) { var y0 = y; y = P.para(s.how, L + 24, y, W - 24, C.blue, 29); P.ctx.fillStyle = C.blue; P.ctx.fillRect(L, y0 - 26, 6, y - y0 - 6); y += 16; }
+    if (s.mode === "quiz") {
+      s.options.forEach(function (o, i) {
+        var kind = ""; if (quizPicked >= 0) kind = i === s.answer ? "good" : (i === quizPicked ? "bad" : "dim");
+        P.button(L, y, W, 62, o, kind, quizPicked < 0 ? { quiz: i } : null, 28); y += 74;
+      });
+      y += 40;
+    }
+    if (s.mode === "keypad") {
+      P.text("Diagonal", L, y + 42, C.mute, 30, "italic");
+      var ex = L + 150; P.ctx.strokeStyle = C.ink; P.ctx.lineWidth = 4; P.ctx.beginPath(); P.ctx.moveTo(ex, y + 54); P.ctx.lineTo(ex + 300, y + 54); P.ctx.stroke();
+      P.text((estimate || "") + (estimate ? " m" : ""), ex + 10, y + 42, C.ink, 36);
+      var keys = ["7", "8", "9", "4", "5", "6", "1", "2", "3", "0", ".", "<"], k = 0, kx0 = L + 500;
+      for (var r = 0; r < 4; r++) for (var cc = 0; cc < 3; cc++) { var key = keys[k++]; P.button(kx0 + cc * 90, y - 10 + r * 66, 80, 58, key === "<" ? "\u232B" : key, "", { key: key }, 30); }
+      P.button(ex, y + 80, 200, 58, "Check", "primary", checked.calc ? null : { act: "calc" }, 28);
+      y += 290;
+    }
+    if (s.mode === "measure") {
+      P.button(L, y, 260, 62, "Measure", "primary", checked.measured ? null : { act: "measure" }, 28); y += 90;
+      if (checked.measured) {
+        var d = diagonals();
+        P.text("A to G   " + fmt(d.ag), L, y, C.ink, 34); y += 44;
+        P.text("F to D   " + fmt(d.fd), L, y, C.ink, 34); y += 44;
+        P.text("Difference   " + mm(Math.abs(d.ag - d.fd)), L, y, Math.abs(d.ag - d.fd) <= TOL_DIAG ? C.green : C.red, 34); y += 54;
+      }
+    }
+    if (s.mode === "pour") { P.button(L, y, 220, 62, "Pour", "bad", poured ? null : { act: "pour" }, 28); y += 90; }
+    if (feedback) { P.ctx.fillStyle = feedback.indexOf("Right") === 0 || feedback.indexOf("Good") === 0 || feedback.indexOf("Square") === 0 ? C.green : C.orange; P.ctx.fillRect(L, y - 28, 6, 70); y = P.para(feedback, L + 24, y, W - 24, C.ink, 28); y += 20; }
+    // why
+    P.rule(y, L, L + W); y += 40;
+    y = P.para(s.why, L, y, W, C.mute, 27, "italic");
+  }
+  // footer
+  var fy = P.ch - 110;
+  P.rule(fy - 30, L, L + W);
+  if (stepIdx > 0) P.button(L, fy, 150, 60, "Back", "", { act: "back" }, 26);
+  if (s.mode === "done") { P.button(P.cw - L - 220, fy, 220, 60, "Start again", "primary", { act: "restart" }, 26); if (!wrongRun) P.button(L + 170, fy, 300, 60, "Watch it go wrong", "bad", { act: "wrong" }, 24); }
+  else if (guided && !stepDone && s.mode !== "intro") P.button(P.cw - L - 300, fy, 300, 60, demoRunning ? "Working..." : "Do this step", demoRunning ? "dim" : "primary", demoRunning ? null : { act: "demo" }, 26);
+  else P.button(P.cw - L - 190, fy, 190, 60, "Next", stepDone ? "primary" : "dim", stepDone ? { act: "next" } : null, 26);
+  P.button(L, fy - 80, 220, 52, "Take me there", "", { act: "goto" }, 24);
+  P.button(L + 236, fy - 80, 170, 52, voiceOn ? "Voice on" : "Voice off", voiceOn ? "on" : "", { act: "voice" }, 24);
+  P.button(L + 422, fy - 80, 210, 52, guided ? "Guided" : "Hands-on", guided ? "on" : "", { act: "mode" }, 24);
+  if (!guided && stepIdx >= 10 && !poured && s.mode !== "pour" && s.mode !== "done") P.button(L + 170, fy, 260, 60, "Pour now anyway", "bad", { act: "pourEarly" }, 24);
+  P.text(score.right + " right, " + score.missed + " missed", P.cw / 2, P.ch - 24, C.mute, 22, "", "center");
+  P.end();
+}
+
+function renderDone(P, L, y, W) {
+  var r = consequence();
+  if (r.ok) {
+    y = P.para("The prefabricated frame is 12.000 x 9.000 exactly. It sits on the slab with the brickwork rebate clear all round. Every trade after this - concretor, bricklayer, framer, roofer - inherits a square building.", L, y, W, C.ink, 30); y += 20;
+    P.ctx.fillStyle = C.green; P.ctx.fillRect(L, y - 28, 6, 60); P.text("Set-out complete. Diagonals within tolerance.", L + 24, y, C.green, 30); y += 70;
+  } else {
+    y = P.para("The frame was made square in the factory. The slab was not. Look at the rear corners: the frame overhangs the slab by " + mm(r.max) + " at its worst. That gap is Pythagoras - the diagonals were never checked, or the wrong line was moved.", L, y, W, C.ink, 30); y += 20;
+    P.ctx.fillStyle = C.red; P.ctx.fillRect(L, y - 28, 6, 60); P.text("Rectification is now the builder's cost.", L + 24, y, C.red, 30); y += 70;
+  }
+  y = P.para("Diagonals as poured: " + fmt(r.d.ag) + " and " + fmt(r.d.fd) + ". Target " + fmt(DIAG) + ".", L, y, W, C.mute, 28);
+  return y;
+}
+
+function renderPlan(P, L, y, W) {
+  P.text("Site plan - Lot 12", L, y, C.ink, 40); P.button(P.cw - L - 150, y - 34, 150, 52, "Close", "", { act: "plan" }, 24); y += 50;
+  var sc = 26, ox = L + 180, oy = y + 40; // px per metre; lot 20 x 30
+  var c = P.ctx;
+  c.fillStyle = "#e6efd8"; c.fillRect(ox, oy, LOT.w * sc, LOT.d * sc);
+  c.setLineDash([12, 8]); c.strokeStyle = C.ink; c.lineWidth = 3; c.strokeRect(ox, oy, LOT.w * sc, LOT.d * sc); c.setLineDash([]);
+  // building
+  var bx = ox + JOB.side * sc, by = oy + JOB.front * sc;
+  c.fillStyle = "#fff"; c.fillRect(bx, by, JOB.width * sc, JOB.depth * sc); c.strokeStyle = C.ink; c.lineWidth = 4; c.strokeRect(bx, by, JOB.width * sc, JOB.depth * sc);
+  P.text("Street", ox + LOT.w * sc / 2, oy - 12, C.mute, 24, "", "center");
+  P.text("Proposed dwelling", bx + JOB.width * sc / 2, by + JOB.depth * sc / 2 - 8, C.ink, 24, "", "center");
+  P.text("12.000 x 9.000", bx + JOB.width * sc / 2, by + JOB.depth * sc / 2 + 24, C.ink, 24, "", "center");
+  // dimensions
+  c.strokeStyle = C.orange; c.lineWidth = 2;
+  c.beginPath(); c.moveTo(bx + 30, oy); c.lineTo(bx + 30, by); c.stroke(); P.text("6.000", bx + 40, oy + JOB.front * sc / 2 + 8, C.orange, 24);
+  c.beginPath(); c.moveTo(ox, by + 30); c.lineTo(bx, by + 30); c.stroke(); P.text("1.500", ox - 4, by + 24, C.orange, 22, "", "right");
+  P.text("20.000", ox + LOT.w * sc / 2, oy + LOT.d * sc + 34, C.ink, 24, "", "center");
+  c.save(); c.translate(ox + LOT.w * sc + 34, oy + LOT.d * sc / 2); c.rotate(-Math.PI / 2); P.text("30.000", 0, 0, C.ink, 24, "", "center"); c.restore();
+  P.text("N", ox + LOT.w * sc + 34, oy + 30, C.mute, 26, "", "center"); c.beginPath(); c.moveTo(ox + LOT.w * sc + 34, oy + 40); c.lineTo(ox + LOT.w * sc + 34, oy + 90); c.stroke();
+  // corner labels
+  ["A", "F", "D", "G"].forEach(function (k) { var p = TRUE[k]; P.text(k, ox + (p.x - LOT.x0) * sc + (k === "A" || k === "D" ? -22 : 10), oy + (LOT.zFront - p.z) * sc + (k === "A" || k === "F" ? -8 : 28), C.blue, 24); });
+  y = oy + LOT.d * sc + 80;
+  y = P.para("Brick veneer on slab. Front setback 6.000, west side setback 1.500. Datum: TBM on the front west survey peg, RL 100.000. Diagonal to expect: work it out yourself.", L, y, W, C.mute, 26);
+}
+
+// ---------- geometry of the set-out ----------
+function frontLineZ() { return TRUE.A.z; }
+function perpDir() { // unit vector from A toward E as pegged (rearward), falls back to true
+  if (pegs.A && pegs.E) { var dx = pegs.E.x - pegs.A.x, dz = pegs.E.z - pegs.A.z, l = Math.hypot(dx, dz); return { x: dx / l, z: dz / l }; }
+  return { x: 0, z: -1 };
+}
+function diagonals() {
+  var a = pegs.A || TRUE.A, d = pegs.D || TRUE.D, f = pegs.F || TRUE.F, g = pegs.G || TRUE.G;
+  return { ag: dist(a, g) + 0.001, fd: dist(f, d) - 0.001 };
+}
+function consequence() {
+  var d = diagonals(), a = pegs.A || TRUE.A;
+  // frame: true rectangle hung off A along the front line. Slab: as pegged.
+  var fr = { A: a, F: { x: a.x + JOB.width, z: a.z }, D: { x: a.x, z: a.z - JOB.depth }, G: { x: a.x + JOB.width, z: a.z - JOB.depth } };
+  var max = 0; ["D", "F", "G"].forEach(function (k) { var e = dist(fr[k], pegs[k] || TRUE[k]); if (e > max) max = e; });
+  return { ok: max <= 0.006, max: max, d: d };
+}
+
+// ---------- readouts for the pointer ----------
+function readouts(pt) {
+  var s = step(), out = [];
+  if (s.mode === "place") {
+    if (s.peg === "A") { out.push(["front boundary", LOT.zFront - pt.z], ["west boundary", pt.x - LOT.x0]); }
+    if (s.peg === "B" || s.peg === "C") { out.push(["from A", dist(pt, pegs.A)], ["off front line", Math.abs(pt.z - pegs.A.z)]); }
+    if (s.peg === "D") { var p = perpDir(), rx = pt.x - pegs.A.x, rz = pt.z - pegs.A.z; var along = rx * p.x + rz * p.z, off = Math.abs(rx * (-p.z) + rz * p.x); out.push(["from A along A-E", along], ["off the line", off]); }
+    if (s.peg === "F") { out.push(["from A", dist(pt, pegs.A)], ["off front line", Math.abs(pt.z - pegs.A.z)]); }
+    if (s.peg === "G") { out.push(["from D", dist(pt, pegs.D)], ["from F", dist(pt, pegs.F)]); }
+  }
+  if (s.mode === "cross") { out.push(["tape from B", dist(pt, pegs.B)], ["tape from C", dist(pt, pegs.C)]); }
+  if (s.mode === "profiles") { var n = nearestSlot(pt); if (n) out.push(["past corner " + n.slot.corner, n.along], ["off wall line", n.off]); }
+  return out;
+}
+function targetFor(pegName) {
+  var A = pegs.A || TRUE.A, p = perpDir();
+  if (pegName === "A") return TRUE.A;
+  if (pegName === "B") return { x: A.x + 3, z: A.z };
+  if (pegName === "C") return { x: A.x - 3, z: A.z };
+  if (pegName === "D") return { x: A.x + p.x * JOB.depth, z: A.z + p.z * JOB.depth };
+  if (pegName === "F") return { x: A.x + JOB.width, z: A.z };
+  if (pegName === "G") { var D = pegs.D; return { x: D.x + JOB.width, z: D.z }; }
+}
+// the eight profile slots: for each corner, one on each of its two wall lines, 1.5 m past the corner
+function profileSlots() {
+  var A = pegs.A, D = pegs.D, F = pegs.F, G = pegs.G, p = perpDir(), ex = { x: 1, z: 0 };
+  return [
+    { corner: "A", from: A, dir: { x: -ex.x, z: -ex.z }, line: "front" }, { corner: "A", from: A, dir: { x: -p.x, z: -p.z }, line: "west" },
+    { corner: "F", from: F, dir: { x: ex.x, z: ex.z }, line: "front" },  { corner: "F", from: F, dir: { x: -p.x, z: -p.z }, line: "east" },
+    { corner: "D", from: D, dir: { x: -ex.x, z: -ex.z }, line: "rear" }, { corner: "D", from: D, dir: { x: p.x, z: p.z }, line: "west" },
+    { corner: "G", from: G, dir: { x: ex.x, z: ex.z }, line: "rear" },   { corner: "G", from: G, dir: { x: p.x, z: p.z }, line: "east" }
+  ];
+}
+function nearestSlot(pt) {
+  var best = null;
+  profileSlots().forEach(function (sl, i) {
+    if (profiles.some(function (pr) { return pr.slot === i; })) return;
+    var rx = pt.x - sl.from.x, rz = pt.z - sl.from.z, along = rx * sl.dir.x + rz * sl.dir.z, off = Math.abs(rx * (-sl.dir.z) + rz * sl.dir.x);
+    var score = off + (along < 0 ? 5 : 0);
+    if (!best || score < best.score) best = { slot: sl, i: i, along: along, off: off, score: score };
+  });
+  return best;
+}
+
+// ---------- scene ----------
+var renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio); renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.outputEncoding = THREE.sRGBEncoding; renderer.xr.enabled = true; renderer.shadowMap.enabled = false;
+document.body.appendChild(renderer.domElement);
+var scene = new THREE.Scene();
+scene.background = new THREE.Color(0xcfe0ee); scene.fog = new THREE.Fog(0xcfe0ee, 60, 160);
+var camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.05, 300);
+var rig = new THREE.Group(); rig.add(camera); scene.add(rig);
+camera.position.set(0, 1.6, 0); rig.position.set(-2, 0, 17.5); // on the verge, looking into the block
+
+scene.add(new THREE.HemisphereLight(0xdfe9f5, 0x6b5a3a, 0.9));
+var sunL = new THREE.DirectionalLight(0xfff1d6, 0.9); sunL.position.set(20, 30, 10); scene.add(sunL);
+
+// ground: sand with a mown verge, procedural
+function groundTexture() {
+  var c = document.createElement("canvas"); c.width = c.height = 512; var x = c.getContext("2d");
+  x.fillStyle = "#c9b98a"; x.fillRect(0, 0, 512, 512);
+  for (var i = 0; i < 9000; i++) { x.fillStyle = Math.random() < 0.5 ? "#bfae7e" : "#d3c497"; x.fillRect(Math.random() * 512, Math.random() * 512, 2 + Math.random() * 3, 2 + Math.random() * 3); }
+  for (var j = 0; j < 400; j++) { x.fillStyle = "#8f9f5a"; x.fillRect(Math.random() * 512, Math.random() * 512, 3, 5); }
+  var t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(40, 40); t.encoding = THREE.sRGBEncoding; return t;
+}
+var ground = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), new THREE.MeshStandardMaterial({ map: groundTexture(), roughness: 1 }));
+ground.rotation.x = -Math.PI / 2; ground.userData.ground = true; scene.add(ground);
+// road and kerb along the front
+var road = new THREE.Mesh(new THREE.PlaneGeometry(240, 8), new THREE.MeshStandardMaterial({ color: 0x4d4f52, roughness: 1 })); road.rotation.x = -Math.PI / 2; road.position.set(0, 0.005, LOT.zFront + 7); scene.add(road);
+var kerb = new THREE.Mesh(new THREE.BoxGeometry(240, 0.12, 0.3), new THREE.MeshStandardMaterial({ color: 0xb8b3a8 })); kerb.position.set(0, 0.06, LOT.zFront + 3); scene.add(kerb);
+// neighbours' fences (side boundaries) and a few trees for scale
+var fenceMat = new THREE.MeshStandardMaterial({ color: 0x8a8f93, metalness: 0.4, roughness: 0.6 });
+[LOT.x0, LOT.x1].forEach(function (x) { var f = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.8, LOT.d), fenceMat); f.position.set(x, 0.9, 0); scene.add(f); });
+var rf = new THREE.Mesh(new THREE.BoxGeometry(LOT.w, 1.8, 0.05), fenceMat); rf.position.set(0, 0.9, LOT.zRear); scene.add(rf);
+function tree(x, z, h) { var t = new THREE.Group(); var tr = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.22, h, 8), new THREE.MeshStandardMaterial({ color: 0x6b4f36 })); tr.position.y = h / 2; t.add(tr); var cr = new THREE.Mesh(new THREE.SphereGeometry(h * 0.45, 10, 8), new THREE.MeshStandardMaterial({ color: 0x4f7a3c })); cr.position.y = h * 1.05; cr.scale.y = 0.8; t.add(cr); t.position.set(x, 0, z); scene.add(t); }
+tree(-16, -5, 5); tree(17, 4, 6); tree(-14, 22, 4); tree(24, -20, 7); tree(-25, -22, 6);
+
+// materials for site gear
+var mPeg = new THREE.MeshStandardMaterial({ color: 0x7a5a3a, roughness: 0.9 });
+var mPegTop = new THREE.MeshStandardMaterial({ color: 0xf6f6f2, roughness: 0.6 });
+var mSurvey = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
+var mSteel = new THREE.MeshStandardMaterial({ color: 0x5f6670, metalness: 0.6, roughness: 0.4 });
+var mBoard = new THREE.MeshStandardMaterial({ color: 0xd9c79a, roughness: 0.8 });
+var mGhost = new THREE.MeshBasicMaterial({ color: 0xe8801a, transparent: true, opacity: 0.55 });
+var mString = new THREE.LineBasicMaterial({ color: 0xe8801a });
+var mStringBlue = new THREE.LineBasicMaterial({ color: 0x2857c4 });
+var mTape = new THREE.LineBasicMaterial({ color: 0xffd400 });
+var mNail = new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.8, roughness: 0.3 });
+
+var site = new THREE.Group(); scene.add(site);     // everything the player builds
+var tappables = [];                                 // meshes that respond to a trigger press (survey pegs, profiles)
+
+// survey pegs at the four lot corners
+var surveyPegs = [];
+[[LOT.x0, LOT.zFront], [LOT.x1, LOT.zFront], [LOT.x0, LOT.zRear], [LOT.x1, LOT.zRear]].forEach(function (p, i) {
+  var g = new THREE.Group();
+  var body = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.3, 0.05), mPeg); body.position.y = 0.1; g.add(body);
+  var top = new THREE.Mesh(new THREE.BoxGeometry(0.052, 0.06, 0.052), mSurvey); top.position.y = 0.25; g.add(top);
+  var nail = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, 0.02, 6), mNail); nail.position.y = 0.29; g.add(nail);
+  var hit = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.6, 12), new THREE.MeshBasicMaterial({ visible: false })); hit.position.y = 0.3; hit.userData.survey = i; g.add(hit); tappables.push(hit);
+  var ring = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.38, 32), new THREE.MeshBasicMaterial({ color: 0xe8801a, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.01; g.add(ring); g.userData.ring = ring;
+  g.position.set(p[0], 0, p[1]); scene.add(g); surveyPegs.push(g);
+});
+var surveyFound = [false, false, false, false];
+
+// ghost marker + readout label that follows the pointer on the ground
+var ghost = new THREE.Group();
+var gpeg = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.4, 0.05), mGhost); gpeg.position.y = 0.2; ghost.add(gpeg);
+var gring = new THREE.Mesh(new THREE.RingGeometry(0.12, 0.16, 24), mGhost); gring.rotation.x = -Math.PI / 2; gring.position.y = 0.01; ghost.add(gring);
+scene.add(ghost); ghost.visible = false;
+var labelC = document.createElement("canvas"); labelC.width = 512; labelC.height = 160; var labelX = labelC.getContext("2d");
+var labelT = new THREE.CanvasTexture(labelC); labelT.minFilter = THREE.LinearFilter; labelT.encoding = THREE.sRGBEncoding;
+var label = new THREE.Sprite(new THREE.SpriteMaterial({ map: labelT, transparent: true, depthTest: false })); label.scale.set(1.28, 0.4, 1); label.position.y = 0.75; ghost.add(label);
+function drawLabel(lines) {
+  labelX.clearRect(0, 0, 512, 160); labelX.fillStyle = "rgba(30,42,68,0.9)"; labelX.fillRect(0, 0, 512, 160);
+  labelX.font = "38px " + FONT; labelX.fillStyle = "#f4f1e8";
+  lines.forEach(function (l, i) { labelX.fillText(l[0], 16, 58 + i * 60); labelX.textAlign = "right"; labelX.fillStyle = "#ffd400"; labelX.fillText(fmt(l[1]), 496, 58 + i * 60); labelX.textAlign = "left"; labelX.fillStyle = "#f4f1e8"; });
+  labelT.needsUpdate = true;
+}
+// tapes drawn from reference pegs to the pointer
+var tapeLines = [];
+function setTapes(from) {
+  tapeLines.forEach(function (t) { site.remove(t); }); tapeLines = [];
+  from.forEach(function (f) { var g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(f.x, 0.3, f.z), new THREE.Vector3(ghost.position.x, 0.3, ghost.position.z)]); var l = new THREE.Line(g, mTape); site.add(l); tapeLines.push(l); });
+}
+
+// guide marker: an orange ring and a label at wherever the current step wants you
+var guide = new THREE.Group();
+var guideRing = new THREE.Mesh(new THREE.RingGeometry(0.45, 0.55, 40), new THREE.MeshBasicMaterial({ color: 0xe8801a, side: THREE.DoubleSide, transparent: true, opacity: 0.85 })); guideRing.rotation.x = -Math.PI / 2; guideRing.position.y = 0.02; guide.add(guideRing);
+var guidePost = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 1.6, 6), new THREE.MeshBasicMaterial({ color: 0xe8801a, transparent: true, opacity: 0.5 })); guidePost.position.y = 0.8; guide.add(guidePost);
+var guideC = document.createElement("canvas"); guideC.width = 512; guideC.height = 128; var guideX = guideC.getContext("2d");
+var guideT = new THREE.CanvasTexture(guideC); guideT.minFilter = THREE.LinearFilter; guideT.encoding = THREE.sRGBEncoding;
+var guideLabel = new THREE.Sprite(new THREE.SpriteMaterial({ map: guideT, transparent: true, depthTest: false })); guideLabel.scale.set(1.6, 0.4, 1); guideLabel.position.y = 1.75; guide.add(guideLabel);
+scene.add(guide); guide.visible = false;
+function setGuide(pt, text) {
+  if (!pt) { guide.visible = false; return; }
+  guide.visible = true; guide.position.set(pt.x, 0, pt.z);
+  guideX.clearRect(0, 0, 512, 128); guideX.fillStyle = "rgba(232,128,26,0.95)"; guideX.fillRect(0, 0, 512, 128);
+  guideX.font = "44px " + FONT; guideX.fillStyle = "#ffffff"; guideX.textAlign = "center"; guideX.fillText(text, 256, 80); guideT.needsUpdate = true;
+}
+function updateGuide() {
+  var s = step();
+  if (s.mode === "tap") { var i = surveyFound.indexOf(false); setGuide(i < 0 ? null : surveyPegs[i].position, "Survey peg " + (i + 1)); return; }
+  if (s.mode === "tap2") { setGuide(TRUE.A, "The lines cross here"); return; }
+  if (s.mode === "place" && !stepDone) { setGuide(targetFor(s.peg), "Peg " + s.peg + " goes about here"); return; }
+  if (s.mode === "cross" && !stepDone) { setGuide({ x: pegs.A.x, z: pegs.A.z - 6 }, "Tapes cross about here"); return; }
+  if (s.mode === "profiles" && profiles.length < 8) { var n = null; profileSlots().some(function (sl, i) { if (!profiles.some(function (p) { return p.slot === i; })) { n = sl; return true; } }); setGuide(n ? { x: n.from.x + n.dir.x * 2, z: n.from.z + n.dir.z * 2 } : null, "Profile " + (profiles.length + 1) + " of 8"); return; }
+  if (s.mode === "level" && !stepDone) { setGuide({ x: profiles[0].x, z: profiles[0].z }, "Sight along the heads"); return; }
+  if (s.mode === "transfer") { var p = null; profiles.some(function (pr) { if (!pr.nail) { p = pr; return true; } }); setGuide(p, p ? "Transfer this one" : null); return; }
+  setGuide(null);
+}
+// a boundary offset line drawn as a flat blue ribbon with a label, so it can be seen from across the block
+function ribbon(a, b, text) {
+  var len = Math.hypot(b.x - a.x, b.z - a.z), m = new THREE.Mesh(new THREE.BoxGeometry(len, 0.012, 0.04), new THREE.MeshBasicMaterial({ color: 0x2857c4 }));
+  m.position.set((a.x + b.x) / 2, 0.02, (a.z + b.z) / 2); m.rotation.y = Math.atan2(-(b.z - a.z), b.x - a.x); site.add(m);
+  var c = document.createElement("canvas"); c.width = 640; c.height = 128; var x = c.getContext("2d"); x.fillStyle = "rgba(40,87,196,0.95)"; x.fillRect(0, 0, 640, 128); x.font = "40px " + FONT; x.fillStyle = "#fff"; x.textAlign = "center"; x.fillText(text, 320, 78);
+  var t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true })); sp.scale.set(2.0, 0.4, 1); sp.position.set((a.x + b.x) / 2, 0.5, (a.z + b.z) / 2); site.add(sp);
+}
+var crossHit = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.8, 12), new THREE.MeshBasicMaterial({ visible: false })); crossHit.position.set(TRUE.A.x, 0.4, TRUE.A.z); crossHit.userData.cross = true; crossHit.visible = false; scene.add(crossHit);
+
+// pegs, strings, profiles
+var pegMeshes = {}, stringMeshes = [], profileMeshes = [];
+function addPeg(name, pt) {
+  pegs[name] = { x: pt.x, z: pt.z };
+  var g = new THREE.Group();
+  var body = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.45, 0.045), mPeg); body.position.y = 0.2; g.add(body);
+  var top = new THREE.Mesh(new THREE.BoxGeometry(0.047, 0.04, 0.047), mPegTop); top.position.y = 0.42; g.add(top);
+  var nail = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, 0.03, 6), mNail); nail.position.y = 0.45; g.add(nail);
+  var lc = document.createElement("canvas"); lc.width = 128; lc.height = 128; var lx = lc.getContext("2d"); lx.fillStyle = "rgba(30,42,68,0.85)"; lx.beginPath(); lx.arc(64, 64, 60, 0, 7); lx.fill(); lx.font = "80px " + FONT; lx.fillStyle = "#f4f1e8"; lx.textAlign = "center"; lx.fillText(name, 64, 92);
+  var lt = new THREE.CanvasTexture(lc); lt.encoding = THREE.sRGBEncoding; var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: lt, transparent: true })); sp.scale.set(0.3, 0.3, 1); sp.position.y = 0.75; g.add(sp);
+  g.position.set(pt.x, 0, pt.z); site.add(g); pegMeshes[name] = g;
+}
+function addString(a, b, mat, y) { var g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(a.x, y || 0.44, a.z), new THREE.Vector3(b.x, y || 0.44, b.z)]); var l = new THREE.Line(g, mat || mString); site.add(l); stringMeshes.push(l); return l; }
+function addProfile(pt, slot, i) {
+  var ex = { x: slot.dir.x, z: slot.dir.z }; // board runs across the wall line
+  var rot = Math.atan2(ex.x, ex.z);
+  var headErr = 0;
+  var g = new THREE.Group();
+  [-0.5, 0.5].forEach(function (o) { var s = new THREE.Mesh(new THREE.BoxGeometry(0.04, 1.0, 0.04), mSteel); s.position.set(o, 0.5, 0); g.add(s); });
+  var b = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.09, 0.03), mBoard); b.position.set(0, 0.9, 0); g.add(b); g.userData.board = b;
+  var hit = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.1, 0.4), new THREE.MeshBasicMaterial({ visible: false })); hit.position.y = 0.6; hit.userData.profile = profiles.length; g.add(hit); tappables.push(hit);
+  g.position.set(pt.x, 0, pt.z); g.rotation.y = rot; site.add(g); profileMeshes.push(g);
+  profiles.push({ x: pt.x, z: pt.z, slot: i, headErr: headErr, nail: false, mesh: g, corner: slot.corner, line: slot.line });
+}
+
+// excavation, slab, frame
+var slabMesh = null, frameMesh = null, digMesh = null;
+function quadGeometry(pts, y) { // pts A,F,G,D clockwise
+  var shape = new THREE.Shape(); shape.moveTo(pts[0].x, -pts[0].z); for (var i = 1; i < pts.length; i++) shape.lineTo(pts[i].x, -pts[i].z); shape.closePath();
+  var g = new THREE.ShapeGeometry(shape); g.rotateX(-Math.PI / 2); g.translate(0, y, 0); return g;
+}
+function slabGeometry(pts, depth) {
+  var shape = new THREE.Shape(); shape.moveTo(pts[0].x, -pts[0].z); for (var i = 1; i < pts.length; i++) shape.lineTo(pts[i].x, -pts[i].z); shape.closePath();
+  var g = new THREE.ExtrudeGeometry(shape, { depth: depth, bevelEnabled: false }); g.rotateX(-Math.PI / 2); return g;
+}
+function buildPour() {
+  var a = pegs.A || TRUE.A, d = pegs.D || TRUE.D, f = pegs.F || TRUE.F, g = pegs.G || TRUE.G;
+  var out = [{ x: a.x - 0.6, z: a.z + 0.6 }, { x: f.x + 0.6, z: f.z + 0.6 }, { x: g.x + 0.6, z: g.z - 0.6 }, { x: d.x - 0.6, z: d.z - 0.6 }];
+  digMesh = new THREE.Mesh(quadGeometry(out, 0.012), new THREE.MeshStandardMaterial({ color: 0x8a6d47, roughness: 1 })); site.add(digMesh);
+  slabMesh = new THREE.Mesh(slabGeometry([a, f, g, d], 0.2), new THREE.MeshStandardMaterial({ color: 0xbfbfb8, roughness: 0.9 })); site.add(slabMesh);
+  ["A", "F", "G", "D"].forEach(function (k) { pegMeshes[k] && (pegMeshes[k].visible = false); });
+  stringMeshes.forEach(function (s) { s.visible = false; });
+}
+function buildFrame() {
+  var a = pegs.A || TRUE.A;
+  frameMesh = new THREE.Group();
+  var mFrame = new THREE.MeshStandardMaterial({ color: 0xd9b27a, roughness: 0.8 });
+  function wall(x0, z0, x1, z1) {
+    var len = Math.hypot(x1 - x0, z1 - z0), n = Math.max(2, Math.round(len / 0.6));
+    var w = new THREE.Group();
+    for (var i = 0; i <= n; i++) { var s = new THREE.Mesh(new THREE.BoxGeometry(0.09, 2.4, 0.045), mFrame); s.position.set(i * len / n, 1.2 + 0.2, 0); w.add(s); }
+    var pl = new THREE.Mesh(new THREE.BoxGeometry(len + 0.09, 0.045, 0.09), mFrame); pl.position.set(len / 2, 0.2 + 0.02, 0); w.add(pl);
+    var tp = pl.clone(); tp.position.y = 2.4 + 0.2; w.add(tp);
+    w.position.set(x0, 0, z0); w.rotation.y = Math.atan2(-(z1 - z0), x1 - x0); frameMesh.add(w);
+  }
+  wall(a.x, a.z, a.x + JOB.width, a.z); wall(a.x + JOB.width, a.z, a.x + JOB.width, a.z - JOB.depth); wall(a.x + JOB.width, a.z - JOB.depth, a.x, a.z - JOB.depth); wall(a.x, a.z - JOB.depth, a.x, a.z);
+  frameMesh.position.y = 6; site.add(frameMesh);
+  // red overhang markers at the corners that miss the slab
+  var r = consequence();
+  ["D", "F", "G"].forEach(function (k) {
+    var fr = { D: { x: a.x, z: a.z - JOB.depth }, F: { x: a.x + JOB.width, z: a.z }, G: { x: a.x + JOB.width, z: a.z - JOB.depth } }[k];
+    var e = dist(fr, pegs[k] || TRUE[k]); if (e > 0.006) { var m = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.5, 8), new THREE.MeshBasicMaterial({ color: 0xc9302c })); m.position.set(fr.x, 0.45, fr.z); site.add(m); var gg = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(fr.x, 0.25, fr.z), new THREE.Vector3((pegs[k] || TRUE[k]).x, 0.25, (pegs[k] || TRUE[k]).z)]); site.add(new THREE.Line(gg, new THREE.LineBasicMaterial({ color: 0xc9302c }))); }
+  });
+}
+var frameDrop = 0;
+
+// ---------- actions ----------
+function tone(freq, t0, dur, gain) { try { var a = ac(), o = a.createOscillator(), g = a.createGain(); o.type = "sine"; o.frequency.value = freq; g.gain.setValueAtTime(0, a.currentTime + t0); g.gain.linearRampToValueAtTime(gain, a.currentTime + t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + t0 + dur); o.connect(g); g.connect(a.destination); o.start(a.currentTime + t0); o.stop(a.currentTime + t0 + dur + 0.05); } catch (e) {} }
+var audio = null; function ac() { if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === "suspended") audio.resume(); return audio; }
+function thunk() { tone(140, 0, 0.12, 0.35); tone(90, 0.02, 0.2, 0.25); }
+function ding() { tone(880, 0, 0.15, 0.15); tone(1320, 0.12, 0.25, 0.12); }
+function buzz() { tone(180, 0, 0.25, 0.2); }
+
+function markRight() { score.right++; ding(); }
+var lastSpoken = "";
+function markMiss() { score.missed++; buzz(); }
+
+function placeAt(pt) {
+  var s = step(); if (stepDone && s.mode !== "profiles" && s.mode !== "tap") return;
+  if (s.mode === "place") {
+    var t = targetFor(s.peg), e = dist(pt, t);
+    if (e > TOL_CARRY) { feedback = "Tape reads wrong. Check the readouts against the plan - you are " + mm(e) + " from where that peg should be."; renderBoard(); buzz(); return; }
+    var placed = e <= TOL_SNAP ? t : pt;
+    addPeg(s.peg, placed); thunk();
+    if (e <= TOL_SNAP) { feedback = "Good. Peg " + s.peg + " is in exactly where the plan puts it."; markRight(); }
+    else { feedback = "Peg " + s.peg + " is in - but " + mm(e) + " off. On a real site you would not know that yet. Watch what it does at the diagonal check."; markMiss(); }
+    if (s.peg === "C") { addString(pegs.B, pegs.C, mStringBlue, 0.42); }
+    if (s.peg === "D") { addString(pegs.A, pegs.D); }
+    if (s.peg === "F") { addString(pegs.A, pegs.F); }
+    if (s.peg === "G") { addString(pegs.D, pegs.G); addString(pegs.F, pegs.G); }
+    stepDone = true; updateGuide();
+  } else if (s.mode === "cross") {
+    var tb = dist(pt, pegs.B), tc = dist(pt, pegs.C), diff = Math.abs(tb - tc);
+    if (pt.z > pegs.A.z - 2) { feedback = "The crossing has to be back inside the block, well behind the front line. Pull the tapes further."; renderBoard(); buzz(); return; }
+    if (diff > TOL_CARRY) { feedback = "The tapes read " + fmt(tb) + " and " + fmt(tc) + ". They have to cross - equal length from B and from C."; renderBoard(); buzz(); return; }
+    // the perpendicular direction is what carries
+    var exact = { x: pegs.A.x, z: pt.z };
+    var placed = diff <= TOL_SNAP ? exact : pt;
+    addPeg("E", placed); thunk(); addString(pegs.A, pegs.E);
+    var ang = Math.abs(Math.atan2(placed.x - pegs.A.x, pegs.A.z - placed.z)) * 180 / Math.PI;
+    if (diff <= TOL_SNAP) { feedback = "Right. Tapes equal, E is on the perpendicular. A to E is your 90 degree line."; markRight(); }
+    else if (wrongRun) { feedback = "Near enough - the tapes look about the same from here. E is in. Moving on."; markMiss(); }
+    else { feedback = "E is in, but the tapes were " + mm(diff) + " apart, so the line A-E is " + ang.toFixed(2) + " degrees off square. Over 9 m that error is going to grow."; markMiss(); }
+    stepDone = true; updateGuide();
+  } else if (s.mode === "profiles") {
+    var n = nearestSlot(pt); if (!n) return;
+    if (n.along < 1.5) { feedback = "Too close. That profile is " + fmt(n.along) + " past the corner - it needs 1.5 m minimum or the excavator takes it out."; renderBoard(); buzz(); return; }
+    if (n.along > 3.5 || n.off > 0.6) { feedback = "Keep it on the extension of the wall line, between 1.5 and 3 m past the corner."; renderBoard(); buzz(); return; }
+    var from = n.slot.from, d = n.slot.dir, pos = { x: from.x + d.x * n.along, z: from.z + d.z * n.along };
+    addProfile(pos, n.slot, n.i); thunk();
+    feedback = profiles.length + " of 8 profiles in. " + (profiles.length < 8 ? "Keep going." : "All eight in. Heads next.");
+    updateGuide(); if (profiles.length < 8) walkTo();
+    if (profiles.length === 8) { profiles[4].headErr = 0.045; profiles[4].mesh.userData.board.position.y = 0.945; profiles[4].mesh.children[0].scale.y = 1.045; profiles[4].mesh.children[1].scale.y = 1.045; markRight(); stepDone = true; }
+  }
+  renderBoard(); updateGuide();
+}
+function tapObject(obj) {
+  var s = step();
+  if (obj.userData.cross && s.mode === "tap2") { stepDone = true; feedback = "That crossing is the front-west corner of the building. Peg A goes there next - and you will measure it, not guess it."; ding(); markRight(); renderBoard(); updateGuide(); return; }
+  if (obj.userData.survey !== undefined && s.mode === "tap") {
+    var i = obj.userData.survey; if (surveyFound[i]) return; surveyFound[i] = true; surveyPegs[i].userData.ring.visible = false; ding();
+    var n = surveyFound.filter(Boolean).length;
+    feedback = n + " of 4 survey pegs confirmed." + (n === 4 ? " Lot 12, 20.000 x 30.000, matches the plan. You may set out." : "");
+    if (n === 4) { stepDone = true; markRight(); speak("All four confirmed. Press Next."); }
+    renderBoard(); updateGuide(); if (n < 4) walkTo();
+  }
+  if (obj.userData.profile !== undefined) {
+    var pr = profiles[obj.userData.profile];
+    if (s.mode === "level") {
+      if (pr.headErr !== 0) { pr.headErr = 0; pr.mesh.userData.board.position.y = 0.9; pr.mesh.children[0].scale.y = 1; pr.mesh.children[1].scale.y = 1; feedback = "That was the one - 45 mm high. Dropped to datum. All eight heads now at the same RL."; markRight(); stepDone = true; ding(); }
+      else { feedback = "That head is level with the rest. Sight along the line again - one of them is proud."; markMiss(); }
+      renderBoard(); updateGuide();
+    }
+    if (s.mode === "transfer" && !pr.nail) {
+      pr.nail = true; var nl = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.06, 6), mNail); nl.position.set(0, 0.97, 0); pr.mesh.add(nl); thunk();
+      var done = profiles.filter(function (p) { return p.nail; }).length;
+      feedback = done + " of 8 lines transferred." + (done === 8 ? " Pegs are now expendable - the profiles hold the building." : "");
+      if (done === 8) { stepDone = true; markRight(); rebuildProfileStrings(); }
+      renderBoard(); updateGuide(); if (done < 8) walkTo();
+    }
+  }
+}
+function rebuildProfileStrings() {
+  var a = pegs.A, d = pegs.D, f = pegs.F, g = pegs.G;
+  var ext = 2.2, p = perpDir();
+  function ln(p1, p2) { var dx = p2.x - p1.x, dz = p2.z - p1.z, l = Math.hypot(dx, dz); dx /= l; dz /= l; addString({ x: p1.x - dx * ext, z: p1.z - dz * ext }, { x: p2.x + dx * ext, z: p2.z + dz * ext }, mStringBlue, 0.95); }
+  ln(a, f); ln(d, g); ln(a, d); ln(f, g);
+}
+
+function act(a) {
+  var s = step();
+  if (a.tab) { tab = a.tab; }
+  else if (a.act === "goto") { walkTo(); }
+  else if (a.act === "demo") { runDemo(); return; }
+  else if (a.act === "mode") { guided = !guided; }
+  else if (a.act === "wrong") { location.hash = "wrong"; location.reload(); return; }
+  else if (a.act === "voice") { voiceOn = !voiceOn; if (!voiceOn) stopSpeech(); else speakStep(); }
+  else if (a.act === "plan") showPlan = !showPlan;
+  else if (a.key) { if (a.key === "<") estimate = estimate.slice(0, -1); else if (estimate.length < 8) estimate += a.key; }
+  else if (a.act === "calc") {
+    var v = parseFloat(estimate); if (isNaN(v)) return;
+    if (Math.abs(v - DIAG) <= 0.002 || Math.abs(v - DIAG * 1000) <= 2) { feedback = "Right. root(144 + 81) = root(225) = 15.000. Now go and measure it."; checked.calc = true; stepDone = true; markRight(); }
+    else { feedback = "Not that. a squared is 144, b squared is 81. Add them, then take the root."; markMiss(); }
+  }
+  else if (a.act === "measure") {
+    checked.measured = true; var d = diagonals(), diff = Math.abs(d.ag - d.fd);
+    if (diff <= TOL_DIAG) { checked.square = true; feedback = "Square. Both diagonals " + fmt(d.ag) + " against a calculated " + fmt(DIAG) + ". Within 3 mm. Mark the wall lines."; markRight(); stepDone = true; }
+    else { feedback = "Not square - " + mm(diff) + " between them. That is your peg placement showing up. Do not pour. Next: fix it the right way."; stepDone = true; }
+  }
+  else if (a.quiz !== undefined) {
+    quizPicked = a.quiz;
+    if (a.quiz === s.answer) { fixSquare(); var dd = diagonals(); feedback = "Right. A and the front line hold the legal setback; A-D holds the side setback. The rear line D-G is the one that moves - both pegs, full difference, same direction. Re-measured profile to profile: " + fmt(dd.ag) + " and " + fmt(dd.fd) + ". Square."; markRight(); stepDone = true; }
+    else { feedback = "No. " + (a.quiz === 0 ? "The front line sets the 6.000 setback. Move it and the building is off its legal position." : "A-D sets the 1.500 side setback and carries the critical corner peg A. Never move A.") ; markMiss(); }
+  }
+  else if (a.act === "pour" || a.act === "pourEarly") {
+    if (a.act === "pourEarly") { feedback = ""; markMiss(); }
+    poured = true; buildPour(); tone(60, 0, 1.2, 0.3);
+    setTimeout(function () { buildFrame(); frameDrop = 1; stepIdx = STEPS.length - 1; stepDone = false; renderBoard(); }, 2500);
+  }
+  else if (a.act === "next") { if (!stepDone) return; advance(); }
+  else if (a.act === "back") { if (stepIdx > 0) { stepIdx--; feedback = ""; stepDone = true; } }
+  else if (a.act === "restart") { location.reload(); return; }
+  renderBoard();
+}
+function fixSquare() {
+  // move the rear line to true, relative to the pegged A and the front line
+  var a = pegs.A; var T = { D: { x: a.x, z: a.z - JOB.depth }, G: { x: a.x + JOB.width, z: a.z - JOB.depth }, F: { x: a.x + JOB.width, z: a.z }, E: { x: a.x, z: a.z - 6 } };
+  ["D", "G", "F", "E"].forEach(function (k) { pegs[k] = T[k]; if (pegMeshes[k]) pegMeshes[k].position.set(T[k].x, 0, T[k].z); });
+  var slots = profileSlots();
+  profiles.forEach(function (p) { var slot = slots[p.slot], t = pegs[p.corner], along = 2.0; p.x = t.x + slot.dir.x * along; p.z = t.z + slot.dir.z * along; p.mesh.position.set(p.x, 0, p.z); p.mesh.rotation.y = Math.atan2(slot.dir.x, slot.dir.z); });
+  stringMeshes.forEach(function (s) { site.remove(s); }); stringMeshes = [];
+  addString(pegs.A, pegs.E); rebuildProfileStrings();
+  checked.measured = false; checked.square = true;
+}
+function advance() {
+  var s = step(); feedback = ""; stepDone = false; quizPicked = -1;
+  if (s.mode === "read") { /* boundary offsets */ }
+  stepIdx++;
+  var n = step();
+  if (n.mode === "tap2" && !n.built) { n.built = true; ribbon({ x: LOT.x0, z: TRUE.A.z }, { x: LOT.x1, z: TRUE.A.z }, "Front offset line - 6.000 setback"); ribbon({ x: TRUE.A.x, z: LOT.zFront }, { x: TRUE.A.x, z: LOT.zRear }, "West offset line - 1.500 setback"); crossHit.visible = true; tappables.push(crossHit); }
+  if (n.mode === "tap2") stepDone = false;
+  if (n.mode === "intro") stepDone = true;
+  if (n.mode === "quiz" && checked.square) { stepIdx++; n = step(); } // skip the fix step when already square
+  if (wrongRun && n.mode === "keypad") { while (step().mode !== "pour") stepIdx++; n = step(); feedback = "This time the crew is in a hurry. Nobody calculates the diagonal, nobody measures it. The profiles are marked up and the concrete is booked."; }
+  renderBoard(); updateGuide(); walkTo(); speakStep();
+}
+
+// ---------- guided demo: the game does the step for you ----------
+function later(fn, ms) { return function (next) { setTimeout(function () { fn(); next(); }, ms); }; }
+function runQueue(q, done) { var i = 0; (function step_() { if (i >= q.length) { done && done(); return; } q[i++](step_); })(); }
+function runDemo() {
+  if (demoRunning || stepDone) return;
+  var s = step(), q = [];
+  demoRunning = true; renderBoard();
+  var skew = wrongRun ? 0.25 : 0;
+  if (s.mode === "tap") { for (var i = 0; i < 4; i++) (function (i) { q.push(later(function () { updateGuide(); walkTo(); }, 200)); q.push(later(function () { tapObject({ userData: { survey: i } }); }, 1100)); })(i); }
+  else if (s.mode === "tap2") { q.push(later(function () { walkTo(); }, 200)); q.push(later(function () { tapObject({ userData: { cross: true } }); }, 1400)); }
+  else if (s.mode === "place") { q.push(later(function () { walkTo(); showTapesTo(targetFor(s.peg)); }, 200)); q.push(later(function () { placeAt(targetFor(s.peg)); setTapes([]); ghost.visible = false; }, 1800)); }
+  else if (s.mode === "cross") { var pt = { x: pegs.A.x + skew, z: pegs.A.z - 6 }; q.push(later(function () { walkTo(); showTapesTo(pt); }, 200)); q.push(later(function () { placeAt(pt); setTapes([]); ghost.visible = false; }, 2200)); }
+  else if (s.mode === "profiles") { for (var j = 0; j < 8; j++) q.push(later(function () { updateGuide(); walkTo(); var n = null; profileSlots().some(function (sl, i) { if (!profiles.some(function (p) { return p.slot === i; })) { n = sl; return true; } }); if (n) placeAt({ x: n.from.x + n.dir.x * 2, z: n.from.z + n.dir.z * 2 }); }, 1000)); }
+  else if (s.mode === "level") { for (var k = 0; k < 8; k++) (function (k) { q.push(later(function () { var pr = profiles[k]; ghost.visible = true; ghost.position.set(pr.x, 0.5, pr.z); gpeg.visible = false; gring.visible = false; drawLabel([["head RL", 100.9 + pr.headErr]]); }, 700)); })(k); q.push(later(function () { ghost.visible = false; gpeg.visible = true; gring.visible = true; tapObject({ userData: { profile: 4 } }); }, 900)); }
+  else if (s.mode === "transfer") { for (var m = 0; m < 8; m++) q.push(later(function () { updateGuide(); walkTo(); var p = null; profiles.some(function (pr, i) { if (!pr.nail) { p = i; return true; } }); if (p !== null) tapObject({ userData: { profile: p } }); }, 900)); }
+  else if (s.mode === "keypad") { "15.000".split("").forEach(function (ch) { q.push(later(function () { act({ key: ch }); }, 250)); }); q.push(later(function () { act({ act: "calc" }); }, 600)); }
+  else if (s.mode === "measure") { q.push(later(function () { act({ act: "measure" }); }, 800)); }
+  else if (s.mode === "quiz") { q.push(later(function () { act({ quiz: s.answer }); }, 1200)); }
+  else if (s.mode === "pour") { q.push(later(function () { act({ act: "pour" }); }, 400)); }
+  runQueue(q, function () { demoRunning = false; renderBoard(); if (wrongRun && step().mode === "measure") { /* the wrong run skips the check */ } });
+}
+function showTapesTo(pt) {
+  var s = step(); ghost.visible = true; ghost.position.set(pt.x, 0, pt.z); gpeg.visible = true; gring.visible = true; drawLabel(readouts(pt));
+  var refs = [];
+  if (s.mode === "place" && s.peg === "A") refs = [{ x: pt.x, z: LOT.zFront }, { x: LOT.x0, z: pt.z }];
+  if (s.mode === "place" && (s.peg === "B" || s.peg === "C" || s.peg === "F" || s.peg === "D")) refs = [pegs.A];
+  if (s.mode === "place" && s.peg === "G") refs = [pegs.D, pegs.F];
+  if (s.mode === "cross") refs = [pegs.B, pegs.C];
+  setTapes(refs);
+}
+
+// ---------- voice ----------
+function stopSpeech() { try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {} }
+function speak(text) {
+  if (!voiceOn || !window.speechSynthesis) return;
+  try { stopSpeech(); var u = new SpeechSynthesisUtterance(text.replace(/\n+/g, ". ")); u.lang = "en-AU"; u.rate = 0.95; var vs = speechSynthesis.getVoices(); var v = vs.find(function (x) { return /en[-_]AU/i.test(x.lang); }) || vs.find(function (x) { return /en[-_]GB/i.test(x.lang); }); if (v) u.voice = v; speechSynthesis.speak(u); } catch (e) {}
+}
+function speakStep() { var s = step(); speak((s.mode === "done" ? "" : "Step " + s.n + ". ") + s.title + ". " + (s.mode === "done" ? "" : s.task) + (s.how ? " " + s.how : "")); }
+
+// ---------- walking you to the spot ----------
+// each step has a place to stand; the game puts you there, facing the work, when the step starts
+function vantageFor() {
+  var s = step(), t = null, back = { x: 0, z: 1 }, d = 3.2;
+  var bc = { x: TRUE.A.x + JOB.width / 2, z: TRUE.A.z - JOB.depth / 2 };
+  if (s.mode === "intro" || s.mode === "keypad" || s.mode === "measure" || s.mode === "quiz") { t = bc; d = 11; }
+  else if (s.mode === "pour" || s.mode === "done") { t = bc; d = 13; }
+  else if (guide.visible) { t = { x: guide.position.x, z: guide.position.z }; }
+  else t = bc;
+  if (!t) return null;
+  // stand between the target and the street when possible, otherwise between the target and where you are
+  var vx = rig.position.x - t.x, vz = rig.position.z - t.z, vl = Math.hypot(vx, vz);
+  if (s.mode === "intro" || s.mode === "pour" || s.mode === "done" || s.mode === "keypad" || s.mode === "measure" || s.mode === "quiz" || vl < 0.5) { vx = 0; vz = 1; vl = 1; }
+  vx /= vl; vz /= vl;
+  // keep inside the fences
+  var px = Math.max(LOT.x0 + 0.8, Math.min(LOT.x1 - 0.8, t.x + vx * d)), pz = Math.max(LOT.zRear + 0.8, Math.min(LOT.zFront + 2.5, t.z + vz * d));
+  return { x: px, z: pz, look: t };
+}
+function faceAndStand(v) {
+  var yawWanted = Math.atan2(-(v.look.x - v.x), -(v.look.z - v.z));
+  if (renderer.xr.isPresenting) {
+    var f = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); var headYaw = Math.atan2(-f.x, -f.z);
+    rig.rotation.y = yawWanted - headYaw;
+    var hx = camera.position.x, hz = camera.position.z, cy = Math.cos(rig.rotation.y), sy = Math.sin(rig.rotation.y);
+    rig.position.set(v.x - (hx * cy + hz * sy), 0, v.z - (-hx * sy + hz * cy));
+  } else { yaw = yawWanted; pitch = -0.25; rig.position.set(v.x, 0, v.z); }
+  tone(600, 0, 0.06, 0.06);
+}
+function walkTo() { updateGuide(); var v = vantageFor(); if (v) faceAndStand(v); }
+
+// ---------- interaction ----------
+var raycaster = new THREE.Raycaster(), tmpM = new THREE.Matrix4(), o3 = new THREE.Vector3(), d3 = new THREE.Vector3();
+var hoverIdx = -1, pointerGround = null, pointerObj = null;
+function castFrom(origin, dir) {
+  raycaster.ray.origin.copy(origin); raycaster.ray.direction.copy(dir); raycaster.far = 60;
+  var hb = raycaster.intersectObject(board.mesh, false);
+  if (hb.length && hb[0].uv) return { kind: "board", idx: board.hitAt(hb[0].uv.x, hb[0].uv.y), dist: hb[0].distance };
+  var ht = raycaster.intersectObjects(tappables, false);
+  if (ht.length) return { kind: "obj", obj: ht[0].object, dist: ht[0].distance };
+  var hg = raycaster.intersectObject(ground, false);
+  if (hg.length) return { kind: "ground", pt: { x: hg[0].point.x, z: hg[0].point.z }, dist: hg[0].distance };
+  return null;
+}
+function updatePointer(h) {
+  var newHover = h && h.kind === "board" ? h.idx : -1;
+  if (newHover !== hoverIdx) { hoverIdx = newHover; board.hover = hoverIdx; renderBoard(); }
+  var s = step(), wantsGround = !guided && ["place", "cross", "profiles"].indexOf(s.mode) >= 0 && !stepDone;
+  if (h && h.kind === "ground" && wantsGround) {
+    ghost.visible = true; ghost.position.set(h.pt.x, 0, h.pt.z);
+    var r = readouts(h.pt); drawLabel(r);
+    var refs = [];
+    if (s.mode === "place" && s.peg === "A") refs = [{ x: h.pt.x, z: LOT.zFront }, { x: LOT.x0, z: h.pt.z }];
+    if (s.mode === "place" && (s.peg === "B" || s.peg === "C" || s.peg === "F")) refs = [pegs.A];
+    if (s.mode === "place" && s.peg === "D") refs = [pegs.A];
+    if (s.mode === "place" && s.peg === "G") refs = [pegs.D, pegs.F];
+    if (s.mode === "cross") refs = [pegs.B, pegs.C];
+    if (s.mode === "profiles") { var n = nearestSlot(h.pt); refs = n ? [n.slot.from] : []; }
+    setTapes(refs);
+    pointerGround = h.pt;
+  } else { ghost.visible = false; setTapes([]); pointerGround = null; }
+  pointerObj = h && h.kind === "obj" ? h.obj : null;
+  if (pointerObj && pointerObj.userData.profile !== undefined && s.mode === "level") { var pr = profiles[pointerObj.userData.profile]; ghost.visible = true; ghost.position.set(pr.x, 0.5, pr.z); gpeg.visible = false; gring.visible = false; drawLabel([["head RL", 100.9 + pr.headErr]]); } else { gpeg.visible = true; gring.visible = true; }
+}
+function press(h) {
+  if (!h) return;
+  if (h.kind === "board") { if (h.idx >= 0 && board.hits[h.idx].action) { tone(1200, 0, 0.04, 0.08); act(board.hits[h.idx].action); } return; }
+  if (h.kind === "obj") { tapObject(h.obj); return; }
+  if (h.kind === "ground") { var s = step(); if (!guided && ["place", "cross", "profiles"].indexOf(s.mode) >= 0) placeAt(h.pt); }
+}
+function teleport(pt) { rig.position.set(pt.x, 0, pt.z); tone(600, 0, 0.06, 0.06); }
+
+// controllers
+var controllers = [];
+for (var ci = 0; ci < 2; ci++) (function (i) {
+  var c = renderer.xr.getController(i);
+  var line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]), new THREE.LineBasicMaterial({ color: 0xe8801a, transparent: true, opacity: 0.7 })); line.scale.z = 5; c.add(line); c.userData.line = line;
+  var handle = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.018, 0.11, 16), new THREE.MeshStandardMaterial({ color: 0x1e2a44 })); handle.rotation.x = Math.PI / 2 - 0.35; handle.position.set(0, -0.02, 0.05); c.add(handle);
+  c.addEventListener("connected", function (e) { c.userData.gamepad = e.data.gamepad; c.userData.hand = e.data.handedness; c.visible = true; });
+  c.addEventListener("disconnected", function () { c.visible = false; });
+  c.addEventListener("selectstart", function () { var h = castFromController(c); press(h); haptic(c); });
+  c.addEventListener("squeezestart", function () { var h = castFromController(c); if (h && h.kind === "ground") teleport(h.pt); });
+  c.visible = false; rig.add(c); controllers.push(c);
+})(ci);
+function castFromController(c) { tmpM.identity().extractRotation(c.matrixWorld); o3.setFromMatrixPosition(c.matrixWorld); d3.set(0, 0, -1).applyMatrix4(tmpM); return castFrom(o3, d3); }
+function haptic(c) { try { var gp = c.userData.gamepad; if (gp && gp.hapticActuators && gp.hapticActuators[0]) gp.hapticActuators[0].pulse(0.4, 40); } catch (e) {} }
+// snap turn on the thumbstick
+var turnCooldown = 0;
+function pollSticks(dt) {
+  turnCooldown -= dt;
+  controllers.forEach(function (c) { var gp = c.userData.gamepad; if (!gp || !gp.axes) return; var ax = gp.axes[2] !== undefined ? gp.axes[2] : gp.axes[0]; if (Math.abs(ax) > 0.7 && turnCooldown <= 0) { rig.rotation.y -= Math.sign(ax) * Math.PI / 6; turnCooldown = 0.35; } });
+}
+
+// desktop
+var mouse = new THREE.Vector2(0, 0), yaw = 0, pitch = 0, dragging = false, moved = false, lastX = 0, lastY = 0, keys = {};
+renderer.domElement.addEventListener("mousedown", function (e) { dragging = true; moved = false; lastX = e.clientX; lastY = e.clientY; });
+window.addEventListener("mouseup", function (e) { dragging = false; if (moved || renderer.xr.isPresenting) return; updateMouse(e); raycaster.setFromCamera(mouse, camera); var h = castFrom(raycaster.ray.origin, raycaster.ray.direction); if (e.button === 2) { if (h && h.kind === "ground") teleport(h.pt); } else press(h); });
+window.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+window.addEventListener("mousemove", function (e) { if (dragging) { var dx = e.clientX - lastX, dy = e.clientY - lastY; if (Math.abs(dx) + Math.abs(dy) > 3) moved = true; yaw -= dx * 0.004; pitch = Math.max(-1.3, Math.min(1.3, pitch - dy * 0.004)); lastX = e.clientX; lastY = e.clientY; } updateMouse(e); });
+window.addEventListener("keydown", function (e) { keys[e.key.toLowerCase()] = true; }); window.addEventListener("keyup", function (e) { keys[e.key.toLowerCase()] = false; });
+function updateMouse(e) { mouse.x = (e.clientX / window.innerWidth) * 2 - 1; mouse.y = -(e.clientY / window.innerHeight) * 2 + 1; }
+window.addEventListener("resize", function () { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+
+// enter VR
+var btn = document.getElementById("enter"), note = document.getElementById("note");
+if (navigator.xr && navigator.xr.isSessionSupported) {
+  navigator.xr.isSessionSupported("immersive-vr").then(function (ok) {
+    if (ok) { btn.style.display = "inline-block"; note.textContent = "Trigger: press, tap, drive a peg. Grip: teleport where you point. Thumbstick: snap turn."; }
+    else note.textContent = "No headset in this browser. Drag to look, W A S D to walk, click to act, right-click to jump to a spot.";
+  });
+} else note.textContent = "No WebXR here. Drag to look, W A S D to walk, click to act, right-click to jump to a spot.";
+btn.addEventListener("click", function () { ac(); navigator.xr.requestSession("immersive-vr", { optionalFeatures: ["local-floor", "bounded-floor"] }).then(function (session) { session.addEventListener("end", function () { document.getElementById("ui").style.display = "block"; }); renderer.xr.setSession(session); document.getElementById("ui").style.display = "none"; setTimeout(function () { walkTo(); speakStep(); }, 1500); }); });
+
+// ---------- loop ----------
+// the clipboard rides in front of you, low and to the left, and turns with your head (yaw only)
+var boardInit = false, boardFollow = true, boardTarget = new THREE.Vector3(), camPos = new THREE.Vector3(), camDir = new THREE.Vector3(), lastT = performance.now();
+scene.add(board.mesh);
+renderer.setAnimationLoop(function () {
+  var now = performance.now(), dt = Math.min(0.1, (now - lastT) / 1000); lastT = now;
+  if (renderer.xr.isPresenting) {
+    pollSticks(dt);
+    var xrCam = renderer.xr.getCamera(camera); xrCam.getWorldPosition(camPos); xrCam.getWorldDirection(camDir);
+    controllers.forEach(function (c) { if (c.visible) { var h = castFromController(c); updatePointer(h); c.userData.line.scale.z = h ? Math.min(h.dist, 60) : 5; } });
+  } else {
+    camera.rotation.set(pitch, yaw, 0, "YXZ");
+    var sp = 4 * dt, fx = -Math.sin(yaw), fz = -Math.cos(yaw);
+    if (keys.w) { rig.position.x += fx * sp; rig.position.z += fz * sp; } if (keys.s) { rig.position.x -= fx * sp; rig.position.z -= fz * sp; }
+    if (keys.a) { rig.position.x += fz * sp; rig.position.z -= fx * sp; } if (keys.d) { rig.position.x -= fz * sp; rig.position.z += fx * sp; }
+    camera.getWorldPosition(camPos); camera.getWorldDirection(camDir);
+    raycaster.setFromCamera(mouse, camera); updatePointer(castFrom(raycaster.ray.origin, raycaster.ray.direction));
+  }
+  camDir.y = 0; camDir.normalize();
+  // clipboard: centred, chest height, and it only re-centres once you have turned or walked well away from it
+  boardTarget.copy(camPos).addScaledVector(camDir, 0.95); boardTarget.y = camPos.y - 0.55;
+  var toBoard = new THREE.Vector3().subVectors(board.mesh.position, camPos); toBoard.y = 0; var dBoard = toBoard.length(); toBoard.normalize();
+  var ang = Math.acos(Math.max(-1, Math.min(1, toBoard.dot(camDir))));
+  if (!boardInit || ang > 0.6 || dBoard > 1.6 || dBoard < 0.5) boardFollow = true;
+  if (boardFollow) { board.mesh.position.lerp(boardTarget, boardInit ? 0.08 : 1); if (board.mesh.position.distanceTo(boardTarget) < 0.03) boardFollow = false; boardInit = true; }
+  board.mesh.lookAt(camPos.x, camPos.y - 0.1, camPos.z);
+  guideRing.scale.setScalar(1 + 0.12 * Math.sin(now / 250));
+  // frame drops onto the slab
+  if (frameDrop > 0 && frameMesh) { frameMesh.position.y = Math.max(0, frameMesh.position.y - 3 * dt); if (frameMesh.position.y === 0 && frameDrop === 1) { frameDrop = 2; thunk(); } }
+  renderer.render(scene, camera);
+});
+
+renderBoard();
+updateGuide();
+
+</script>
+</body>
+</html>
