@@ -214,84 +214,76 @@ Panel.prototype.button = function (x, y, w, h, label, kind, action, px) {
 Panel.prototype.hitAt = function (u, v) { var px = u * this.cw, py = (1 - v) * this.ch; for (var i = 0; i < this.hits.length; i++) { var r = this.hits[i]; if (px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h) return i; } return -1; };
 
 // ---------- the clipboard ----------
-var board = new Panel(0.62, 0.80, 930, 1200);
+var board = new Panel(0.9, 0.504, 1500, 840);
+var page = new Panel(0.62, 0.80, 930, 1200);
 
 function renderBoard() {
   if (feedback && feedback !== lastSpoken) { lastSpoken = feedback; speak(feedback); }
-  var P = board, L = 40, W = P.cw - 80, y = 0;
+  var P = board, L = 40, W = P.cw - 80, s = step();
   P.begin();
-  // tabs
-  var tabs = [["setout", "Set-out"], ["level", "Levelling"], ["grid", "Grid"], ["volumes", "Volumes"], ["cutfill", "Cut & fill"]];
-  var bx = L;
-  tabs.forEach(function (t) { P.button(bx, 28, 164, 58, t[1], t[0] === tab ? "track-on" : "", { tab: t[0] }, 22); bx += 171; });
-  y = 130;
-  if (tab !== "setout" && !tours[tab]) { renderComing(P, L, y, W); P.end(); return; }
-  if (showPlan) { renderPlan(P, L, y, W); P.end(); return; }
-  if (showSteps) { renderSteps(P, L, y, W); P.end(); return; }
-  if (showSheet && tourSheets[tab]) { tourSheets[tab](P, L, y, W); P.end(); return; }
-  if (showExplain) { renderExplain(P, L, y, W); P.end(); return; }
-
-  var s = step();
-  P.text(s.n === 0 ? "Before you start" : "Step " + s.n + " of " + (STEPS.length - 2), L + 170, y, C.mute, 26);
-  P.button(P.cw - L - 150, y - 36, 150, 52, "Site plan", "", { act: "plan" }, 24);
-  P.button(P.cw - L - 310, y - 36, 150, 52, "All steps", "", { act: "steps" }, 24);
-  if (tourSheets[tab]) P.button(P.cw - L - 470, y - 36, 150, 52, "Sheet", "", { act: "sheet" }, 24);
-  if (typeof EXPLAIN === "object" && explainFor(s)) P.button(L, y - 36, 150, 52, "Explain", "track-on", { act: "explain" }, 24);
-  y += 64;
-  y = P.para(s.title, L, y, W, C.ink, 40, "", 50); y += 6;
-  P.rule(y, L, L + W); y += 44;
+  // tabs and page buttons
+  var tabs = [["setout", "Set-out"], ["level", "Levelling"], ["grid", "Grid"], ["volumes", "Volumes"], ["cutfill", "Cut & fill"]], bx = L;
+  tabs.forEach(function (t) { P.button(bx, 22, 176, 54, t[1], t[0] === tab ? "track-on" : "", { tab: t[0] }, 24); bx += 184; });
+  bx = 985;
+  if (typeof EXPLAIN === "object" && explainFor(s)) P.button(bx, 22, 130, 54, "Explain", showExplain ? "on" : "track-on", { act: "explain" }, 24); bx += 138;
+  P.button(bx, 22, 110, 54, "Plan", showPlan ? "on" : "", { act: "plan" }, 24); bx += 118;
+  P.button(bx, 22, 110, 54, "Steps", showSteps ? "on" : "", { act: "steps" }, 24); bx += 118;
+  if (tourSheets[tab]) P.button(bx, 22, 100, 54, "Sheet", showSheet ? "on" : "", { act: "sheet" }, 24);
+  // title
+  var y = 122;
+  P.text(s.n === 0 ? "Before you start" : "Step " + s.n + " of " + (STEPS.length - 2), L, y, C.mute, 24);
+  y = P.para(s.title, L, y + 44, W, C.ink, 36, "", 44); y += 4; P.rule(y, L, L + W); y += 40;
+  var top = y, wide = s.mode === "intro" || s.mode === "explain" || s.mode === "end" || s.mode === "done" || String(s.task).length > 620;
+  var LW = wide ? W : 780, RX = L + 830, RW = W - 830, ry = top, interactive = ["quiz", "keypad", "measure", "pour"].indexOf(s.mode) >= 0;
   if (s.mode === "done") y = renderDone(P, L, y, W);
-  else if (s.mode === "end") { y = P.para(s.task, L, y, W, C.ink, 30); }
+  else if (s.mode === "end") y = P.para(s.task, L, y, W, C.ink, 28, "", 38);
   else {
-    y = P.para(s.task, L, y, W, C.ink, 30); y += 12;
-    if (s.how && guided) s = Object.assign({}, s, { how: s.watch || "Press Do this step and watch." });
-    if (s.how) { var y0 = y; y = P.para(s.how, L + 24, y, W - 24, C.blue, 29); P.ctx.fillStyle = C.blue; P.ctx.fillRect(L, y0 - 26, 6, y - y0 - 6); y += 16; }
-    if (s.mode === "quiz") {
-      s.options.forEach(function (o, i) {
-        var kind = ""; if (quizPicked >= 0) kind = i === s.answer ? "good" : (i === quizPicked ? "bad" : "dim");
-        P.button(L, y, W, 62, o, kind, quizPicked < 0 ? { quiz: i } : null, 28); y += 74;
-      });
-      y += 40;
-    }
-    if (s.mode === "keypad") {
-      P.text("Diagonal", L, y + 42, C.mute, 30, "italic");
-      var ex = L + 150; P.ctx.strokeStyle = C.ink; P.ctx.lineWidth = 4; P.ctx.beginPath(); P.ctx.moveTo(ex, y + 54); P.ctx.lineTo(ex + 300, y + 54); P.ctx.stroke();
-      P.text((estimate || "") + (estimate ? " m" : ""), ex + 10, y + 42, C.ink, 36);
-      var keys = ["7", "8", "9", "4", "5", "6", "1", "2", "3", "0", ".", "<"], k = 0, kx0 = L + 500;
-      for (var r = 0; r < 4; r++) for (var cc = 0; cc < 3; cc++) { var key = keys[k++]; P.button(kx0 + cc * 90, y - 10 + r * 66, 80, 58, key === "<" ? "\u232B" : key, "", { key: key }, 30); }
-      P.button(ex, y + 80, 200, 58, "Check", "primary", checked.calc ? null : { act: "calc" }, 28);
-      y += 290;
-    }
-    if (s.mode === "measure") {
-      P.button(L, y, 260, 62, "Measure", "primary", checked.measured ? null : { act: "measure" }, 28); y += 90;
-      if (checked.measured) {
-        var d = diagonals();
-        P.text("A to G   " + fmt(d.ag), L, y, C.ink, 34); y += 44;
-        P.text("F to D   " + fmt(d.fd), L, y, C.ink, 34); y += 44;
-        P.text("Difference   " + mm(Math.abs(d.ag - d.fd)), L, y, Math.abs(d.ag - d.fd) <= TOL_DIAG ? C.green : C.red, 34); y += 54;
+    y = P.para(s.task, L, y, LW, C.ink, wide ? 26 : 28, "", wide ? 34 : 38); y += 10;
+    var how = s.how; if (how && guided) how = s.watch || "Press Do this step and watch.";
+    if (how) { var y0 = y; y = P.para(how, L + 24, y, LW - 24, C.blue, 27, "", 36); P.ctx.fillStyle = C.blue; P.ctx.fillRect(L, y0 - 26, 6, y - y0 - 8); y += 12; }
+    if (feedback && y < P.ch - 200) { var fy0 = y; y = P.para(feedback, L + 24, y, LW - 24, C.ink, 27, "", 36); P.ctx.fillStyle = feedback.indexOf("Right") === 0 || feedback.indexOf("Good") === 0 || feedback.indexOf("Square") === 0 ? C.green : C.orange; P.ctx.fillRect(L, fy0 - 26, 6, y - fy0 - 8); }
+    // right column: the interactive bits, or the why
+    if (!wide) {
+      if (s.mode === "quiz") { s.options.forEach(function (o, i) { var kind = ""; if (quizPicked >= 0) kind = i === s.answer ? "good" : (i === quizPicked ? "bad" : "dim"); P.button(RX, ry, RW, 60, o, kind, quizPicked < 0 ? { quiz: i } : null, 26); ry += 72; }); ry += 10; }
+      if (s.mode === "keypad") {
+        P.text("Diagonal", RX, ry + 40, C.mute, 28, "italic"); var ex = RX + 130; P.ctx.strokeStyle = C.ink; P.ctx.lineWidth = 4; P.ctx.beginPath(); P.ctx.moveTo(ex, ry + 52); P.ctx.lineTo(ex + 230, ry + 52); P.ctx.stroke();
+        P.text((estimate || "") + (estimate ? " m" : ""), ex + 10, ry + 40, C.ink, 34);
+        var keys = ["7", "8", "9", "4", "5", "6", "1", "2", "3", "0", ".", "<"], k = 0, kx0 = RX + 380;
+        for (var r = 0; r < 4; r++) for (var cc = 0; cc < 3; cc++) { var key = keys[k++]; P.button(kx0 + cc * 76, ry - 10 + r * 62, 68, 54, key === "<" ? "\u232B" : key, "", { key: key }, 28); }
+        P.button(ex, ry + 80, 180, 56, "Check", "primary", checked.calc ? null : { act: "calc" }, 26); ry += 270;
       }
-    }
-    if (s.mode === "pour") { P.button(L, y, 220, 62, "Pour", "bad", poured ? null : { act: "pour" }, 28); y += 90; }
-    if (feedback) { P.ctx.fillStyle = feedback.indexOf("Right") === 0 || feedback.indexOf("Good") === 0 || feedback.indexOf("Square") === 0 ? C.green : C.orange; P.ctx.fillRect(L, y - 28, 6, 70); y = P.para(feedback, L + 24, y, W - 24, C.ink, 28); y += 20; }
-    // why
-    if (s.why && y + 130 < P.ch - 200) { P.rule(y, L, L + W); y += 40; y = P.para(s.why, L, y, W, C.mute, 27, "italic"); }
+      if (s.mode === "measure") { P.button(RX, ry, 240, 60, "Measure", "primary", checked.measured ? null : { act: "measure" }, 26); ry += 84; if (checked.measured) { var d = diagonals(); P.text("A to G   " + fmt(d.ag), RX, ry, C.ink, 30); ry += 42; P.text("F to D   " + fmt(d.fd), RX, ry, C.ink, 30); ry += 42; P.text("Difference   " + mm(Math.abs(d.ag - d.fd)), RX, ry, Math.abs(d.ag - d.fd) <= TOL_DIAG ? C.green : C.red, 30); ry += 50; } }
+      if (s.mode === "pour") { P.button(RX, ry, 200, 60, "Pour", "bad", poured ? null : { act: "pour" }, 26); ry += 84; }
+      if (s.why && ry + 100 < P.ch - 150) { P.ctx.strokeStyle = C.rule; P.ctx.lineWidth = 3; P.ctx.beginPath(); P.ctx.moveTo(RX - 30, top - 20); P.ctx.lineTo(RX - 30, P.ch - 160); P.ctx.stroke(); P.para(s.why, RX, ry, RW, C.mute, 25, "italic", 33); }
+    } else if (s.why && y + 60 < P.ch - 150) { y += 10; P.para(s.why, L, y, W, C.mute, 25, "italic", 33); }
   }
   // footer
-  var fy = P.ch - 110;
-  P.rule(fy - 30, L, L + W);
-  if (stepIdx > 0) P.button(L, fy, 150, 60, "Back", "", { act: "back" }, 26);
-  if (s.mode === "done") { P.button(P.cw - L - 220, fy, 220, 60, "Start again", "primary", { act: "restart" }, 26); if (!wrongRun) P.button(L + 170, fy, 300, 60, "Watch it go wrong", "bad", { act: "wrong" }, 24); }
+  var fy = P.ch - 90;
+  P.rule(fy - 22, L, L + W);
+  if (stepIdx > 0) P.button(L, fy, 130, 60, "Back", "", { act: "back" }, 26);
+  P.button(L + 145, fy, 210, 60, "Take me there", "", { act: "goto" }, 24);
+  P.button(L + 370, fy, 160, 60, voiceOn ? "Voice on" : "Voice off", voiceOn ? "on" : "", { act: "voice" }, 24);
+  P.button(L + 545, fy, 190, 60, guided ? "Guided" : "Hands-on", guided ? "on" : "", { act: "mode" }, 24);
+  if (!guided && pegs.G && !poured && s.mode !== "pour" && s.mode !== "done") P.button(L + 750, fy, 240, 60, "Pour now anyway", "bad", { act: "pourEarly" }, 22);
+  if (s.mode === "done") { P.button(P.cw - L - 220, fy, 220, 60, "Start again", "primary", { act: "restart" }, 26); if (!wrongRun) P.button(P.cw - L - 520, fy, 280, 60, "Watch it go wrong", "bad", { act: "wrong" }, 24); }
   else if (s.mode === "end") { P.button(P.cw - L - 300, fy, 300, 60, s.nextTab ? "Next: " + s.nextLabel : "Start again", "primary", s.nextTab ? { tab: s.nextTab } : { act: "restart" }, 26); }
   else if (guided && !stepDone && s.mode !== "intro" && s.mode !== "explain") P.button(P.cw - L - 300, fy, 300, 60, demoRunning ? "Working..." : "Do this step", demoRunning ? "dim" : "primary", demoRunning ? null : { act: "demo" }, 26);
   else P.button(P.cw - L - 190, fy, 190, 60, "Next", stepDone ? "primary" : "dim", stepDone ? { act: "next" } : null, 26);
-  P.button(L, fy - 80, 220, 52, "Take me there", "", { act: "goto" }, 24);
-  P.button(L + 236, fy - 80, 170, 52, voiceOn ? "Voice on" : "Voice off", voiceOn ? "on" : "", { act: "voice" }, 24);
-  P.button(L + 422, fy - 80, 210, 52, guided ? "Guided" : "Hands-on", guided ? "on" : "", { act: "mode" }, 24);
-  if (!guided && pegs.G && !poured && s.mode !== "pour" && s.mode !== "done") P.button(L + 170, fy, 260, 60, "Pour now anyway", "bad", { act: "pourEarly" }, 24);
-  P.text(score.right + " right, " + score.missed + " missed", P.cw / 2, P.ch - 24, C.mute, 22, "", "center");
+  P.text(score.right + " right, " + score.missed + " missed", L + 750, fy + 40, C.mute, 22);
+  P.end();
+  renderPage();
+}
+// the upright page: plan, steps index, sheet or explain - only there when asked for
+function renderPage() {
+  var P = page, L = 40, W = P.cw - 80, y = 90, any = showPlan || showSteps || showSheet || showExplain;
+  page.mesh.visible = any; if (!any) return;
+  P.begin();
+  if (showPlan) renderPlan(P, L, y, W);
+  else if (showSteps) renderSteps(P, L, y, W);
+  else if (showSheet && tourSheets[tab]) tourSheets[tab](P, L, y, W);
+  else if (showExplain) renderExplain(P, L, y, W);
   P.end();
 }
-
 function renderSteps(P, L, y, W) {
   P.text("Jump to a step", L, y, C.ink, 40); P.button(P.cw - L - 150, y - 34, 150, 52, "Close", "", { act: "steps" }, 24); y += 30;
   P.para("Pick any step. The game builds the site up to that point and walks you there.", L, y, W, C.mute, 26); y += 60;
@@ -894,12 +886,26 @@ function showTapesTo(pt) {
 }
 
 // ---------- voice ----------
-function stopSpeech() { try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {} }
+function stopSpeech() { try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {} try { if (narration) { narration.pause(); narration = null; } } catch (e) {} }
+var voices = [], narration = null;
+function loadVoices() { try { voices = speechSynthesis.getVoices() || []; } catch (e) {} }
+if (window.speechSynthesis) { loadVoices(); try { speechSynthesis.onvoiceschanged = loadVoices; } catch (e) {} }
+function pickVoice() { if (!voices.length) loadVoices(); return voices.find(function (x) { return /en[-_]AU/i.test(x.lang); }) || voices.find(function (x) { return /en[-_]GB/i.test(x.lang); }) || voices.find(function (x) { return /^en/i.test(x.lang); }) || null; }
 function speak(text) {
   if (ffMode || !voiceOn || !window.speechSynthesis) return;
-  try { stopSpeech(); var u = new SpeechSynthesisUtterance(text.replace(/\n+/g, ". ")); u.lang = "en-AU"; u.rate = 0.95; var vs = speechSynthesis.getVoices(); var v = vs.find(function (x) { return /en[-_]AU/i.test(x.lang); }) || vs.find(function (x) { return /en[-_]GB/i.test(x.lang); }); if (v) u.voice = v; speechSynthesis.speak(u); } catch (e) {}
+  try { stopSpeech(); if (narration) { narration.pause(); narration = null; } var u = new SpeechSynthesisUtterance(text.replace(/\n+/g, ". ")); var v = pickVoice(); if (v) { u.voice = v; u.lang = v.lang; } u.rate = 0.95; u.pitch = 1.0; speechSynthesis.speak(u); } catch (e) {}
 }
-function speakStep() { var s = step(); speak((s.mode === "done" || s.n === 0 ? "" : "Step " + s.n + ". ") + s.title + ". " + (s.mode === "done" ? "" : s.task) + (s.how ? " " + s.how : "")); }
+function primeSpeech() { try { if (window.speechSynthesis) { loadVoices(); var u = new SpeechSynthesisUtterance(" "); speechSynthesis.speak(u); } } catch (e) {} }
+function stepText(s) { return (s.mode === "done" || s.n === 0 ? "" : "Step " + s.n + ". ") + s.title + ". " + (s.mode === "done" ? "" : s.task) + (s.how ? " " + s.how : ""); }
+// recorded narration: audio/<tab>-<n>.mp3 next to this page, if you have made one; otherwise the browser's own voice
+function speakStep() {
+  var s = step(); if (ffMode || !voiceOn) return;
+  stopSpeech(); if (narration) { narration.pause(); narration = null; }
+  var a = new Audio("audio/" + tab + "-" + s.n + ".mp3");
+  a.addEventListener("error", function () { if (narration === a) { narration = null; speak(stepText(s)); } });
+  a.addEventListener("canplaythrough", function () { if (narration === a) a.play().catch(function () { narration = null; speak(stepText(s)); }); });
+  narration = a; a.load();
+}
 
 // ---------- walking you to the spot ----------
 // each step has a place to stand; the game puts you there, facing the work, when the step starts
@@ -912,12 +918,11 @@ function vantageFor() {
   else if (guide.visible) { t = { x: guide.position.x, z: guide.position.z }; }
   else t = bc;
   if (!t) return null;
-  // stand between the target and the street when possible, otherwise between the target and where you are
-  var vx = rig.position.x - t.x, vz = rig.position.z - t.z, vl = Math.hypot(vx, vz);
+  // stand between the target and the middle of the lot, so you are always looking inward with the fences behind you
+  var mid = { x: (LOT.x0 + LOT.x1) / 2, z: 4 }, vx = mid.x - t.x, vz = mid.z - t.z, vl = Math.hypot(vx, vz);
   if (s.mode === "intro" || s.mode === "pour" || s.mode === "done" || s.mode === "keypad" || s.mode === "measure" || s.mode === "quiz" || vl < 0.5) { vx = 0; vz = 1; vl = 1; }
   vx /= vl; vz /= vl;
-  // keep inside the fences
-  var px = Math.max(LOT.x0 + 0.8, Math.min(LOT.x1 - 0.8, t.x + vx * d)), pz = Math.max(LOT.zRear + 0.8, Math.min(LOT.zFront + 2.5, t.z + vz * d));
+  var px = Math.max(LOT.x0 + 2.5, Math.min(LOT.x1 - 2.5, t.x + vx * d)), pz = Math.max(LOT.zRear + 2.5, Math.min(LOT.zFront + 3, t.z + vz * d));
   return { x: px, z: pz, look: t };
 }
 function groundY(x, z) { return tab === "setout" ? 0 : (tab === "volumes" ? volGy(x, z) : gy(x, z)); }
@@ -928,6 +933,7 @@ function faceAndStand(v) {
     rig.rotation.y = yawWanted - headYaw;
     var hx = camera.position.x, hz = camera.position.z, cy = Math.cos(rig.rotation.y), sy = Math.sin(rig.rotation.y);
     rig.position.set(v.x - (hx * cy + hz * sy), v.y !== undefined ? v.y : groundY(v.x, v.z), v.z - (-hx * sy + hz * cy));
+    if (tab === "setout") { var headX = rig.position.x + hx * cy + hz * sy, headZ = rig.position.z - hx * sy + hz * cy; if (headX < LOT.x0 || headX > LOT.x1 || headZ < LOT.zRear || headZ > LOT.zFront + 4 || Math.hypot(hx, hz) > 2) rig.position.set(v.x, rig.position.y, v.z); }
   } else { yaw = yawWanted; pitch = v.y !== undefined ? -0.75 : -0.25; rig.position.set(v.x, v.y !== undefined ? v.y : groundY(v.x, v.z), v.z); }
   if (typeof showDeck === "function") { if (v.y !== undefined) showDeck(v, v.y); else if (aerialDeck) aerialDeck.visible = false; }
   tone(600, 0, 0.06, 0.06);
@@ -936,11 +942,11 @@ function walkTo() { if (ffMode) return; updateGuide(); var v = vantageFor(); if 
 
 // ---------- interaction ----------
 var raycaster = new THREE.Raycaster(), tmpM = new THREE.Matrix4(), o3 = new THREE.Vector3(), d3 = new THREE.Vector3();
-var hoverIdx = -1, pointerGround = null, pointerObj = null;
+var hoverIdx = -1, hoverPanel = null, pointerGround = null, pointerObj = null;
 function castFrom(origin, dir) {
   raycaster.ray.origin.copy(origin); raycaster.ray.direction.copy(dir); raycaster.far = 60;
-  var hb = raycaster.intersectObject(board.mesh, false);
-  if (hb.length && hb[0].uv) return { kind: "board", idx: board.hitAt(hb[0].uv.x, hb[0].uv.y), dist: hb[0].distance };
+  var hb = raycaster.intersectObjects(page.mesh.visible ? [board.mesh, page.mesh] : [board.mesh], false);
+  if (hb.length && hb[0].uv) { var pn = hb[0].object.userData.panel; return { kind: "board", panel: pn, idx: pn.hitAt(hb[0].uv.x, hb[0].uv.y), dist: hb[0].distance }; }
   var ht = raycaster.intersectObjects(tappables, false);
   if (ht.length) return { kind: "obj", obj: ht[0].object, dist: ht[0].distance };
   var hg = raycaster.intersectObject(tab === "setout" ? ground : (tab === "volumes" ? volTerrain : terrain), false);
@@ -948,8 +954,8 @@ function castFrom(origin, dir) {
   return null;
 }
 function updatePointer(h) {
-  var newHover = h && h.kind === "board" ? h.idx : -1;
-  if (newHover !== hoverIdx) { hoverIdx = newHover; board.hover = hoverIdx; renderBoard(); }
+  var hp = h && h.kind === "board" ? h.panel : null, newHover = hp ? h.idx : -1;
+  if (hp !== hoverPanel || newHover !== hoverIdx) { if (hoverPanel) hoverPanel.hover = -1; hoverPanel = hp; hoverIdx = newHover; if (hp) hp.hover = newHover; renderBoard(); }
   var s = step(), wantsGround = !guided && ["place", "cross", "profiles"].indexOf(s.mode) >= 0 && !stepDone;
   if (h && h.kind === "ground" && wantsGround) {
     ghost.visible = true; ghost.position.set(h.pt.x, 0, h.pt.z);
@@ -969,12 +975,12 @@ function updatePointer(h) {
 }
 function press(h) {
   if (!h) return;
-  if (h.kind === "board") { if (h.idx >= 0 && board.hits[h.idx].action) { tone(1200, 0, 0.04, 0.08); act(board.hits[h.idx].action); } return; }
+  if (h.kind === "board") { if (h.idx >= 0 && h.panel.hits[h.idx].action) { tone(1200, 0, 0.04, 0.08); act(h.panel.hits[h.idx].action); } return; }
   if (guided) { var s0 = step(); if (h.kind === "obj" || (h.kind === "ground" && guide.visible && Math.hypot(h.pt.x - guide.position.x, h.pt.z - guide.position.z) < 2.0)) { if (!stepDone && !demoRunning) runDemo(); else if (stepDone) act({ act: "next" }); } return; }
   if (h.kind === "obj") { tapObject(h.obj); return; }
   if (h.kind === "ground") { var s = step(); if (["place", "cross", "profiles"].indexOf(s.mode) >= 0) placeAt(h.pt); }
 }
-function teleport(pt) { rig.position.set(pt.x, groundY(pt.x, pt.z), pt.z); tone(600, 0, 0.06, 0.06); }
+function teleport(pt) { pt = { x: Math.max(LOT.x0 - 2, Math.min(LOT.x1 + 2, pt.x)), z: Math.max(LOT.zRear - 2, Math.min(LOT.zFront + 4, pt.z)) }; rig.position.set(pt.x, groundY(pt.x, pt.z), pt.z); tone(600, 0, 0.06, 0.06); }
 
 // controllers
 var controllers = [];
@@ -985,7 +991,7 @@ for (var ci = 0; ci < 2; ci++) (function (i) {
   c.addEventListener("connected", function (e) { c.userData.gamepad = e.data.gamepad; c.userData.hand = e.data.handedness; c.visible = true; });
   c.addEventListener("disconnected", function () { c.visible = false; });
   c.addEventListener("selectstart", function () { var h = castFromController(c); press(h); haptic(c); });
-  c.addEventListener("squeezestart", function () { var h = castFromController(c); if (h && h.kind === "ground") teleport(h.pt); });
+  c.addEventListener("squeezestart", function () { if (guided) return; var h = castFromController(c); if (h && h.kind === "ground") teleport(h.pt); });
   c.visible = false; rig.add(c); controllers.push(c);
 })(ci);
 function castFromController(c) { tmpM.identity().extractRotation(c.matrixWorld); o3.setFromMatrixPosition(c.matrixWorld); d3.set(0, 0, -1).applyMatrix4(tmpM); return castFrom(o3, d3); }
@@ -1015,12 +1021,12 @@ if (navigator.xr && navigator.xr.isSessionSupported) {
     else note.textContent = "No headset in this browser. Drag to look, W A S D to walk, click to act, right-click to jump to a spot.";
   });
 } else note.textContent = "No WebXR here. Drag to look, W A S D to walk, click to act, right-click to jump to a spot.";
-btn.addEventListener("click", function () { ac(); navigator.xr.requestSession("immersive-vr", { optionalFeatures: ["local-floor", "bounded-floor"] }).then(function (session) { session.addEventListener("end", function () { document.getElementById("ui").style.display = "block"; }); renderer.xr.setSession(session); document.getElementById("ui").style.display = "none"; setTimeout(function () { walkTo(); speakStep(); }, 1500); }); });
+btn.addEventListener("click", function () { ac(); primeSpeech(); speakStep(); navigator.xr.requestSession("immersive-vr", { optionalFeatures: ["local-floor", "bounded-floor"] }).then(function (session) { session.addEventListener("end", function () { document.getElementById("ui").style.display = "block"; }); renderer.xr.setSession(session); document.getElementById("ui").style.display = "none"; setTimeout(function () { walkTo(); }, 1500); }); });
 
 // ---------- loop ----------
 // the clipboard rides in front of you, low and to the left, and turns with your head (yaw only)
-var boardInit = false, boardFollow = true, boardTarget = new THREE.Vector3(), camPos = new THREE.Vector3(), camDir = new THREE.Vector3(), lastT = performance.now();
-scene.add(board.mesh);
+var boardInit = false, boardFollow = true, boardTarget = new THREE.Vector3(), pageTarget = new THREE.Vector3(), camPos = new THREE.Vector3(), camDir = new THREE.Vector3(), lastT = performance.now();
+scene.add(board.mesh); scene.add(page.mesh); page.mesh.visible = false;
 renderer.setAnimationLoop(function () {
   var now = performance.now(), dt = Math.min(0.1, (now - lastT) / 1000); lastT = now;
   if (renderer.xr.isPresenting) {
@@ -1038,12 +1044,14 @@ renderer.setAnimationLoop(function () {
   camDir.y = 0; camDir.normalize();
   // clipboard: centred, chest height, and it only re-centres once you have turned or walked well away from it
   var vr = renderer.xr.isPresenting, rightV = new THREE.Vector3(-camDir.z, 0, camDir.x);
-  boardTarget.copy(camPos).addScaledVector(camDir, vr ? 1.0 : 1.3).addScaledVector(rightV, vr ? 0 : 0.55); boardTarget.y = camPos.y - (vr ? 0.45 : 0.2);
+  boardTarget.copy(camPos).addScaledVector(camDir, vr ? 0.85 : 1.3).addScaledVector(rightV, vr ? 0 : 0.55); boardTarget.y = camPos.y - (vr ? 0.95 : 0.3);
+  pageTarget.copy(camPos).addScaledVector(camDir, 1.2).addScaledVector(rightV, vr ? 0.25 : -0.55); pageTarget.y = camPos.y - 0.15;
   var toBoard = new THREE.Vector3().subVectors(board.mesh.position, camPos); toBoard.y = 0; var dBoard = toBoard.length(); toBoard.normalize();
   var ang = Math.acos(Math.max(-1, Math.min(1, toBoard.dot(camDir))));
   if (!boardInit || ang > 0.6 || dBoard > 1.6 || dBoard < 0.5) boardFollow = true;
-  if (boardFollow) { board.mesh.position.lerp(boardTarget, boardInit ? 0.08 : 1); if (board.mesh.position.distanceTo(boardTarget) < 0.03) boardFollow = false; boardInit = true; }
-  board.mesh.lookAt(camPos.x, camPos.y - 0.1, camPos.z);
+  if (boardFollow) { board.mesh.position.lerp(boardTarget, boardInit ? 0.08 : 1); page.mesh.position.lerp(pageTarget, boardInit ? 0.08 : 1); if (board.mesh.position.distanceTo(boardTarget) < 0.03) boardFollow = false; boardInit = true; }
+  board.mesh.lookAt(camPos.x, camPos.y, camPos.z);
+  page.mesh.lookAt(camPos.x, page.mesh.position.y + 0.05, camPos.z);
   guideRing.scale.setScalar(1 + 0.12 * Math.sin(now / 250));
   tickTweens(now); tickWalkTape(); tickBob(); if (typeof _tickExtra === "function") _tickExtra(now, camPos);
   if (tapeBoard.mesh.visible) { if (now > tapeBoardUntil) tapeBoard.mesh.visible = false; else tapeBoard.mesh.lookAt(camPos.x, tapeBoard.mesh.position.y, camPos.z); }
