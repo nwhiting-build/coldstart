@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Site Set-Out VR</title>
+<title>Site Set-Out VR - build 15</title>
 <style>
   body { margin: 0; overflow: hidden; background: #cfe0ee; font: 17px/1.5 Georgia, "Times New Roman", serif; color: #1e2a44; }
   canvas { display: block; }
@@ -26,6 +26,7 @@
 // Content follows the MBAWA "Standard Set Out Procedures" deck.
 // =====================================================================
 
+var BUILD = 15;
 var C = { ink: "#1e2a44", paper: "#f4f1e8", ply: "#c9a978", orange: "#e8801a", green: "#2f8f5b", red: "#c9302c", blue: "#2857c4", mute: "#6f7480", rule: "#cfc9b9", white: "#ffffff" };
 var FONT = "Georgia, 'Noto Serif', 'Times New Roman', serif";
 
@@ -222,8 +223,8 @@ function renderBoard() {
   var P = board, L = 40, W = P.cw - 80, s = step();
   P.begin();
   // tabs and page buttons
-  var tabs = [["setout", "Set-out"], ["level", "Levelling"], ["grid", "Grid"], ["volumes", "Volumes"], ["cutfill", "Cut & fill"]], bx = L;
-  tabs.forEach(function (t) { P.button(bx, 22, 176, 54, t[1], t[0] === tab ? "track-on" : "", { tab: t[0] }, 24); bx += 184; });
+  var tabs = [["setout", "Set-out"], ["dumpy", "Dumpy"], ["level", "Levelling"], ["grid", "Grid"], ["volumes", "Volumes"], ["cutfill", "Cut & fill"]], bx = L;
+  tabs.forEach(function (t) { P.button(bx, 22, 146, 54, t[1], t[0] === tab ? "track-on" : "", { tab: t[0] }, 22); bx += 152; });
   bx = 985;
   if (typeof EXPLAIN === "object" && explainFor(s)) P.button(bx, 22, 130, 54, "Explain", showExplain ? "on" : "track-on", { act: "explain" }, 24); bx += 138;
   P.button(bx, 22, 110, 54, "Plan", showPlan ? "on" : "", { act: "plan" }, 24); bx += 118;
@@ -269,7 +270,7 @@ function renderBoard() {
   else if (s.mode === "end") { P.button(P.cw - L - 300, fy, 300, 60, s.nextTab ? "Next: " + s.nextLabel : "Start again", "primary", s.nextTab ? { tab: s.nextTab } : { act: "restart" }, 26); }
   else if (guided && !stepDone && s.mode !== "intro" && s.mode !== "explain") P.button(P.cw - L - 300, fy, 300, 60, demoRunning ? "Working..." : "Do this step", demoRunning ? "dim" : "primary", demoRunning ? null : { act: "demo" }, 26);
   else P.button(P.cw - L - 190, fy, 190, 60, "Next", stepDone ? "primary" : "dim", stepDone ? { act: "next" } : null, 26);
-  P.text(score.right + " right, " + score.missed + " missed", L + 750, fy + 40, C.mute, 22);
+  P.text(score.right + " right, " + score.missed + " missed    build " + BUILD, L + 750, fy + 40, C.mute, 22);
   P.end();
   renderPage();
 }
@@ -519,28 +520,28 @@ function tickWalkTape() {
   walkTape.line.geometry.setFromPoints([new THREE.Vector3(walkTape.from.x, walkTape.y0, walkTape.from.z), hp]);
 }
 // tape close-up: a board that pops up over the peg and shows the steel tape with the string across it
-var tapeBoard = new Panel(1.1, 0.42, 1100, 420); tapeBoard.mesh.visible = false; scene.add(tapeBoard.mesh);
+var tapeBoard = new Panel(2.4, 0.96, 1100, 440); tapeBoard.mesh.visible = false; scene.add(tapeBoard.mesh); var tapeFromTo = "";
 var tapeBoardUntil = 0;
-function showTapeReading(pt, metres, note) {
-  var P = tapeBoard, c = P.ctx; P.begin();
+function showTapeReading(pt, metres, note, fromTo) {
+  var P = tapeBoard, c = P.ctx; P.begin(); if (fromTo) tapeFromTo = fromTo;
   // the tape: hooked at the 100 mm mark, so the tape reads 100 more than the distance
-  var read = metres + 0.1, cx = 560, pxPerMm = 3.6;
-  c.fillStyle = "#f2d51c"; c.fillRect(0, 150, P.cw, 150);
-  var startMm = Math.round(read * 1000) - 150;
-  for (var mmv = startMm; mmv <= startMm + 310; mmv++) {
+  var read = metres + 0.1, cx = 560, pxPerMm = 5.2;
+  c.fillStyle = "#f2d51c"; c.fillRect(0, 150, P.cw, 170);
+  var startMm = Math.round(read * 1000) - 105;
+  for (var mmv = startMm; mmv <= startMm + 215; mmv++) {
     var x = cx + (mmv - read * 1000) * pxPerMm; if (x < 12 || x > P.cw - 12) continue;
-    var h = mmv % 10 === 0 ? 46 : (mmv % 5 === 0 ? 30 : 16); c.fillStyle = "#1e2a44"; c.fillRect(x - 1, 150, 2, h);
-    if (mmv % 10 === 0 && mmv % 100 !== 0) { c.font = "26px " + FONT; c.fillStyle = "#1e2a44"; c.textAlign = "center"; c.fillText(String((mmv % 100) / 10 | 0), x, 226); }
-    if (mmv % 100 === 0) { c.font = "bold 40px " + FONT; c.fillStyle = "#c9302c"; c.fillText((mmv / 1000).toFixed(1), x, 282); }
+    var h = mmv % 10 === 0 ? 56 : (mmv % 5 === 0 ? 36 : 18); c.fillStyle = "#1e2a44"; c.fillRect(x - 1.5, 150, 3, h);
+    if (mmv % 10 === 0 && mmv % 100 !== 0) { c.font = "30px " + FONT; c.fillStyle = "#1e2a44"; c.textAlign = "center"; c.fillText(String((mmv % 100) / 10 | 0), x, 240); }
+    if (mmv % 100 === 0) { c.font = "bold 46px " + FONT; c.fillStyle = "#c9302c"; c.fillText((mmv / 1000).toFixed(1), x, 300); }
   }
   c.textAlign = "left";
   // the string
-  c.strokeStyle = "#ff2fa0"; c.lineWidth = 5; c.beginPath(); c.moveTo(cx - 60, 40); c.lineTo(cx + 60, 400); c.stroke();
-  P.text("Tape reads " + fmt(read) + "   less the 100 mm hook   =  " + fmt(metres), 40, 80, C.ink, 40);
-  P.text(note || "Hooked at the 100 mark, not the end - the end hook is bent and worn, the 100 line is not.", 40, 128, C.mute, 26);
-  P.text("Read it out loud. Partner repeats it back. " + fmt(metres) + ".", 40, 360, C.green, 30);
+  c.strokeStyle = "#ff2fa0"; c.lineWidth = 6; c.beginPath(); c.moveTo(cx - 40, 120); c.lineTo(cx + 40, 420); c.stroke();
+  P.text((tapeFromTo ? tapeFromTo + ":  " : "") + "reads " + fmt(read) + "  less the 100 hook  =  " + fmt(metres), 40, 72, C.ink, 38);
+  P.text(note || "Hooked at the 100 mark, not the end - the end hook is bent and worn, the 100 line is not.", 40, 122, C.mute, 27);
+  P.text("Read it out loud. Partner repeats it back. " + fmt(metres) + ".", 40, 390, C.green, 32);
   P.end();
-  tapeBoard.mesh.visible = true; tapeBoard.mesh.position.set(pt.x, groundY(pt.x, pt.z) + 1.55, pt.z); tapeBoardUntil = performance.now() + 4500;
+  tapeBoard.mesh.visible = true; tapeBoard.userData_face = true; placeInFront(tapeBoard.mesh, 1.6, 0.05); guideLabel.visible = false; tapeBoardUntil = performance.now() + 4500;
 }
 // plumb bob: hangs from a string crossing, drops to the peg
 var bob = new THREE.Group();
@@ -568,7 +569,7 @@ function setGuide(pt, text) {
   if (guided) text = text.replace(" goes about here", "").replace(" about here", "") + (stepDone ? " - done" : " - tap to do");
   guide.visible = true; guide.position.set(pt.x, groundY(pt.x, pt.z), pt.z);
   guideX.clearRect(0, 0, 512, 128); guideX.fillStyle = "rgba(232,128,26,0.95)"; guideX.fillRect(0, 0, 512, 128);
-  guideX.font = "44px " + FONT; guideX.fillStyle = "#ffffff"; guideX.textAlign = "center"; guideX.fillText(text, 256, 80); guideT.needsUpdate = true;
+  var fs_ = 44; guideX.font = fs_ + "px " + FONT; while (guideX.measureText(text).width > 490 && fs_ > 20) { fs_ -= 2; guideX.font = fs_ + "px " + FONT; } guideX.fillStyle = "#ffffff"; guideX.textAlign = "center"; guideX.fillText(text, 256, 64 + fs_ * 0.36); guideT.needsUpdate = true;
 }
 function updateGuide() {
   var s = step();
@@ -836,7 +837,7 @@ function buildQueue(s) {
     var tgt = targetFor(s.peg), ref = s.peg === "A" ? { x: tgt.x, z: LOT.zFront } : (s.peg === "G" ? pegs.D : pegs.A), dm = s.peg === "A" ? JOB.front : (s.peg === "D" ? JOB.depth : (s.peg === "F" || s.peg === "G" ? JOB.width : 3));
     q.push(later(function () { walkTo(); standAt(workerA, ref, { x: 0.35, z: 0.35 }); walkTapeTo(workerB, ref, tgt, 2200); }, 200));
     q.push(later(function () { showTapesTo(tgt); }, 2400));
-    q.push(later(function () { showTapeReading(tgt, dm); }, 700));
+    q.push(later(function () { showTapeReading(tgt, dm, null, s.peg === "A" ? "Boundary to A" : (s.peg === "G" ? "D to G" : "A to " + s.peg)); }, 700));
     q.push(later(function () { placeAt(tgt); setTapes([]); ghost.visible = false; }, 2600));
     q.push(later(function () { hideWorkers(); }, 1800));
   }
@@ -845,16 +846,16 @@ function buildQueue(s) {
     q.push(later(function () { walkTo(); standAt(workerA, pegs.B, { x: 0.35, z: 0.35 }); walkTapeTo(workerB, pegs.C, off, 2200); }, 200));
     q.push(later(function () { showTapesTo(off); feedback = "Tape from B reads " + fmt(dist(off, pegs.B)) + ", tape from C reads " + fmt(dist(off, pegs.C)) + ". Not equal - slide across."; renderBoard(); }, 2400));
     q.push(later(function () { tween(workerB, { x: pt.x + 0.3, z: pt.z + 0.3 }, 1600); }, 1800));
-    q.push(later(function () { showTapesTo(pt); showTapeReading(pt, dist(pt, pegs.B), "Both tapes read the same. The crossing is on the perpendicular."); }, 1800));
+    q.push(later(function () { showTapesTo(pt); showTapeReading(pt, dist(pt, pegs.B), "Both tapes read the same. The crossing is on the perpendicular.", "B to E and C to E"); }, 1800));
     q.push(later(function () { placeAt(pt); setTapes([]); ghost.visible = false; }, 3000));
     q.push(later(function () { hideWorkers(); }, 1800));
   }
   else if (s.mode === "check345") {
     var p = perpDir(), m4 = { x: pegs.A.x + p.x * 4, z: pegs.A.z + p.z * 4 };
     q.push(later(function () { walkTo(); standAt(workerA, pegs.A, { x: -0.35, z: 0.35 }); walkTapeTo(workerB, pegs.A, m4, 2000); }, 200));
-    q.push(later(function () { setTapes([]); var m = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 8), new THREE.MeshBasicMaterial({ color: 0xff2fa0 })); m.position.set(m4.x, 0.02, m4.z); site.add(m); showTapeReading(m4, 4, "4.000 back along A-E from the nail in A. A mark, not a peg."); }, 2200));
+    q.push(later(function () { setTapes([]); var m = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 8), new THREE.MeshBasicMaterial({ color: 0xff2fa0 })); m.position.set(m4.x, 0.02, m4.z); site.add(m); showTapeReading(m4, 4, "4.000 back along A-E from the nail in A. A mark, not a peg.", "A to the 4 m mark"); }, 2200));
     q.push(later(function () { standAt(workerA, pegs.B, { x: 0.35, z: 0.35 }); walkTapeTo(workerB, pegs.B, m4, 2000); }, 2600));
-    q.push(later(function () { var d = dist(pegs.B, m4); showTapeReading(m4, d, Math.abs(d - 5) < 0.003 ? "5.000. The corner is square." : "Not 5.000 - the corner is " + mm(Math.abs(d - 5)) + " off."); feedback = Math.abs(d - 5) < 0.003 ? "Right. B to the 4 m mark reads 5.000. 3, 4, 5 - the corner at A is square." : (wrongRun ? "It reads " + fmt(d) + ". Near enough, they say, and move on." : "It reads " + fmt(d) + " - " + mm(Math.abs(d - 5)) + " out. The corner is not square."); if (Math.abs(d - 5) < 0.003) markRight(); else markMiss(); stepDone = true; renderBoard(); updateGuide(); }, 2200));
+    q.push(later(function () { var d = dist(pegs.B, m4); showTapeReading(m4, d, Math.abs(d - 5) < 0.003 ? "5.000. The corner is square." : "Not 5.000 - the corner is " + mm(Math.abs(d - 5)) + " off.", "B to the 4 m mark"); feedback = Math.abs(d - 5) < 0.003 ? "Right. B to the 4 m mark reads 5.000. 3, 4, 5 - the corner at A is square." : (wrongRun ? "It reads " + fmt(d) + ". Near enough, they say, and move on." : "It reads " + fmt(d) + " - " + mm(Math.abs(d - 5)) + " out. The corner is not square."); if (Math.abs(d - 5) < 0.003) markRight(); else markMiss(); stepDone = true; renderBoard(); updateGuide(); }, 2200));
     q.push(later(function () { hideWorkers(); }, 2500));
   }
   else if (s.mode === "corners") {
@@ -935,10 +936,19 @@ function faceAndStand(v) {
     rig.position.set(v.x - (hx * cy + hz * sy), v.y !== undefined ? v.y : groundY(v.x, v.z), v.z - (-hx * sy + hz * cy));
     if (tab === "setout") { var headX = rig.position.x + hx * cy + hz * sy, headZ = rig.position.z - hx * sy + hz * cy; if (headX < LOT.x0 || headX > LOT.x1 || headZ < LOT.zRear || headZ > LOT.zFront + 4 || Math.hypot(hx, hz) > 2) rig.position.set(v.x, rig.position.y, v.z); }
   } else { yaw = yawWanted; pitch = v.y !== undefined ? -0.75 : -0.25; rig.position.set(v.x, v.y !== undefined ? v.y : groundY(v.x, v.z), v.z); }
+  rigFixedY = v.y !== undefined ? v.y : null;
   if (typeof showDeck === "function") { if (v.y !== undefined) showDeck(v, v.y); else if (aerialDeck) aerialDeck.visible = false; }
   tone(600, 0, 0.06, 0.06);
 }
 function walkTo() { if (ffMode) return; updateGuide(); var v = vantageFor(); if (v) faceAndStand(v); }
+
+// put a board a fixed distance in front of the viewer, at eye height plus an offset
+var _cp = new THREE.Vector3(), _cd = new THREE.Vector3();
+function placeInFront(mesh, dist, dy) {
+  if (renderer.xr.isPresenting) { var xc = renderer.xr.getCamera(camera); xc.getWorldPosition(_cp); xc.getWorldDirection(_cd); } else { camera.getWorldPosition(_cp); camera.getWorldDirection(_cd); }
+  _cd.y = 0; if (_cd.lengthSq() < 0.001) _cd.set(0, 0, -1); _cd.normalize();
+  mesh.position.set(_cp.x + _cd.x * dist, _cp.y + (dy || 0), _cp.z + _cd.z * dist);
+}
 
 // ---------- interaction ----------
 var raycaster = new THREE.Raycaster(), tmpM = new THREE.Matrix4(), o3 = new THREE.Vector3(), d3 = new THREE.Vector3();
@@ -1025,7 +1035,7 @@ btn.addEventListener("click", function () { ac(); primeSpeech(); speakStep(); na
 
 // ---------- loop ----------
 // the clipboard rides in front of you, low and to the left, and turns with your head (yaw only)
-var boardInit = false, boardFollow = true, boardTarget = new THREE.Vector3(), pageTarget = new THREE.Vector3(), camPos = new THREE.Vector3(), camDir = new THREE.Vector3(), lastT = performance.now();
+var rigFixedY = null, boardInit = false, boardFollow = true, boardTarget = new THREE.Vector3(), pageTarget = new THREE.Vector3(), camPos = new THREE.Vector3(), camDir = new THREE.Vector3(), lastT = performance.now();
 scene.add(board.mesh); scene.add(page.mesh); page.mesh.visible = false;
 renderer.setAnimationLoop(function () {
   var now = performance.now(), dt = Math.min(0.1, (now - lastT) / 1000); lastT = now;
@@ -1041,6 +1051,7 @@ renderer.setAnimationLoop(function () {
     camera.getWorldPosition(camPos); camera.getWorldDirection(camDir);
     raycaster.setFromCamera(mouse, camera); updatePointer(castFrom(raycaster.ray.origin, raycaster.ray.direction));
   }
+  if (rigFixedY === null) { var gyh = groundY(camPos.x, camPos.z); if (Math.abs(rig.position.y - gyh) > 0.002) { camPos.y += gyh - rig.position.y; rig.position.y = gyh; } }
   camDir.y = 0; camDir.normalize();
   // clipboard: centred, chest height, and it only re-centres once you have turned or walked well away from it
   var vr = renderer.xr.isPresenting, rightV = new THREE.Vector3(-camDir.z, 0, camDir.x);
@@ -1050,11 +1061,12 @@ renderer.setAnimationLoop(function () {
   var ang = Math.acos(Math.max(-1, Math.min(1, toBoard.dot(camDir))));
   if (!boardInit || ang > 0.6 || dBoard > 1.6 || dBoard < 0.5) boardFollow = true;
   if (boardFollow) { board.mesh.position.lerp(boardTarget, boardInit ? 0.08 : 1); page.mesh.position.lerp(pageTarget, boardInit ? 0.08 : 1); if (board.mesh.position.distanceTo(boardTarget) < 0.03) boardFollow = false; boardInit = true; }
+  boardTarget.y = Math.max(boardTarget.y, groundY(boardTarget.x, boardTarget.z) + 0.5);
   board.mesh.lookAt(camPos.x, camPos.y, camPos.z);
   page.mesh.lookAt(camPos.x, page.mesh.position.y + 0.05, camPos.z);
   guideRing.scale.setScalar(1 + 0.12 * Math.sin(now / 250));
   tickTweens(now); tickWalkTape(); tickBob(); if (typeof _tickExtra === "function") _tickExtra(now, camPos);
-  if (tapeBoard.mesh.visible) { if (now > tapeBoardUntil) tapeBoard.mesh.visible = false; else tapeBoard.mesh.lookAt(camPos.x, tapeBoard.mesh.position.y, camPos.z); }
+  if (tapeBoard.mesh.visible) { if (now > tapeBoardUntil) { tapeBoard.mesh.visible = false; guideLabel.visible = true; } else { placeInFront(tapeBoard.mesh, 1.6, 0.05); tapeBoard.mesh.lookAt(camPos.x, tapeBoard.mesh.position.y, camPos.z); } }
   // frame drops onto the slab
   if (frameDrop > 0 && frameMesh) { frameMesh.position.y = Math.max(0, frameMesh.position.y - 3 * dt); if (frameMesh.position.y === 0 && frameDrop === 1) { frameDrop = 2; thunk(); } }
   renderer.render(scene, camera);
@@ -1118,27 +1130,28 @@ staff.visible = false; natural.add(staff);
 function placeStaff(pt) { staff.visible = true; staff.position.set(pt.x, gy(pt.x, pt.z), pt.z); }
 
 // staff close-up: the eyepiece view, crosshair on the reading
-var staffBoard = new Panel(0.6, 0.6, 600, 600); staffBoard.mesh.visible = false; scene.add(staffBoard.mesh); var staffBoardUntil = 0;
+var staffBoard = new Panel(0.9, 0.9, 600, 600); staffBoard.mesh.visible = false; scene.add(staffBoard.mesh); var staffBoardUntil = 0;
 function showStaffReading(pt, val, label) {
   var P = staffBoard, c = P.ctx; P.begin();
   c.save(); c.beginPath(); c.arc(300, 300, 270, 0, 7); c.clip(); c.fillStyle = "#e8eef4"; c.fillRect(0, 0, 600, 600);
   var pxPerMm = 2.2, cx = 300, cy = 300;
   for (var mmv = Math.round(val * 1000) - 140; mmv <= Math.round(val * 1000) + 140; mmv++) {
-    var y = cy + (mmv - val * 1000) * pxPerMm;
-    if (mmv % 10 === 0) { var blk = Math.floor(mmv / 10) % 2 === 0; c.fillStyle = Math.floor(mmv / 100) % 2 ? "#c9302c" : "#1e2a44"; if (blk) c.fillRect(230, y - 10 * pxPerMm, 60, 10 * pxPerMm); if (mmv % 100 === 0) { c.font = "bold 44px " + FONT; c.textAlign = "left"; c.fillText((mmv / 1000).toFixed(1), 300, y + 14); } }
+    var y = cy - (mmv - val * 1000) * pxPerMm;
+    if (mmv % 10 === 0) { var m2 = Math.floor(mmv / 1000), col2 = m2 % 2 ? "#c9302c" : "#1e2a44", cm2 = Math.floor(mmv / 10), inDm2 = ((cm2 % 10) + 10) % 10, e2 = inDm2 % 5; if (e2 === 0 || e2 === 2 || e2 === 4) { c.fillStyle = col2; c.fillRect(230, y - 10 * pxPerMm, 50, 10 * pxPerMm); } c.fillStyle = col2; if (inDm2 < 5) c.fillRect(272, y - 10 * pxPerMm, 10, 10 * pxPerMm); else c.fillRect(230, y - 10 * pxPerMm, 10, 10 * pxPerMm); if (mmv % 100 === 0) { c.font = "bold 44px " + FONT; c.textAlign = "left"; c.fillText(String((cm2 / 10) % 10), 300, y - 14); c.font = "24px " + FONT; c.fillText(String(m2), 345, y - 18); } }
   }
   c.restore(); c.lineWidth = 4; c.strokeStyle = "#1e2a44"; c.beginPath(); c.arc(300, 300, 270, 0, 7); c.stroke();
   c.strokeStyle = "#111"; c.lineWidth = 3; c.beginPath(); c.moveTo(40, cy); c.lineTo(560, cy); c.moveTo(cx, 40); c.lineTo(cx, 560); c.stroke();
   c.strokeStyle = "#888"; c.lineWidth = 2; c.beginPath(); c.moveTo(200, cy - 30); c.lineTo(400, cy - 30); c.moveTo(200, cy + 30); c.lineTo(400, cy + 30); c.stroke();
   c.fillStyle = "#c9302c"; c.font = "bold 44px " + FONT; c.textAlign = "center"; c.fillText(fmt(val), 300, 560);
   c.fillStyle = C.ink; c.font = "26px " + FONT; c.fillText(label || "centre hair, not the stadia line", 300, 590);
-  P.end(); P.mesh.visible = true; P.mesh.position.set(pt.x, gy(pt.x, pt.z) + 2.6, pt.z); staffBoardUntil = performance.now() + 4500;
+  P.end(); P.mesh.visible = true; placeInFront(P.mesh, 1.4, 0.1); staffBoardUntil = performance.now() + 4500;
 }
 
 // =====================================================================
 // LEVELLING TOUR
 // =====================================================================
 var LV = { pegP: { x: -8, z: 12 }, pegQ: { x: 8, z: 12 }, st1: { x: 0, z: 12 }, st2: { x: 11, z: 12 }, cp: { x: -2, z: 4 }, stA: { x: -7, z: 7 }, stB: { x: 2, z: -3 } };
+var KERB = { x: -2, z: 17 }, FRONTLINE = { x: -1, z: 10 };
 var lvSheet = [];   // booking rows: {pt, bs, is, fs, rise, fall, rl, note}
 var twoPeg = { a1: 0, b1: 0, a2: 0, b2: 0 };
 function bookRow(r) { lvSheet.push(r); }
@@ -1148,41 +1161,41 @@ function reduceSheet() {
 function sums() { var bs = 0, fs = 0, rs = 0, fl = 0; lvSheet.forEach(function (r) { bs += r.bs || 0; fs += r.fs || 0; rs += r.rise || 0; fl += r.fall || 0; }); return { bs: r3(bs), fs: r3(fs), rise: r3(rs), fall: r3(fl) }; }
 
 var LEVEL_STEPS = [
-  { title: "Levelling: datum, the level plane, and the booking sheet", mode: "intro", vantage: { x: -6, z: 20, look: { x: 0, z: 5 } },
+  { title: "Levelling: datum, the level plane, and the booking sheet", mode: "intro", vantage: { x: -2, z: 17.5, look: { x: 0, z: 5 } },
     task: "This is the natural site, before any earthworks. It falls toward the street and it rolls. Every height on this job is measured against one point: the TBM, a nail in the front-west survey peg, RL 100.000.\\n\\nThe level projects an invisible horizontal plane - think of a sheet of glass at instrument height. Every staff reading is how far the ground is below that glass. Big reading, low ground. Small reading, high ground.\\n\\nWhat you will do: check the instrument, run a two-peg test, set up, read the TBM, read pegs, move the instrument through a change point, and close the loop back to the TBM. Then the arithmetic has to balance three ways." },
-  { title: "Bubble check - two minutes that save a re-survey", mode: "bubble", vantage: { x: 2, z: 15, look: LV.st1 }, guide: { pt: LV.st1, text: "Instrument" },
+  { title: "Bubble check - two minutes that save a re-survey", mode: "bubble", vantage: { x: 0, z: 16.5, look: LV.st1 }, guide: { pt: LV.st1, text: "Instrument" },
     watch: "Watch: instrument set up, bubble centred, then the telescope turned through 180 degrees. If the bubble stays centred, the vial is true.",
     task: "Before any reading: set the tripod firm, centre the bubble, then rotate the telescope 180 degrees. The bubble must stay centred. If it drifts, the instrument needs adjusting - stop.",
     why: "Systematic errors are the dangerous ones. They repeat on every reading and pass every arithmetic check. The only defence is testing the instrument before you trust it." },
-  { title: "Two-peg test - part one, the true difference", mode: "twopeg1", vantage: { x: 0, z: 17, look: LV.st1 }, guide: { pt: LV.st1, text: "Midpoint" },
+  { title: "Two-peg test - part one, the true difference", mode: "twopeg1", vantage: { x: 0, z: 16.5, look: LV.st1 }, guide: { pt: LV.st1, text: "Midpoint" },
     watch: "Watch: pegs P and Q 16 m apart, the level exactly midway. Staff on P, read. Staff on Q, read. The difference is the true height difference - any tilt in the telescope cancels because the sights are equal.",
     task: "Two pegs, P and Q. Instrument set up exactly halfway between them. Read the staff on each. Because both sights are the same length, any collimation error is the same on both readings and cancels in the subtraction. That difference is the truth.",
     why: "Equal sight lengths are the whole point. Pace it if you have to, but get the instrument in the middle." },
-  { title: "Two-peg test - part two, expose the error", mode: "twopeg2", vantage: { x: 9, z: 16, look: LV.st2 }, guide: { pt: LV.st2, text: "Beyond Q" },
+  { title: "Two-peg test - part two, expose the error", mode: "twopeg2", vantage: { x: 5, z: 16.5, look: LV.st2 }, guide: { pt: LV.st2, text: "Beyond Q" },
     watch: "Watch: the level moves to just beyond Q. Now one sight is short and one is long. Read both again. Compare this difference with the true one.",
     task: "Move the instrument to a point beyond one peg, so the sights are unequal. Read both pegs again. If the telescope is tilted, the long sight carries more of the error and the difference changes. Difference of differences is the collimation error over 16 m. More than 3 mm - the instrument goes for service.",
     why: "Difference of the differences. Students forget the last subtraction and report the wrong number." },
-  { title: "Set up and read the TBM - backsight", mode: "bs", vantage: { x: -9, z: 11, look: LV.stA }, guide: { pt: DATUM, text: "TBM" },
+  { title: "Set up and read the TBM - backsight", mode: "bs", vantage: { x: -6, z: 16.5, look: LV.stA }, guide: { pt: DATUM, text: "TBM" },
     watch: "Watch: station 1 set up. First reading is a backsight to the TBM. Height of collimation = RL of the TBM + the backsight.",
     task: "Station 1. The first reading from any new station is a backsight to a point of known RL - here the TBM at 100.000. Add the reading to the RL and you have the height of the glass: the height of collimation, HOC.",
     why: "HOC = RL of TBM + BS. Everything read from this station is HOC minus the reading. No rise or fall is worked on the TBM line - it only sets the height." },
-  { title: "Intermediate sights - the grid corners", mode: "is", vantage: { x: -9, z: 11, look: gridPts[0] }, guide: { pt: gridPts[0], text: "A1" },
+  { title: "Intermediate sights - the grid corners", mode: "is", vantage: { x: -4, z: 13, look: gridPts[0] }, guide: { pt: gridPts[0], text: "A1" },
     watch: "Watch: the staff goes to A1, then D1, then A4. Each is an intermediate sight, booked in the IS column, one line per peg.",
     task: "Intermediate sights: readings between the backsight and the foresight. The staff walks to each point, the instrument does not move. Book the reading first, on its own line. Do the arithmetic after.",
     why: "Readings are evidence. Write them down in the order they happen. Calculate later, when you are sure you have them all." },
-  { title: "Change point - foresight, move, backsight", mode: "cp", vantage: { x: -4, z: 1, look: LV.cp }, guide: { pt: LV.cp, text: "Change point" },
+  { title: "Change point - foresight, move, backsight", mode: "cp", vantage: { x: -2, z: 10, look: LV.cp }, guide: { pt: LV.cp, text: "Change point" },
     watch: "Watch: the last reading from station 1 is a foresight to the change point. The instrument moves to station 2. The first reading from station 2 is a backsight to the same change point. One line on the sheet holds both.",
     task: "The far corner cannot be read from station 1, so the instrument has to move. A change point carries the height across: foresight to it from the old station, backsight to it from the new. The staff does not move between those two readings. The CP is one line on the sheet, with an FS and a BS on it.",
     why: "The change point is the relay baton. If the peg moves between the FS and the BS, the whole run after it is wrong." },
-  { title: "Read D4 and close back on the TBM", mode: "close", vantage: { x: 4, z: -4, look: gridPts[15] }, guide: { pt: gridPts[15], text: "D4" },
+  { title: "Read D4 and close back on the TBM", mode: "close", vantage: { x: 0, z: 10, look: gridPts[15] }, guide: { pt: gridPts[15], text: "D4" },
     watch: "Watch: from station 2, an intermediate sight to D4, then a foresight back to the TBM. The loop is closed.",
     task: "From station 2 read D4, then finish with a foresight back to the TBM. The run started on the TBM and ends on it, so the last RL should come out at 100.000. The difference is the misclose.",
     why: "Closing the loop proves the field work, not just the maths. An arithmetic check cannot catch a misread staff. A closed loop can." },
-  { title: "Reduce the sheet - rise and fall", mode: "reduce", vantage: { x: -6, z: 20, look: { x: 0, z: 5 } },
+  { title: "Reduce the sheet - rise and fall", mode: "reduce", vantage: { x: -2, z: 17.5, look: { x: 0, z: 5 } },
     watch: "Watch: the sheet fills in. Each reading is compared to the one above it: previous minus current. Positive is a rise, negative is a fall. RL = previous RL plus rise or minus fall.",
     task: "Rise and fall: compare each reading with the one immediately above it. Previous minus current. Positive, the ground rose. Negative, it fell. Carry the RL down the sheet. Do not reset at the change point - the comparison runs straight through it.",
     why: "If the next reading is smaller the ground went up. If it is bigger the ground went down. Say it out loud until it is automatic." },
-  { title: "The three-way check", mode: "check3", vantage: { x: -6, z: 20, look: { x: 0, z: 5 } },
+  { title: "The three-way check", mode: "check3", vantage: { x: -2, z: 17.5, look: { x: 0, z: 5 } },
     watch: "Watch: sum of backsights minus sum of foresights, sum of rises minus sum of falls, last RL minus first RL. All three must be the same number.",
     task: "Total the columns. Sum BS minus sum FS must equal sum rise minus sum fall, and both must equal last RL minus first RL. If they do not, there is a booking or arithmetic error - find it now, on site, not back at the office.",
     why: "It is a bank reconciliation. It balances or it does not. Never do it in your head." },
@@ -1253,25 +1266,25 @@ tourSheets.level = function (P, L, y, W) {
 // =====================================================================
 var gridSheet = [], contourLines = [];
 var GRID_STEPS = [
-  { title: "Grid survey: turning ground into a drawing", mode: "intro", vantage: { x: -12, z: 14, look: { x: -1, z: 4 } },
+  { title: "Grid survey: turning ground into a drawing", mode: "intro", vantage: { x: -2, z: 17.5, look: { x: -1, z: 4 } },
     task: "You cannot draw a hill from one reading. The grid method: peg a regular grid across the site, level every peg, then work out where the contours must cross between them.\\n\\nThis is the assessment grid - 9 m by 9 m, 3 m spacing, columns A to D, rows 1 to 4. Sixteen pegs, sixteen RLs, one contour plan." },
-  { title: "Peg the base line - tape held horizontal", mode: "gbase", vantage: { x: -8, z: 13, look: gridPts[1] }, guide: { pt: gridPts[0], text: "A1" },
+  { title: "Peg the base line - tape held horizontal", mode: "gbase", vantage: { x: -4, z: 14, look: gridPts[1] }, guide: { pt: gridPts[0], text: "A1" },
     watch: "Watch: from A1 the tape is pulled east along the base line, held level, with a plumb bob dropping the 3 m mark to the ground. B1, C1, D1.",
     task: "The base line runs along the front of the grid. Every grid distance is a plan distance - horizontal, never along the slope. On falling ground, one end of the tape is held up level and a plumb bob drops the mark to the peg.",
     why: "This is the single most expensive mistake in the topic. A 10 m tape laid on a slope is less than 10 m in plan. Every volume off that grid is wrong." },
-  { title: "Turn 90 degrees and fill the grid", mode: "gfill", vantage: { x: -9, z: 3, look: gridPts[8] }, guide: { pt: gridPts[4], text: "A2" },
+  { title: "Turn 90 degrees and fill the grid", mode: "gfill", vantage: { x: -1, z: 13, look: gridPts[8] }, guide: { pt: gridPts[4], text: "A2" },
     watch: "Watch: a 3:4:5 off A1 gives the A column. Then rows 2, 3 and 4 are pegged at 3 m, every intersection labelled.",
     task: "A quick 3:4:5 turns the second line off the base. Peg the far side, then every interior intersection. Label every peg - letter and number - before you leave it.",
     why: "A grid without labels is useless. Labels are how the field data becomes a plan." },
-  { title: "Level every peg from one station", mode: "gread", vantage: { x: -10, z: 9, look: LV.stA }, guide: { pt: DATUM, text: "TBM" },
+  { title: "Level every peg from one station", mode: "gread", vantage: { x: -5, z: 14, look: LV.stA }, guide: { pt: DATUM, text: "TBM" },
     watch: "Watch: backsight to the TBM, then the staff walks every peg A1 to D4. Sixteen intermediate sights, booked in order.",
     task: "Set up where every peg can be seen. Backsight to the TBM for the HOC, then intermediate sights to all sixteen pegs, then a foresight back to the TBM to close. HOC minus each reading is the RL of that peg.",
     why: "Closed loop, always. The grid RLs feed the contour plan and the cut and fill - an error here is an error in the truck count." },
-  { title: "Interpolate - where does the contour cross?", mode: "ginterp", vantage: { x: -9, z: 3, look: gridPts[8] }, guide: { pt: gridPts[8], text: "A3 to B3" },
+  { title: "Interpolate - where does the contour cross?", mode: "ginterp", vantage: { x: -2, z: 11, look: gridPts[8] }, guide: { pt: gridPts[8], text: "A3 to B3" },
     watch: "Watch: A3 and B3 have different RLs. The contour crosses the line between them in proportion to the rise.",
     task: "A contour crosses a grid line where the RL equals the contour value. Between two pegs, assume the ground is a straight slope and find the crossing in proportion: (contour minus lower RL) divided by (upper RL minus lower RL), times the grid spacing.",
     why: "Ruler, radial graph or arithmetic - three methods, one idea. The maths is the one you can do in the truck." },
-  { title: "Draw the contours - on the ground and on the plan", mode: "gcontour", vantage: { x: -12, z: 14, look: { x: -1, z: 4 } },
+  { title: "Draw the contours - on the ground and on the plan", mode: "gcontour", vantage: { x: -2, z: 17.5, look: { x: -1, z: 4 } },
     watch: "Watch: the 0.1 m contours appear across the grid, and the plan on the clipboard fills in.",
     task: "Join the crossings with smooth curves. Four rules: every contour is continuous, none cross, none split, every point on one is the same height. Close spacing is steep ground; wide is gentle.",
     why: "Trace each contour with your finger. If the dots do not justify the curve, find out why before you ink it." },
@@ -1296,7 +1309,7 @@ function drawContours() {
 }
 tourDemos.grid = function (s, q) {
   if (s.mode === "gbase") {
-    [1, 2, 3].forEach(function (c, i) { q.push(later(function () { if (i === 0) walkTo(); gridMeshes[0].visible = true; var from = gridPts[c - 1], to = gridPts[c]; standAt(workerA, from, { x: -0.4, z: 0.4 }); walkTapeTo(workerB, from, to, 1600, function () { gridMeshes[c].visible = true; thunk(); }); setGuide(to, to.name); }, i === 0 ? 300 : 2000)); q.push(later(function () { showTapeReading(gridPts[c], 3, "Tape held level. Bob dropped to the peg."); }, 1700)); });
+    [1, 2, 3].forEach(function (c, i) { q.push(later(function () { if (i === 0) walkTo(); gridMeshes[0].visible = true; var from = gridPts[c - 1], to = gridPts[c]; standAt(workerA, from, { x: -0.4, z: 0.4 }); walkTapeTo(workerB, from, to, 1600, function () { gridMeshes[c].visible = true; thunk(); }); setGuide(to, to.name); }, i === 0 ? 300 : 2000)); q.push(later(function () { showTapeReading(gridPts[c], 3, "Tape held level. Bob dropped to the peg.", gridPts[c - 1].name + " to " + gridPts[c].name); }, 1700)); });
     q.push(later(function () { hideWorkers(); stepDone = true; markRight(); updateGuide(); renderBoard(); }, 2500));
   }
   if (s.mode === "gfill") {
@@ -1342,25 +1355,25 @@ function renderGridPlan(P, L, y, W) {
 // =====================================================================
 var cfDepths = [], cfResult = null, platformPlane = null, earthworksDone = false;
 var CF_STEPS = [
-  { title: "Cut and fill: the three RLs", mode: "intro", vantage: { x: -12, z: 14, look: { x: -1, z: 4 } },
+  { title: "Cut and fill: the three RLs", mode: "intro", vantage: { x: -2, z: 17.5, look: { x: -1, z: 4 } },
     task: "The slab needs a level platform. High ground comes out - cut. Low ground is built up - fill. Three RLs define the job: the head of the cut, the platform, and the toe of the fill.\\n\\nCut depth = ground RL minus platform RL. Fill depth = platform RL minus ground RL. Same grid, same sixteen pegs, one more subtraction each." },
-  { title: "Set the platform RL", mode: "cfplat", vantage: { x: -12, z: 14, look: { x: -1, z: 4 } },
+  { title: "Set the platform RL", mode: "cfplat", vantage: { x: -2, z: 17.5, look: { x: -1, z: 4 } },
     watch: "Watch: the platform appears as a level plane through the ground at RL " + fmt(PLATFORM) + ". Where the ground is above it - cut. Below it - fill.",
     task: "The engineer sets the platform at " + fmt(PLATFORM) + " to suit the drainage and to balance the dirt. Everything above that plane comes out; everything below is made up.",
     why: "On a simple job the platform matches the highest corner and it is all cut. On a real job it is chosen so the cut roughly makes the fill, and the trucks stay off the road." },
-  { title: "Depth at every peg", mode: "cfdepth", vantage: { x: -10, z: 9, look: gridPts[5] }, guide: { pt: gridPts[0], text: "A1" },
+  { title: "Depth at every peg", mode: "cfdepth", vantage: { x: -3, z: 13, look: gridPts[5] }, guide: { pt: gridPts[0], text: "A1" },
     watch: "Watch: each peg gets a depth - RL minus platform. Positive is cut, negative is fill.",
     task: "For each grid point subtract the platform from the RL. That number is the depth of cut at that peg, or, if negative, the depth of fill.",
     why: "Mixing up which RL subtracts from which is the classic error. Ground minus platform. Positive means dirt above the platform, and dirt above the platform comes out." },
-  { title: "Prism by prism - uses and collective depth", mode: "cfvol", vantage: { x: -12, z: 14, look: { x: -1, z: 4 } },
+  { title: "Prism by prism - uses and collective depth", mode: "cfvol", vantage: { x: -2, z: 17.5, look: { x: -1, z: 4 } },
     watch: "Watch: the nine grid squares are prisms. A corner peg is used once, an edge peg twice, an interior peg four times. Depth times uses, summed, divided by total uses, times area.",
     task: "Each 3 m square is a prism. Its volume is average depth of its four corners times 9 square metres. Rather than do nine prisms, count how many prisms each peg touches: corners once, edges twice, interior four times. Depth times uses gives the collective. Sum the collective, divide by total uses, multiply by the whole area. Cut and fill are kept separate.",
     why: "Self-check: total uses must equal four times the number of prisms. Nine prisms, thirty-six uses." },
-  { title: "Bulking, compaction and the balance", mode: "cfbulk", vantage: { x: -12, z: 14, look: { x: -1, z: 4 } },
+  { title: "Bulking, compaction and the balance", mode: "cfbulk", vantage: { x: -2, z: 17.5, look: { x: -1, z: 4 } },
     watch: "Watch: bank volume becomes loose volume on the truck, and the fill has to be compacted back down.",
     task: "The grid gives bank volume - dirt as it sits in the ground. Dug up, it bulks by about 22 percent - that is what goes on the truck. Placed and rolled as fill it compacts to 85 to 90 percent of bank. So the cut does not simply equal the fill. The balance tells you whether you import or cart away, before the excavator arrives.",
     why: "Bank is the size of the hole. Loose is the truck count. Students lose marks when the answer is in the wrong state." },
-  { title: "Do the earthworks", mode: "cfdig", vantage: { x: -12, z: 16, look: { x: -1, z: 4 } },
+  { title: "Do the earthworks", mode: "cfdig", vantage: { x: -2, z: 17.5, look: { x: -1, z: 4 } },
     watch: "Watch: the ground is cut down and built up to the platform. Batters run off the edges.",
     task: "Topsoil stripped and stockpiled. Cut taken down to the platform, fill placed and compacted in layers. The result is the level pad the set-out happens on.",
     why: "Fill under a slab is engineered fill - compacted in layers, tested. Uncontrolled fill is why slabs crack." },
@@ -1426,13 +1439,13 @@ function switchTour(to) {
   if (to === tab) return;
   tours[tab].idx = stepIdx; tours[tab].done = stepDone;
   stopSpeech(); tab = to; STEPS = tours[tab].steps; stepIdx = tours[tab].idx; stepDone = tours[tab].done; feedback = ""; demoRunning = false; showPlan = false; showSteps = false; showSheet = false; showExplain = false;
-  var nat = tab === "level" || tab === "grid" || tab === "cutfill", vol = tab === "volumes";
+  var nat = tab === "level" || tab === "grid" || tab === "cutfill" || tab === "dumpy", vol = tab === "volumes";
   natural.visible = nat; terrain.visible = nat; volWorld.visible = vol; ground.visible = tab === "setout"; site.visible = tab === "setout"; road.visible = !vol; kerb.visible = !vol; if (typeof aerialDeck !== "undefined" && aerialDeck) aerialDeck.visible = false; surveyPegs.forEach(function (g) { g.visible = true; }); guide.visible = false; ghost.visible = false; tapeBoard.mesh.visible = false; staffBoard.mesh.visible = false; hideWorkers(); bob.visible = false;
   if (!nat && earthworksDone) { /* the platform is cut; the flat world is the platform */ }
   renderBoard(); updateGuide(); walkTo(); speakStep();
 }
 // keep the staff close-up facing you, and the workers on the ground
-var _tickExtra = function (now, camPos) { if (staffBoard.mesh.visible) { if (now > staffBoardUntil) staffBoard.mesh.visible = false; else staffBoard.mesh.lookAt(camPos.x, staffBoard.mesh.position.y, camPos.z); } if (tab !== "setout") { [workerA, workerB].forEach(function (w) { if (w.visible) w.position.y = groundY(w.position.x, w.position.z); }); } };
+var _tickExtra = function (now, camPos) { if (staffBoard.mesh.visible) { if (now > staffBoardUntil) staffBoard.mesh.visible = false; else { placeInFront(staffBoard.mesh, 1.4, 0.1); staffBoard.mesh.lookAt(camPos.x, staffBoard.mesh.position.y, camPos.z); } } if (tab !== "setout") { [workerA, workerB].forEach(function (w) { if (w.visible) w.position.y = groundY(w.position.x, w.position.z); }); } };
 
 
 // =====================================================================
@@ -1671,6 +1684,221 @@ EXPLAIN["volumes:vtable"] = { terms: [T("Collective depth", "A peg's depth x its
 EXPLAIN["volumes:vbulk"] = { terms: [T("Bank", "Dirt undisturbed in the ground. What the table gives."), T("Loose", "Dug dirt - it swells. Bank x about 1.22."), T("Bulking factor", "The multiplier from bank to loose. Depends on the soil; 1.22 is typical.")], working: function () { var t = table101(); return [t.vol.toFixed(1) + " x 1.22 = " + (t.vol * 1.22).toFixed(1) + " m3 loose.", (t.vol * 1.22).toFixed(1) + " / 10 = " + (t.vol * 1.22 / 10).toFixed(1) + " -> " + Math.ceil(t.vol * 1.22 / 10) + " loads of 10 m3."]; } };
 EXPLAIN["volumes:vlt"] = { terms: [T("AHD - Australian Height Datum", "The national datum, roughly mean sea level. Survey plans quote it."), T("Site datum", "A convenient number given to the bench mark for the job - here AHD 39.470 is called 10.000."), T("Bench mark (BM)", "The fixed point the site RLs start from.")], working: function () { var t = ltTable(); return ["Platform AHD 34.760 - BM AHD 39.470 = -4.710.", "Site RL of platform = 10.000 - 4.710 = " + fmt(t.plat) + ".", "Each reading - " + fmt(t.plat) + " = depth. Corners x1, edges x2, interior x4.", "Collective " + fmt(t.coll) + " / " + t.uses + " uses = " + t.avg.toFixed(3) + " m.", t.avg.toFixed(3) + " x (30 x 31.5 = 945) = " + t.vol.toFixed(0) + " m3. No bulking allowance."]; } };
 EXPLAIN["volumes:end"] = { terms: [], working: function () { return ["Grid -> contours -> platform -> prisms -> table -> trucks."]; } };
+
+
+// =====================================================================
+// THE INSTRUMENT - a proper dumpy level on a tripod, and an E-staff
+// =====================================================================
+var mYellow = new THREE.MeshStandardMaterial({ color: 0xf2c418, roughness: 0.5 }), mDark = new THREE.MeshStandardMaterial({ color: 0x2b2b2b, roughness: 0.6 }), mAlu = new THREE.MeshStandardMaterial({ color: 0xc9ccd1, metalness: 0.6, roughness: 0.35 }), mOrange = new THREE.MeshStandardMaterial({ color: 0xe8801a, roughness: 0.6 }), mGlass = new THREE.MeshStandardMaterial({ color: 0xbfe8ff, transparent: true, opacity: 0.6 });
+function buildLevel() {
+  var g = new THREE.Group(), legs = [];
+  [0, 2.094, 4.189].forEach(function (a) {
+    var upper = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.022, 0.75, 10), mAlu); upper.position.y = -0.375;
+    var lower = new THREE.Group(); lower.position.y = -0.7; var lw = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.7, 10), mAlu); lw.position.y = -0.35; lower.add(lw);
+    var clamp = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.05, 12), mOrange); clamp.position.y = 0; lower.add(clamp);
+    var foot = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.09, 10), mOrange); foot.rotation.x = Math.PI; foot.position.y = -0.74; lower.add(foot);
+    var pivot = new THREE.Group(); pivot.rotation.y = a; pivot.position.y = 1.35; var tilt = new THREE.Group(); tilt.rotation.z = 0.32; tilt.add(upper); tilt.add(lower); pivot.add(tilt);
+    g.add(pivot); legs.push({ pivot: pivot, tilt: tilt, lower: lower });
+  });
+  var head = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.035, 24), mOrange); head.position.y = 1.36; g.add(head);
+  var bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.05, 10), mAlu); bolt.position.y = 1.39; g.add(bolt);
+  // the instrument: tribrach + body, as a unit that can be lowered on
+  var inst = new THREE.Group(); inst.position.y = 1.39;
+  var trib = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.09, 0.03, 3), mDark); trib.position.y = 0.015; trib.rotation.y = Math.PI / 6; inst.add(trib);
+  var screws = []; [0, 2.094, 4.189].forEach(function (a) { var sc = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.03, 12), mDark); sc.position.set(Math.sin(a) * 0.07, 0.045, Math.cos(a) * 0.07); var rib = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.004, 0.006), mAlu); rib.position.y = 0.012; sc.add(rib); inst.add(sc); screws.push(sc); });
+  var plate = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.02, 24), mDark); plate.position.y = 0.07; inst.add(plate);
+  var body = new THREE.Group(); body.position.y = 0.08;
+  var base = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.04, 24), mYellow); base.position.y = 0.02; body.add(base);
+  var scope = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.07, 0.22), mYellow); scope.position.y = 0.085; body.add(scope);
+  var objective = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.03, 0.03, 20), mDark); objective.rotation.x = Math.PI / 2; objective.position.set(0, 0.085, -0.125); body.add(objective);
+  var lens = new THREE.Mesh(new THREE.CircleGeometry(0.02, 20), mGlass); lens.position.set(0, 0.085, -0.141); body.add(lens);
+  var eyepiece = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.022, 0.035, 20), mDark); eyepiece.rotation.x = Math.PI / 2; eyepiece.position.set(0, 0.085, 0.125); body.add(eyepiece);
+  var focus = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.012, 20), mDark); focus.rotation.z = Math.PI / 2; focus.position.set(0.044, 0.095, 0.02); body.add(focus);
+  var vialBase = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.012, 0.05), mDark); vialBase.position.set(0, 0.126, 0.03); body.add(vialBase);
+  var vial = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.04, 12), mGlass); vial.rotation.x = Math.PI / 2; vial.position.set(0, 0.136, 0.03); body.add(vial);
+  var sight = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.015, 0.02), mDark); sight.position.set(0, 0.128, -0.06); body.add(sight);
+  var circle = new THREE.Mesh(new THREE.CylinderGeometry(0.058, 0.058, 0.008, 32), mAlu); circle.position.y = 0.045; body.add(circle);
+  inst.add(body); g.add(inst);
+  g.userData = { legs: legs, inst: inst, body: body, screws: screws, head: head };
+  return g;
+}
+// replace the rough level with the good one, keeping the same name and behaviour
+natural.remove(level);
+level = buildLevel(); level.visible = false; natural.add(level);
+// the E-staff face: 4 m, red metres odd / black even, E bars every cm, numerals every dm
+function staffTexture() {
+  var W = 128, H = 4096, c = document.createElement("canvas"); c.width = W; c.height = H; var x = c.getContext("2d");
+  x.fillStyle = "#fbfbf6"; x.fillRect(0, 0, W, H);
+  var pxm = H / 4; // px per metre
+  for (var cm = 0; cm < 400; cm++) {
+    var m = Math.floor(cm / 100), col = m % 2 ? "#c9302c" : "#1e2a44", y0 = H - (cm + 1) * pxm / 100, h = pxm / 100;
+    var inDm = cm % 10, e = inDm % 5;   // E pattern: bars at 0,2,4 of each 5 cm, spine on the right
+    if (e === 0 || e === 2 || e === 4) { x.fillStyle = col; x.fillRect(8, y0, 40, h); }
+    if (inDm < 5) { x.fillStyle = col; x.fillRect(40, y0, 8, h); }  // spine for the first E
+    if (inDm >= 5 && inDm < 10) { x.fillStyle = col; x.fillRect(8, y0, 8, h); }   // mirrored E spine on the left
+    if (cm % 10 === 0) { x.fillStyle = col; x.font = "bold " + Math.round(pxm / 12) + "px " + FONT; x.textAlign = "center"; x.fillText(String((cm / 10) % 10), 84, y0 - 4 + h * 0.5 + pxm / 24 - pxm / 40); }
+    if (cm % 100 === 0) { x.fillStyle = col; x.font = Math.round(pxm / 20) + "px " + FONT; x.fillText(String(m), 110, y0 + pxm / 24); }
+  }
+  var t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.minFilter = THREE.LinearFilter; return t;
+}
+(function () { while (staff.children.length) staff.remove(staff.children[0]); var m = new THREE.Mesh(new THREE.BoxGeometry(0.07, 4.0, 0.035), [mAlu, mAlu, mAlu, mAlu, new THREE.MeshStandardMaterial({ map: staffTexture() }), mAlu]); m.position.y = 2.0; staff.add(m); var shoe = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.02, 0.05), mDark); shoe.position.y = 0.01; staff.add(shoe); })();
+
+// annotated staff close-up for the reading lesson
+var lessonBoard = new Panel(2.0, 1.0, 1200, 600); lessonBoard.mesh.visible = false; scene.add(lessonBoard.mesh);
+function showStaffLesson(val, notes) {
+  var P = lessonBoard, c = P.ctx; P.begin();
+  var pxPerMm = 2.6, cx = 300, cy = 300, W = P.cw;
+  c.save(); c.beginPath(); c.arc(cx, cy, 250, 0, 7); c.clip(); c.fillStyle = "#e8eef4"; c.fillRect(0, 0, W, 600);
+  var v0 = Math.round(val * 1000);
+  for (var mmv = v0 - 120; mmv <= v0 + 120; mmv++) {
+    var y = cy - (mmv - val * 1000) * pxPerMm, m = Math.floor(mmv / 1000), col = m % 2 ? "#c9302c" : "#1e2a44", cm = Math.floor(mmv / 10), inDm = ((cm % 10) + 10) % 10, e = inDm % 5;
+    if (mmv % 10 === 0) { if (e === 0 || e === 2 || e === 4) { c.fillStyle = col; c.fillRect(150, y - 10 * pxPerMm, 60, 10 * pxPerMm); } if (inDm < 5) { c.fillStyle = col; c.fillRect(200, y - 10 * pxPerMm, 12, 10 * pxPerMm); } else { c.fillStyle = col; c.fillRect(150, y - 10 * pxPerMm, 12, 10 * pxPerMm); } }
+    if (mmv % 100 === 0) { c.fillStyle = col; c.font = "bold 40px " + FONT; c.textAlign = "left"; c.fillText(String((cm / 10) % 10), 250, y - 20); c.font = "24px " + FONT; c.fillText(String(m), 300, y - 24); }
+  }
+  c.restore(); c.lineWidth = 4; c.strokeStyle = "#1e2a44"; c.beginPath(); c.arc(cx, cy, 250, 0, 7); c.stroke();
+  c.strokeStyle = "#111"; c.lineWidth = 3; c.beginPath(); c.moveTo(cx - 240, cy); c.lineTo(cx + 240, cy); c.moveTo(cx, cy - 240); c.lineTo(cx, cy + 240); c.stroke();
+  c.strokeStyle = "#888"; c.lineWidth = 2; c.beginPath(); c.moveTo(cx - 90, cy - 40); c.lineTo(cx + 90, cy - 40); c.moveTo(cx - 90, cy + 40); c.lineTo(cx + 90, cy + 40); c.stroke();
+  var nx = 640; c.fillStyle = C.ink; c.font = "bold 34px " + FONT; c.textAlign = "left"; c.fillText("Reading " + fmt(val), nx, 70);
+  c.font = "26px " + FONT; var y2 = 120; (notes || []).forEach(function (n) { y2 = P.para(n, nx, y2, W - nx - 30, C.ink, 25, "", 32) + 6; });
+  P.end(); P.mesh.visible = true; placeInFront(P.mesh, 1.6, 0.05); lessonUntil = performance.now() + 12000;
+}
+var lessonUntil = 0;
+// bubble close-up
+var bubbleBoard = new Panel(0.7, 0.7, 500, 500); bubbleBoard.mesh.visible = false; scene.add(bubbleBoard.mesh); var bubbleUntil = 0;
+function showBubble(dx, dy, label) {
+  var P = bubbleBoard, c = P.ctx; P.begin();
+  c.fillStyle = "#dfe9dc"; c.beginPath(); c.arc(250, 230, 170, 0, 7); c.fill(); c.strokeStyle = "#1e2a44"; c.lineWidth = 5; c.stroke();
+  c.strokeStyle = "#1e2a44"; c.lineWidth = 3; c.beginPath(); c.arc(250, 230, 45, 0, 7); c.stroke(); c.beginPath(); c.arc(250, 230, 90, 0, 7); c.stroke();
+  c.fillStyle = "rgba(120,200,255,0.9)"; c.beginPath(); c.arc(250 + dx * 120, 230 - dy * 120, 40, 0, 7); c.fill(); c.strokeStyle = "#2857c4"; c.lineWidth = 3; c.stroke();
+  c.fillStyle = C.ink; c.font = "28px " + FONT; c.textAlign = "center"; c.fillText(label || "", 250, 450);
+  c.fillText(Math.hypot(dx, dy) < 0.15 ? "Centred" : "Off centre", 250, 490);
+  P.end(); P.mesh.visible = true; placeInFront(P.mesh, 1.3, 0.1); bubbleUntil = performance.now() + 3500;
+}
+function tweenRot(obj, yTarget, dur) { if (ffMode || typeof requestAnimationFrame === "undefined") { obj.rotation.y = yTarget; return; } var y0 = obj.rotation.y, t0 = performance.now(); (function tick() { var k = Math.min(1, (performance.now() - t0) / dur); obj.rotation.y = y0 + (yTarget - y0) * (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2); if (k < 1) requestAnimationFrame(tick); else obj.rotation.y = yTarget; })(); }
+function spinScrew(i, turns) { var sc = level.userData.screws[i]; if (sc) tweenRot(sc, sc.rotation.y + turns * Math.PI * 2, 900); }
+
+// =====================================================================
+// DUMPY LEVEL SET-UP TOUR
+// =====================================================================
+var DL = { spot: { x: -3, z: 11 }, bm: DATUM, spotB: gridPts[1] };
+var DUMPY_STEPS = [
+  { title: "The dumpy level: what it is and what the parts are called", mode: "intro", vantage: { x: -2, z: 17.5, look: DL.spot },
+    task: "A dumpy level - an optical level, an automatic level, a builder's level - is a telescope that can only look exactly horizontally once it has been set up. That is all it does. Every height on site comes from that one horizontal line and a graduated staff.\\n\\nParts, from the ground up: the tripod, with three telescoping legs and spiked feet. The head plate the instrument screws to. The tribrach - the base with three foot screws that tilt the instrument to level it. The telescope, with the objective lens at the front, the eyepiece at the back, a focusing knob on the side and a bubble vial on top. The staff: a 4 or 5 m ruler, held vertical on the point being measured, read through the telescope." },
+  { title: "Set the tripod - firm ground, legs out, feet trodden in", mode: "dtripod", vantage: { x: -2, z: 15, look: DL.spot }, guide: { pt: DL.spot, text: "Tripod here" },
+    watch: "Watch: the legs extend, spread, and the feet are pushed into the ground. The head is brought roughly level by adjusting one leg.",
+    task: "Pick a spot on firm ground between the bench mark and the points you want to read, and if you can, a little higher than the bench mark. Undo the leg clamps, extend the legs to about chest height, spread them wide, and tread each foot into the ground. Look at the head plate: get it roughly level by eye, lengthening or shortening one leg.",
+    why: "The foot screws only have a few degrees of travel. If the head is badly out, the screws cannot save it. Level the tripod first, by eye, with the legs." },
+  { title: "Fit the instrument - and line the telescope up with two screws", mode: "dattach", vantage: { x: -2, z: 14, look: DL.spot }, guide: { pt: DL.spot, text: "Instrument" },
+    watch: "Watch: the level is lowered onto the head and screwed down, then the telescope is turned until it sits parallel to two of the three foot screws.",
+    task: "Lower the level onto the head plate and tighten the centre bolt from underneath until it does not wobble when tapped. Then turn the telescope so it lies parallel to a line through two of the foot screws. Those two are what you level with first.",
+    why: "Every levelling sequence starts with the telescope over two screws. Get in the habit of setting that up before you touch a screw." },
+  { title: "Level it - two screws, thumbs in, thumbs out", mode: "dlevel2", vantage: { x: -2, z: 14, look: DL.spot },
+    watch: "Watch the bubble. Both thumbs turn the two screws at once, in opposite directions. The bubble follows the left thumb.",
+    task: "Put a thumb on each of the two screws under the telescope and turn them together - both inwards, or both outwards. One goes clockwise, the other anticlockwise. The bubble moves in the direction your left thumb moves. Keep going until it is in the centre of the circle.",
+    why: "Turning both screws together keeps the instrument height the same and moves only the tilt. One screw alone changes the height as well and you chase the bubble round." },
+  { title: "Turn 90 degrees - the third screw", mode: "dlevel3", vantage: { x: -2, z: 14, look: DL.spot },
+    watch: "Watch: the telescope swings a quarter turn to sit over the third screw. That screw alone brings the bubble back to centre.",
+    task: "Turn the telescope 90 degrees so it points along the third screw. The bubble will have moved. Use the third screw only - one hand - until it is centred again.",
+    why: "Two screws fix the tilt in one direction, the third fixes it in the other. Two directions is a plane." },
+  { title: "Check it - back to the start, then 180 degrees", mode: "dcheck", vantage: { x: -2, z: 14, look: DL.spot },
+    watch: "Watch: back over the first two screws - still centred. Then right round 180 degrees - still centred. The instrument is level.",
+    task: "Return the telescope to its first position and look at the bubble. Then turn it through 180 degrees and look again. If it stays centred in all three positions the instrument is level. If it drifts in any position, go back to the two-screw stage and repeat. Do not start reading until it passes.",
+    why: "This is the daily calibration check from the levelling tour. If the bubble will not stay centred through a full turn, the vial itself is out and the instrument goes for adjustment." },
+  { title: "Focus - the crosshairs first, then the staff", mode: "dfocus", vantage: { x: -2, z: 14, look: DL.spot },
+    watch: "Watch: cap off. A sheet of paper in front of the lens while the eyepiece is turned until the crosshairs are black and sharp. Then the staff is sighted and the focusing knob brings it in.",
+    task: "Take the lens cap off. Hold a sheet of paper in front of the objective so the view is blank, and turn the eyepiece until the crosshairs are crisp - that focuses the eyepiece to your eye. Then sight the staff and turn the side focusing knob until the staff is sharp. Move your eye slightly: if the crosshair seems to slide on the staff, that is parallax - refocus until it stops.",
+    why: "Crosshairs are focused to the eye, the staff is focused to the distance. Two different adjustments; do them in that order." },
+  { title: "The staff - extended, on the point, plumb, and rocked", mode: "dstaff", vantage: { x: -6, z: 16.5, look: DL.bm }, guide: { pt: DL.bm, text: "Staff on the TBM" },
+    watch: "Watch: the staff is pulled out to its full length, its shoe set on the nail of the TBM, and the holder rocks it slowly toward and away from the instrument. The reading drops to a minimum and rises again.",
+    task: "Extend every section of the staff fully and check the sections have locked. Put the shoe on the exact point - the nail. Hold it vertical: the holder stands behind it with a hand each side, and rocks it slowly forward and back through vertical. Through the telescope the reading goes down, then up. The lowest reading is when the staff was plumb. That is the reading you book.",
+    why: "A staff leaning 5 degrees reads 4 mm high at 1 metre. Rocking through vertical finds the true minimum without a bubble on the staff." },
+  { title: "Reading the E-staff", mode: "dread", vantage: { x: -6, z: 16.5, look: DL.bm },
+    watch: "Watch the close-up: a big numeral for each decimetre, a small one for each metre, E-shaped bars in centimetres, and the millimetres estimated by eye between the bars. The centre hair gives the reading - the two short hairs above and below are stadia hairs, not for levels.",
+    task: "The staff face is in metres, decimetres and centimetres. Read the metre from the small figure or the colour - black for even metres, red for odd. Read the decimetre from the large numeral just below the hair. Count the centimetre bars from the bottom of that decimetre up to the hair - each bar and each gap is one centimetre. Estimate the millimetres within the last bar. Say the whole thing out loud: one point four three five.",
+    why: "The commonest gross errors are reading the stadia hair instead of the centre hair, and reading the wrong metre. Say the reading, have your partner repeat it back." },
+  { title: "Backsight to the bench mark: BM + BS = height of the line", mode: "dbs", vantage: { x: -6, z: 16.5, look: DL.bm },
+    watch: "Watch: the reading on the TBM is booked as the backsight. It is added to the TBM's RL to give the height of the telescope's line - the HOC.",
+    task: "The first reading from this set-up is on the bench mark - the TBM at RL 100.000. That reading is the backsight. Bench mark RL plus backsight = the height of the horizontal line through the telescope, the height of collimation.",
+    why: "You now know exactly how high the invisible line is. Every other reading from this station is measured down from it." },
+  { title: "Foresight to the unmeasured spot: HOC minus FS = its RL", mode: "dfs", vantage: { x: -6, z: 16.5, look: DL.spotB }, guide: { pt: DL.spotB, text: "Unmeasured spot" },
+    watch: "Watch: the staff moves to B1. Same instrument, same line. The reading is subtracted from the HOC to give the RL of B1.",
+    task: "Move the staff to the point you want the height of - B1 here. The instrument does not move. Read the staff: that is a foresight. HOC minus foresight = RL of the spot. Big reading, low ground; small reading, high ground.",
+    why: "One addition, then one subtraction per point. That is the whole of levelling from a single station. Change points and rise-and-fall booking come in the Levelling tour." },
+  { title: "Instrument tour complete", mode: "end", nextTab: "level", nextLabel: "Levelling",
+    task: "Tripod, instrument, bubble, focus, staff, reading, backsight, foresight. You can set the level up, prove it is level, and take a reading you can trust.\\n\\nNext: the Levelling tour - two-peg test, change points, rise and fall, and the checks." }
+];
+var dumpyHOC = 0;
+tourDemos.dumpy = function (s, q) {
+  var L = level, U = L.userData;
+  if (s.mode === "dtripod") {
+    q.push(later(function () { walkTo(); placeLevel(DL.spot, DL.bm); U.inst.visible = false; U.legs.forEach(function (lg) { lg.lower.scale.y = 0.3; lg.tilt.rotation.z = 0.12; }); L.position.y = gy(DL.spot.x, DL.spot.z) + 0.15; standAt(workerA, DL.spot, { x: 0.7, z: 0.5 }); feedback = "Firm ground, between the TBM and the grid, a little higher than the TBM."; renderBoard(); }, 300));
+    q.push(later(function () { U.legs.forEach(function (lg) { lg.lower.scale.y = 1; }); feedback = "Clamps off, legs extended to chest height."; renderBoard(); }, 1400));
+    q.push(later(function () { U.legs.forEach(function (lg) { lg.tilt.rotation.z = 0.32; }); L.position.y = gy(DL.spot.x, DL.spot.z); feedback = "Legs spread and each foot trodden in."; renderBoard(); }, 1400));
+    q.push(later(function () { U.legs[1].lower.scale.y = 0.92; L.rotation.z = 0.04; feedback = "Head plate roughly level by eye - one leg shortened a touch."; renderBoard(); stepDone = true; markRight(); updateGuide(); }, 1400));
+  }
+  if (s.mode === "dattach") {
+    q.push(later(function () { walkTo(); U.inst.visible = true; U.inst.position.y = 1.39 + 0.6; tween(U.inst, { x: 0, y: 1.39, z: 0 }, 1500); feedback = "Instrument lowered onto the head plate."; renderBoard(); }, 300));
+    q.push(later(function () { feedback = "Centre bolt tightened from underneath. Tap it - no wobble."; renderBoard(); }, 1800));
+    q.push(later(function () { tweenRot(U.body, Math.PI / 3, 1200); feedback = "Telescope turned to lie parallel to two foot screws."; renderBoard(); stepDone = true; markRight(); updateGuide(); }, 1200));
+  }
+  if (s.mode === "dlevel2") {
+    var bx = -0.6, by = 0.35;
+    q.push(later(function () { walkTo(); showBubble(bx, by, "Before: bubble off centre"); }, 300));
+    for (var i = 1; i <= 5; i++) (function (i) { q.push(later(function () { spinScrew(0, 0.5); spinScrew(1, -0.5); showBubble(bx * (1 - i / 5), by, "Thumbs in... bubble follows the left thumb"); }, 700)); })(1);
+    for (var j = 2; j <= 5; j++) (function (j) { q.push(later(function () { spinScrew(0, 0.5); spinScrew(1, -0.5); showBubble(bx * (1 - j / 5), by, "Both screws together, opposite directions"); }, 700)); })(j);
+    q.push(later(function () { showBubble(0, by, "Centred along the telescope. Still off across it."); feedback = "Bubble centred in the direction of the telescope. It is still off in the other direction - that is the third screw's job."; renderBoard(); stepDone = true; markRight(); }, 900));
+  }
+  if (s.mode === "dlevel3") {
+    q.push(later(function () { tweenRot(U.body, U.body.rotation.y + Math.PI / 2, 1200); showBubble(0, 0.35, "Turned 90 degrees - over the third screw"); }, 300));
+    for (var k = 1; k <= 4; k++) (function (k) { q.push(later(function () { spinScrew(2, 0.5); showBubble(0, 0.35 * (1 - k / 4), "Third screw only, one hand"); }, 700)); })(k);
+    q.push(later(function () { showBubble(0, 0, "Centred"); feedback = "Bubble centred with the third screw. Now prove it."; renderBoard(); stepDone = true; markRight(); }, 900));
+  }
+  if (s.mode === "dcheck") {
+    q.push(later(function () { tweenRot(U.body, U.body.rotation.y - Math.PI / 2, 1200); showBubble(0.02, 0.01, "Back to the first position"); feedback = "Position 1 - centred."; renderBoard(); }, 300));
+    q.push(later(function () { tweenRot(U.body, U.body.rotation.y + Math.PI, 1600); showBubble(-0.02, 0.02, "Turned 180 degrees"); feedback = "Position 3, 180 degrees round - still centred. The instrument is level and the vial is true."; renderBoard(); stepDone = true; markRight(); }, 2000));
+  }
+  if (s.mode === "dfocus") {
+    q.push(later(function () { walkTo(); placeStaff(DL.bm); standAt(workerB, DL.bm, { x: 0.4, z: -0.4 }); tweenRot(U.body, Math.atan2(DL.bm.x - DL.spot.x, DL.bm.z - DL.spot.z) + Math.PI, 1200); feedback = "Cap off. Paper over the lens, eyepiece turned until the crosshairs are black and sharp."; renderBoard(); }, 300));
+    q.push(later(function () { var v = reading(DL.bm); showStaffReading(DL.bm, v, "Focusing knob: staff brought in sharp. No parallax."); feedback = "Staff sighted, side knob turned until the E-face is sharp. Eye moved side to side: the hair stays put. No parallax."; renderBoard(); stepDone = true; markRight(); }, 2200));
+  }
+  if (s.mode === "dstaff") {
+    var v = reading(DL.bm);
+    q.push(later(function () { walkTo(); placeStaff(DL.bm); standAt(workerB, DL.bm, { x: 0.4, z: -0.4 }); staff.scale.y = 0.45; feedback = "Staff collapsed - four sections. Pull every one out and lock it."; renderBoard(); }, 300));
+    q.push(later(function () { staff.scale.y = 1; feedback = "Fully extended, locked. Shoe on the nail in the TBM."; renderBoard(); }, 1500));
+    [0.18, 0.09, 0, -0.09, -0.16, -0.08, 0].forEach(function (lean, i) { q.push(later(function () { staff.rotation.x = lean; var r = r3(v + 0.5 * (1 - Math.cos(lean)) * 1.4); showStaffReading(DL.bm, r, lean === 0 ? "Plumb - the lowest reading. Book this." : "Leaning - reads high"); }, i === 0 ? 1500 : 800)); });
+    q.push(later(function () { feedback = "Rocked through vertical. Lowest reading " + fmt(v) + " - that is the one."; renderBoard(); stepDone = true; markRight(); updateGuide(); }, 1200));
+  }
+  if (s.mode === "dread") {
+    var v2 = reading(DL.bm), m = Math.floor(v2), dm = Math.floor((v2 - m) * 10), cm = Math.floor((v2 - m - dm / 10) * 100), mmv = Math.round((v2 * 1000) % 10);
+    q.push(later(function () { walkTo(); showStaffLesson(v2, ["Metre: " + m + " - " + (m % 2 ? "red" : "black") + " figures, small numeral.", "Decimetre: the big numeral just below the hair - " + dm + ".", "Centimetres: count the bars and gaps up from the " + dm + " - " + cm + ".", "Millimetres: estimate within the last bar - about " + mmv + ".", "Centre hair, not a stadia hair. Say it: " + fmt(v2).replace(".", " point ")]); feedback = "Reading " + fmt(v2) + ". Metre " + m + ", decimetre " + dm + ", " + cm + " centimetres, " + mmv + " millimetres estimated."; renderBoard(); stepDone = true; markRight(); }, 400));
+  }
+  if (s.mode === "dbs") {
+    q.push(later(function () { walkTo(); var bs = reading(DL.bm); dumpyHOC = r3(DATUM.rl + bs); showStaffReading(DL.bm, bs, "Backsight to the TBM"); feedback = "Backsight " + fmt(bs) + ". TBM 100.000 + " + fmt(bs) + " = HOC " + fmt(dumpyHOC) + ". That is how high the line through the telescope is."; renderBoard(); stepDone = true; markRight(); }, 400));
+  }
+  if (s.mode === "dfs") {
+    q.push(later(function () { walkTo(); gridMeshes[1].visible = true; placeStaff(DL.spotB); standAt(workerB, DL.spotB, { x: 0.4, z: 0.4 }); tweenRot(U.body, Math.atan2(DL.spotB.x - DL.spot.x, DL.spotB.z - DL.spot.z) + Math.PI, 1200); }, 300));
+    q.push(later(function () { var fs = reading(DL.spotB); showStaffReading(DL.spotB, fs, "Foresight to B1"); feedback = "Foresight " + fmt(fs) + ". HOC " + fmt(dumpyHOC) + " - " + fmt(fs) + " = RL " + fmt(dumpyHOC - fs) + " at B1."; renderBoard(); stepDone = true; markRight(); updateGuide(); }, 1800));
+  }
+};
+tours.dumpy = { steps: DUMPY_STEPS, idx: 0, done: true, plan: renderGridPlan };
+DUMPY_STEPS.forEach(function (s, i) { s.n = i; if (!s.how && s.mode !== "intro" && s.mode !== "end") s.how = "Press Do this step."; });
+
+EXPLAIN["dumpy:intro"] = { terms: [T("Dumpy / optical / automatic level", "A telescope on a tripod that, once levelled, looks exactly horizontally. Automatic levels have a compensator that fine-levels the line of sight for you; you still level the bubble."), T("Tripod", "Three telescoping legs with spiked feet and a flat head plate. Sets the instrument at a usable height on firm ground."), T("Tribrach", "The base of the instrument carrying three foot screws. Turning the screws tilts the instrument to bring the bubble to centre."), T("Foot screws / levelling screws", "The three knurled screws under the instrument."), T("Bubble / vial", "The spirit level on the instrument. Circular ('bull's eye') on most modern levels."), T("Objective", "The big lens at the front of the telescope."), T("Eyepiece", "The small lens you look into, with a focus ring for the crosshairs."), T("Focusing knob", "The knob on the side that focuses the telescope on the staff."), T("Crosshairs", "The fine lines in the telescope. The horizontal centre hair is the reading line."), T("Stadia hairs", "Two short hairs above and below the centre hair, used for measuring distance - not for levelling readings."), T("E-staff", "The graduated staff, named for the E-shaped centimetre pattern on its face.")], working: function () { return ["Set up -> level -> check -> focus -> staff on the point -> read the centre hair."]; } };
+EXPLAIN["dumpy:dtripod"] = { terms: [T("Firm ground", "Ground that will not settle while you work. Never set up on loose fill, soft sand or a timber deck that flexes."), T("Head plate", "The flat top of the tripod. Levelling it by eye first gives the foot screws room to work.")], working: function () { return ["1. Choose a spot between the bench mark and the work, on firm ground.", "2. Undo clamps, extend legs to chest height, re-clamp.", "3. Spread the legs wide. Tread each foot in.", "4. Look across the head plate; lengthen or shorten a leg until it looks level."]; } };
+EXPLAIN["dumpy:dattach"] = { terms: [T("Centre bolt", "The bolt under the head plate that screws up into the instrument's base and holds it on.")], working: function () { return ["1. Lower the instrument onto the plate. Screw the centre bolt up into it.", "2. Tap the instrument. If it wobbles, tighten.", "3. Turn the telescope until it is parallel to a line through two foot screws."]; } };
+EXPLAIN["dumpy:dlevel2"] = { terms: [T("Thumbs in, thumbs out", "Both thumbs turn the two screws toward each other or away from each other. The screws turn in opposite directions and the bubble follows the left thumb.")], working: function () { return ["1. Thumb on each of the two screws under the telescope.", "2. Turn both together - inwards or outwards.", "3. Bubble moves the way the left thumb moves.", "4. Stop when the bubble sits in the centre circle."]; } };
+EXPLAIN["dumpy:dlevel3"] = { terms: [T("Third screw", "The one screw not under the telescope in the first position. It controls tilt in the second direction.")], working: function () { return ["1. Turn the telescope 90 degrees - it now points along the third screw.", "2. Turn that screw alone until the bubble is centred.", "3. The instrument is now level in two directions at right angles - a plane."]; } };
+EXPLAIN["dumpy:dcheck"] = { terms: [T("180 degree check", "Turning the telescope half a circle and confirming the bubble stays centred. Proves the vial is true and the instrument level.")], working: function () { return ["Position 1 (over two screws): centred.", "Position 2 (90 degrees): centred.", "Position 3 (180 degrees): centred.", "Any drift -> back to two screws and repeat. Still drifting -> instrument for adjustment."]; } };
+EXPLAIN["dumpy:dfocus"] = { terms: [T("Eyepiece focus", "Turning the eyepiece ring to make the crosshairs sharp for your eye. Done against a blank background."), T("Objective focus", "Turning the side knob to make the staff sharp."), T("Parallax", "The crosshair appearing to move across the staff when you move your eye. Means the two focuses are not on the same plane - refocus until it stops.")], working: function () { return ["1. Lens cap off.", "2. Paper in front of the lens. Turn the eyepiece until the hairs are black and sharp.", "3. Sight the staff. Turn the focusing knob until the E-face is sharp.", "4. Move your eye. Hair moves on the staff? Refocus. Stays put? Read."]; } };
+EXPLAIN["dumpy:dstaff"] = { terms: [T("Staff shoe", "The metal base of the staff. Its underside is the zero. It sits on the exact point - the nail."), T("Plumb", "Exactly vertical."), T("Rocking the staff", "Swinging the staff slowly through vertical toward and away from the instrument. The lowest reading seen is the plumb reading.")], working: function () { return ["Reading = true reading / cos(lean). At 1.400 and 5 degrees lean: 1.400 / 0.9962 = 1.405. 5 mm high.", "Rocked through vertical the reading dips to 1.400 and rises again. Book the dip."]; } };
+EXPLAIN["dumpy:dread"] = { terms: [T("Metre figure", "A small number on the face, and the colour of the graduations: black for even metres, red for odd."), T("Decimetre numeral", "The large figure beside each E - the tenths of a metre."), T("E bars", "Centimetre graduations: each bar and each gap is 10 mm. The E shape makes the 5 cm blocks easy to count."), T("Estimating millimetres", "The last digit is judged by eye - where within the bar the hair sits.")], working: function () { var v = level.userData && level.userData.hoc ? reading(DL.bm) : 1.435; var m = Math.floor(v), dm = Math.floor((v - m) * 10), cm = Math.floor((v - m - dm / 10) * 100), mmv = Math.round((v * 1000) % 10); return ["Metre: " + m + " (" + (m % 2 ? "red" : "black") + ").", "Decimetre: " + dm + " - the big numeral under the hair.", "Centimetres: " + cm + " bars and gaps up from the " + dm + ".", "Millimetres: " + mmv + ", estimated.", "Reading: " + fmt(v) + "."]; } };
+EXPLAIN["dumpy:dbs"] = { terms: [T("Bench mark (BM / TBM)", "A point of known RL. Every set-up starts by reading it."), T("Backsight (BS)", "The first reading from a set-up, onto a known point."), T("HOC - height of collimation", "The RL of the horizontal line through the telescope. BM RL + BS.")], working: function () { var bs = level.userData && level.userData.hoc ? reading(DL.bm) : 1.4; return ["TBM RL = 100.000.", "Backsight = " + fmt(bs) + ".", "HOC = 100.000 + " + fmt(bs) + " = " + fmt(100 + bs) + "."]; } };
+EXPLAIN["dumpy:dfs"] = { terms: [T("Foresight (FS)", "A reading onto a point whose RL you want, from the same set-up."), T("RL of the point", "HOC minus the foresight.")], working: function () { var fs = level.userData && level.userData.hoc ? reading(DL.spotB) : 1.0; return ["HOC = " + fmt(dumpyHOC || 101.4) + ".", "Foresight on B1 = " + fmt(fs) + ".", "RL B1 = " + fmt(dumpyHOC || 101.4) + " - " + fmt(fs) + " = " + fmt((dumpyHOC || 101.4) - fs) + "."]; } };
+EXPLAIN["dumpy:end"] = { terms: [], working: function () { return ["Set up, level, check, focus, staff, read, BS, FS."]; } };
+
+// keep the bubble close-up in front of the viewer, then hide it
+var _tickPrev = _tickExtra;
+_tickExtra = function (now, camPos) { _tickPrev(now, camPos); if (lessonBoard.mesh.visible) { if (now > lessonUntil) lessonBoard.mesh.visible = false; else { placeInFront(lessonBoard.mesh, 1.6, 0.05); lessonBoard.mesh.lookAt(camPos.x, lessonBoard.mesh.position.y, camPos.z); } } if (bubbleBoard.mesh.visible) { if (now > bubbleUntil) bubbleBoard.mesh.visible = false; else { placeInFront(bubbleBoard.mesh, 1.3, 0.1); bubbleBoard.mesh.lookAt(camPos.x, bubbleBoard.mesh.position.y, camPos.z); } } };
 
 </script>
 </body>
