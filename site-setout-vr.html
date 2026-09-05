@@ -56,77 +56,97 @@ var estimate = "";
 // ---------- the steps ----------
 // mode: read | place | cross | tap | keypad | measure | quiz | pour | done
 var STEPS = [
+  { n: 0, title: "Set-out: the ten steps",
+    mode: "intro",
+    task: "You are on the verge outside Lot 12. The plan is on the clipboard. Before anything goes in the ground, here is the whole sequence you are about to walk through - the same order every job, no skipping:\n\n1  Confirm the block and the survey pegs\n2  Boundary offset lines\n3  First building corner - peg A\n4  A 90 degree corner - isometric triangle\n5  Remaining corners, largest rectangle first\n6  Profiles, 1.5 m outside the dig, all heads level\n7  Transfer lines to the profiles\n8  Diagonal check, within 3 mm, before any concrete\n9  Wall lines on the profiles\n10  Final dimension check, then pour\n\nAt each step the game will walk you to the spot and tell you what to do. Press Next to start.",
+    why: "Set out is where the plan becomes the building. A 2 degree error at the start is 420 mm out of position after 12 metres." },
   { n: 1, title: "Confirm the block and find the survey pegs",
     mode: "tap", targets: ["survey"],
-    task: "Four survey pegs mark the boundary. A licensed surveyor put them there - that is the cadastral survey, and you cannot start without it. Walk the lot and tap each white-topped peg to confirm it. Check the lot number on the plan is the lot you are standing on.",
+    task: "Four survey pegs mark the boundary. A licensed surveyor put them there - that is the cadastral survey, and you cannot start without it. Check the lot number on the plan is the lot you are standing on, then confirm each peg.",
+    how: "Look for the white-topped peg inside the orange ring at your feet. Point the controller at it and pull the trigger. The game will then move you to the next one.",
     why: "If you cannot find a survey peg - stop and call a surveyor. Never set out from an unconfirmed boundary. Boundary setbacks are legally enforceable and a wrong position can be a demolition order." },
   { n: 2, title: "Establish the boundary offset lines",
-    mode: "read",
-    task: "String lines are run along the front and west boundaries, offset from the survey pegs. Everything is measured from these lines, not from the pegs in the grass. Press Next to run them.",
+    mode: "tap2",
+    task: "Two blue lines have been run on the ground. One runs across the block 6.000 back from the front pegs - the front setback. One runs down the block 1.500 in from the west fence - the side setback. Everything is measured from these lines, not from the pegs in the grass.",
+    how: "You are standing beside where the two lines cross. Point at the orange ring on the crossing and pull the trigger.",
     why: "The offset lines are the base lines for the whole set-out. The front line gives you the setback; the west line gives you the side clearance." },
   { n: 3, title: "Drive the first building corner - peg A",
     mode: "place", peg: "A",
-    task: "Peg A is the front-west corner of the building: 6.000 back from the front boundary and 1.500 in from the west boundary. Point at the ground, read the two tapes, and pull the trigger when both read right.",
+    task: "Peg A is the front-west corner of the building: 6.000 back from the front boundary and 1.500 in from the west boundary.",
+    how: "Point at the ground near the ring. Two yellow tapes run out to the boundaries and the readout shows what each one says. Move the pointer until it reads 6.000 from the front and 1.500 from the west, then pull the trigger to drive the peg. Inside 40 mm counts as exact.",
     why: "This is the critical corner peg. It sets the legal offset from the boundary. It is the one peg you never move later." },
   { n: 4, title: "Set the 90 degree corner - isometric triangle",
     mode: "place", peg: "B",
-    task: "First, pegs B and C: 3.000 each side of A along the front line. Drive B on the east side of A.",
+    task: "To get a 90 degree corner off the front line we build an isometric triangle. First, pegs B and C: 3.000 each side of A along the front line. Drive B on the east side of A.",
+    how: "Point at the ground east of A. The tape reads from A; the second readout tells you how far off the front line you are. Trigger at 3.000 from A, on the line.",
     why: "The further apart B and C are, the more accurate the perpendicular. 3 m is the textbook figure; use more on a bigger building." },
   { n: 5, title: "Peg C - the other side",
     mode: "place", peg: "C",
     task: "Now peg C, 3.000 west of A on the same line. Both distances must be identical - same tape, both measured from A.",
+    how: "Same again on the west side. 3.000 from A, zero off the line, trigger.",
     why: "Symmetry is the whole trick. Nothing else in this method matters if B and C are not equal distances from A." },
   { n: 6, title: "Pull two tapes until they cross - peg E",
     mode: "cross",
-    task: "A tape is hooked on B and another on C. Move the pointer back into the block until both tapes read the same - about 6.000. That crossing is directly behind A on the perpendicular. Drive peg E there.",
+    task: "A tape is hooked on B and another on C. Pull both back into the block until they cross. The crossing is directly behind A on the perpendicular.",
+    how: "Point at the ground behind A, about 6 m in. Two tapes follow the pointer, one from B and one from C. Slide sideways until both read the same number, then trigger. That is peg E.",
     why: "No protractor, no trig. Two equal tapes from two equal pegs cross on the perpendicular bisector, and A is its foot. String A to E is your 90 degree line." },
   { n: 7, title: "Remaining corners - largest rectangle first",
     mode: "place", peg: "D",
-    task: "Measure 9.000 from A along the line A-E and drive peg D, the rear-west corner. Keep the pointer on the line - the second tape reads how far off it you are.",
+    task: "Measure 9.000 from A along the line A-E and drive peg D, the rear-west corner.",
+    how: "Follow the orange string from A through E. The readout gives distance along the line and how far off it you are. 9.000 along, zero off, trigger.",
     why: "Every building reduces to rectangles. Set out the largest one first, always. Sub-shapes inherit its errors." },
   { n: 8, title: "Peg F - front-east corner",
     mode: "place", peg: "F",
     task: "12.000 east of A along the front line. Drive peg F.",
+    how: "Back to the front line. 12.000 from A, zero off the line, trigger.",
     why: "F is set from the front offset line, so like A it sits on a critical line." },
   { n: 9, title: "Peg G - rear-east corner",
     mode: "place", peg: "G",
-    task: "G is 12.000 from D and 9.000 from F. Two tapes again - find the spot where both read right.",
+    task: "G is 12.000 from D and 9.000 from F. Two tapes again.",
+    how: "Point at the ground in the rear-east corner. Slide the pointer until one tape reads 12.000 and the other 9.000, then trigger.",
     why: "You now have four corners. You do not yet know if they make a rectangle. That is what the diagonal check is for - but profiles come first." },
   { n: 10, title: "Install profiles - 1.5 m outside the excavation",
     mode: "profiles",
-    task: "Corner pegs sit inside the excavation and the excavator will destroy them. Hurdle profiles store the building position outside the dig. Tap the ground on the extension of each wall line, at least 1.5 m past the corner - eight of them.",
+    task: "Corner pegs sit inside the excavation and the excavator will destroy them. Hurdle profiles store the building position outside the dig - two at each corner, one on each wall line, eight in all.",
+    how: "The ring shows where the next profile goes. Point at the ground on the extension of the wall line, past the corner. The readout shows how far past the corner you are - it must be 1.5 m or more. Trigger to drive the hurdle. The game moves you to the next one.",
     why: "Minimum 1.5 m clearance for mechanical excavation, 0.5 m for manual. Profiles are your insurance: pegs get knocked, profiles don't." },
   { n: 11, title: "The golden rule - all heads level",
     mode: "level",
-    task: "Sight along the profile heads with the level. One of them is not at the same reduced level as the rest. Tap the odd one out and drop it to the datum.",
+    task: "One of the eight heads is not at the same reduced level as the rest.",
+    how: "Point at a profile board and the readout gives its head RL. Seven of them read 100.900. Find the one that does not and pull the trigger on it to drop it to datum.",
     why: "If one head is high the string runs on a slope, and every distance you measure is a slope distance. 10.000 m at 2 degrees reads 9.994 - a 6 mm error, enough to fail a diagonal check." },
   { n: 12, title: "Transfer the lines to the profiles",
     mode: "transfer",
-    task: "Run the string through each peg nail, plumb it up to the profile board and drive a nail there. Tap each profile to transfer. After this the pegs can be knocked out without losing the building.",
+    task: "Run the string through each peg nail, plumb it up to the profile board and drive a nail there. After this the pegs can be knocked out without losing the building.",
+    how: "Point at the profile in the ring and pull the trigger to drive its nail. Eight times. The game moves you round.",
     why: "Spirit level for short domestic spans, plumb bob for vertical transfer, oil bath reflector for long commercial spans." },
   { n: 13, title: "Calculate the diagonal before you measure it",
     mode: "keypad",
-    task: "Building is 12.000 x 9.000. c = root(a squared + b squared). Key in the diagonal you expect, in metres, before you pull a tape.",
+    task: "Building is 12.000 x 9.000. c = root(a squared + b squared).",
+    how: "Key the diagonal you expect into the clipboard, in metres, and press Check. Do this before you measure anything.",
     why: "Write the target down before you go to the tape. A measured figure with nothing to compare it to tells you nothing." },
   { n: 14, title: "Diagonal check - profile to profile",
     mode: "measure",
-    task: "Measure both diagonals from the profile nails, not the strings - strings sag. Press Measure. Both must be equal within 3 mm.",
+    task: "Both diagonals, profile nail to profile nail, not string to string - strings sag. Both must be equal within 3 mm, and both should match the number you just calculated.",
+    how: "Press Measure on the clipboard and read the two figures.",
     why: "This is the only proof of square. Do it before any concrete is poured. Five minutes now against $40,000 in rectification." },
   { n: 15, title: "Not square - fix it the right way",
     mode: "quiz",
     q: "The diagonals differ. Which line do you move?",
     options: ["The front line A-F", "The west line A-D", "The rear line D-G"], answer: 2,
     task: "Identify the critical line - the one set at the correct offset from the boundary - and the critical corner peg. Never move those. Move the non-critical line by the full difference, both pegs, same direction, then measure again.",
+    how: "Pick the line on the clipboard.",
     why: "Moving the critical peg shifts the whole building off its legal setback. The rear line is the one that is free to move." },
   { n: 16, title: "Mark the wall lines and pour",
     mode: "pour",
-    task: "Brick veneer on slab: three nails per profile - outside face of brickwork and slab edge, outside face of frame, and the rebate formwork. Final dimension check against the plan, then the excavator comes in and the slab goes down. Press Pour.",
+    task: "Brick veneer on slab: three nails per profile - outside face of brickwork and slab edge, outside face of frame, and the rebate formwork. Final dimension check against the plan, then the excavator comes in and the slab goes down.",
+    how: "Press Pour on the clipboard and watch from the street.",
     why: "Different construction types need different nails. Cavity brick on slab needs four, strip footing cavity brick five or more. Wrong nail, wrong position for that trade." },
   { n: 17, title: "The frame goes on",
     mode: "done",
     task: "", why: "" }
 ];
-var stepIdx = 0, stepDone = false, quizPicked = -1, levelPicked = false, feedback = "";
+var voiceOn = true, stepIdx = 0, stepDone = true, quizPicked = -1, levelPicked = false, feedback = "";
 var tab = "setout";
 var showPlan = false;
 
@@ -180,6 +200,7 @@ Panel.prototype.hitAt = function (u, v) { var px = u * this.cw, py = (1 - v) * t
 var board = new Panel(0.62, 0.80, 930, 1200);
 
 function renderBoard() {
+  if (feedback && feedback !== lastSpoken) { lastSpoken = feedback; speak(feedback); }
   var P = board, L = 40, W = P.cw - 80, y = 0;
   P.begin();
   // tabs
@@ -191,14 +212,15 @@ function renderBoard() {
   if (showPlan) { renderPlan(P, L, y, W); P.end(); return; }
 
   var s = step();
-  P.text("Step " + s.n + " of " + (STEPS.length - 1), L, y, C.mute, 26); 
-  P.button(P.cw - L - 150, y - 34, 150, 52, "Site plan", "", { act: "plan" }, 24);
-  y += 44;
+  P.text(s.n === 0 ? "Before you start" : "Step " + s.n + " of 16", L, y, C.mute, 26);
+  P.button(P.cw - L - 150, y - 36, 150, 52, "Site plan", "", { act: "plan" }, 24);
+  y += 64;
   y = P.para(s.title, L, y, W, C.ink, 40, "", 50); y += 6;
   P.rule(y, L, L + W); y += 44;
   if (s.mode === "done") y = renderDone(P, L, y, W);
   else {
-    y = P.para(s.task, L, y, W, C.ink, 30); y += 16;
+    y = P.para(s.task, L, y, W, C.ink, 30); y += 12;
+    if (s.how) { var y0 = y; y = P.para(s.how, L + 24, y, W - 24, C.blue, 29); P.ctx.fillStyle = C.blue; P.ctx.fillRect(L, y0 - 26, 6, y - y0 - 6); y += 16; }
     if (s.mode === "quiz") {
       s.options.forEach(function (o, i) {
         var kind = ""; if (quizPicked >= 0) kind = i === s.answer ? "good" : (i === quizPicked ? "bad" : "dim");
@@ -236,7 +258,9 @@ function renderBoard() {
   if (stepIdx > 0) P.button(L, fy, 150, 60, "Back", "", { act: "back" }, 26);
   if (s.mode !== "done") P.button(P.cw - L - 190, fy, 190, 60, "Next", stepDone ? "primary" : "dim", stepDone ? { act: "next" } : null, 26);
   else P.button(P.cw - L - 260, fy, 260, 60, "Start again", "primary", { act: "restart" }, 26);
-  if (stepIdx >= 9 && !poured && s.mode !== "pour" && s.mode !== "done") P.button(L + 170, fy, 260, 60, "Pour now anyway", "bad", { act: "pourEarly" }, 24);
+  P.button(L, fy - 80, 220, 52, "Take me there", "", { act: "goto" }, 24);
+  P.button(L + 236, fy - 80, 170, 52, voiceOn ? "Voice on" : "Voice off", voiceOn ? "on" : "", { act: "voice" }, 24);
+  if (stepIdx >= 10 && !poured && s.mode !== "pour" && s.mode !== "done") P.button(L + 170, fy, 260, 60, "Pour now anyway", "bad", { act: "pourEarly" }, 24);
   P.text(score.right + " right, " + score.missed + " missed", P.cw / 2, P.ch - 24, C.mute, 22, "", "center");
   P.end();
 }
@@ -424,6 +448,40 @@ function setTapes(from) {
   from.forEach(function (f) { var g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(f.x, 0.3, f.z), new THREE.Vector3(ghost.position.x, 0.3, ghost.position.z)]); var l = new THREE.Line(g, mTape); site.add(l); tapeLines.push(l); });
 }
 
+// guide marker: an orange ring and a label at wherever the current step wants you
+var guide = new THREE.Group();
+var guideRing = new THREE.Mesh(new THREE.RingGeometry(0.45, 0.55, 40), new THREE.MeshBasicMaterial({ color: 0xe8801a, side: THREE.DoubleSide, transparent: true, opacity: 0.85 })); guideRing.rotation.x = -Math.PI / 2; guideRing.position.y = 0.02; guide.add(guideRing);
+var guidePost = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 1.6, 6), new THREE.MeshBasicMaterial({ color: 0xe8801a, transparent: true, opacity: 0.5 })); guidePost.position.y = 0.8; guide.add(guidePost);
+var guideC = document.createElement("canvas"); guideC.width = 512; guideC.height = 128; var guideX = guideC.getContext("2d");
+var guideT = new THREE.CanvasTexture(guideC); guideT.minFilter = THREE.LinearFilter; guideT.encoding = THREE.sRGBEncoding;
+var guideLabel = new THREE.Sprite(new THREE.SpriteMaterial({ map: guideT, transparent: true, depthTest: false })); guideLabel.scale.set(1.6, 0.4, 1); guideLabel.position.y = 1.75; guide.add(guideLabel);
+scene.add(guide); guide.visible = false;
+function setGuide(pt, text) {
+  if (!pt) { guide.visible = false; return; }
+  guide.visible = true; guide.position.set(pt.x, 0, pt.z);
+  guideX.clearRect(0, 0, 512, 128); guideX.fillStyle = "rgba(232,128,26,0.95)"; guideX.fillRect(0, 0, 512, 128);
+  guideX.font = "44px " + FONT; guideX.fillStyle = "#ffffff"; guideX.textAlign = "center"; guideX.fillText(text, 256, 80); guideT.needsUpdate = true;
+}
+function updateGuide() {
+  var s = step();
+  if (s.mode === "tap") { var i = surveyFound.indexOf(false); setGuide(i < 0 ? null : surveyPegs[i].position, "Survey peg " + (i + 1)); return; }
+  if (s.mode === "tap2") { setGuide(TRUE.A, "The lines cross here"); return; }
+  if (s.mode === "place" && !stepDone) { setGuide(targetFor(s.peg), "Peg " + s.peg + " goes about here"); return; }
+  if (s.mode === "cross" && !stepDone) { setGuide({ x: pegs.A.x, z: pegs.A.z - 6 }, "Tapes cross about here"); return; }
+  if (s.mode === "profiles" && profiles.length < 8) { var n = null; profileSlots().some(function (sl, i) { if (!profiles.some(function (p) { return p.slot === i; })) { n = sl; return true; } }); setGuide(n ? { x: n.from.x + n.dir.x * 2, z: n.from.z + n.dir.z * 2 } : null, "Profile " + (profiles.length + 1) + " of 8"); return; }
+  if (s.mode === "level" && !stepDone) { setGuide({ x: profiles[0].x, z: profiles[0].z }, "Sight along the heads"); return; }
+  if (s.mode === "transfer") { var p = null; profiles.some(function (pr) { if (!pr.nail) { p = pr; return true; } }); setGuide(p, p ? "Transfer this one" : null); return; }
+  setGuide(null);
+}
+// a boundary offset line drawn as a flat blue ribbon with a label, so it can be seen from across the block
+function ribbon(a, b, text) {
+  var len = Math.hypot(b.x - a.x, b.z - a.z), m = new THREE.Mesh(new THREE.BoxGeometry(len, 0.012, 0.04), new THREE.MeshBasicMaterial({ color: 0x2857c4 }));
+  m.position.set((a.x + b.x) / 2, 0.02, (a.z + b.z) / 2); m.rotation.y = Math.atan2(-(b.z - a.z), b.x - a.x); site.add(m);
+  var c = document.createElement("canvas"); c.width = 640; c.height = 128; var x = c.getContext("2d"); x.fillStyle = "rgba(40,87,196,0.95)"; x.fillRect(0, 0, 640, 128); x.font = "40px " + FONT; x.fillStyle = "#fff"; x.textAlign = "center"; x.fillText(text, 320, 78);
+  var t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true })); sp.scale.set(2.0, 0.4, 1); sp.position.set((a.x + b.x) / 2, 0.5, (a.z + b.z) / 2); site.add(sp);
+}
+var crossHit = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.8, 12), new THREE.MeshBasicMaterial({ visible: false })); crossHit.position.set(TRUE.A.x, 0.4, TRUE.A.z); crossHit.userData.cross = true; crossHit.visible = false; scene.add(crossHit);
+
 // pegs, strings, profiles
 var pegMeshes = {}, stringMeshes = [], profileMeshes = [];
 function addPeg(name, pt) {
@@ -498,6 +556,7 @@ function ding() { tone(880, 0, 0.15, 0.15); tone(1320, 0.12, 0.25, 0.12); }
 function buzz() { tone(180, 0, 0.25, 0.2); }
 
 function markRight() { score.right++; ding(); }
+var lastSpoken = "";
 function markMiss() { score.missed++; buzz(); }
 
 function placeAt(pt) {
@@ -513,7 +572,7 @@ function placeAt(pt) {
     if (s.peg === "D") { addString(pegs.A, pegs.D); }
     if (s.peg === "F") { addString(pegs.A, pegs.F); }
     if (s.peg === "G") { addString(pegs.D, pegs.G); addString(pegs.F, pegs.G); }
-    stepDone = true;
+    stepDone = true; updateGuide();
   } else if (s.mode === "cross") {
     var tb = dist(pt, pegs.B), tc = dist(pt, pegs.C), diff = Math.abs(tb - tc);
     if (pt.z > pegs.A.z - 2) { feedback = "The crossing has to be back inside the block, well behind the front line. Pull the tapes further."; renderBoard(); buzz(); return; }
@@ -525,7 +584,7 @@ function placeAt(pt) {
     var ang = Math.abs(Math.atan2(placed.x - pegs.A.x, pegs.A.z - placed.z)) * 180 / Math.PI;
     if (diff <= TOL_SNAP) { feedback = "Right. Tapes equal, E is on the perpendicular. A to E is your 90 degree line."; markRight(); }
     else { feedback = "E is in, but the tapes were " + mm(diff) + " apart, so the line A-E is " + ang.toFixed(2) + " degrees off square. Over 9 m that error is going to grow."; markMiss(); }
-    stepDone = true;
+    stepDone = true; updateGuide();
   } else if (s.mode === "profiles") {
     var n = nearestSlot(pt); if (!n) return;
     if (n.along < 1.5) { feedback = "Too close. That profile is " + fmt(n.along) + " past the corner - it needs 1.5 m minimum or the excavator takes it out."; renderBoard(); buzz(); return; }
@@ -533,32 +592,34 @@ function placeAt(pt) {
     var from = n.slot.from, d = n.slot.dir, pos = { x: from.x + d.x * n.along, z: from.z + d.z * n.along };
     addProfile(pos, n.slot, n.i); thunk();
     feedback = profiles.length + " of 8 profiles in. " + (profiles.length < 8 ? "Keep going." : "All eight in. Heads next.");
+    updateGuide(); if (profiles.length < 8) walkTo();
     if (profiles.length === 8) { profiles[4].headErr = 0.045; profiles[4].mesh.userData.board.position.y = 0.945; profiles[4].mesh.children[0].scale.y = 1.045; profiles[4].mesh.children[1].scale.y = 1.045; markRight(); stepDone = true; }
   }
-  renderBoard();
+  renderBoard(); updateGuide();
 }
 function tapObject(obj) {
   var s = step();
+  if (obj.userData.cross && s.mode === "tap2") { stepDone = true; feedback = "That crossing is the front-west corner of the building. Peg A goes there next - and you will measure it, not guess it."; ding(); markRight(); renderBoard(); updateGuide(); return; }
   if (obj.userData.survey !== undefined && s.mode === "tap") {
     var i = obj.userData.survey; if (surveyFound[i]) return; surveyFound[i] = true; surveyPegs[i].userData.ring.visible = false; ding();
     var n = surveyFound.filter(Boolean).length;
     feedback = n + " of 4 survey pegs confirmed." + (n === 4 ? " Lot 12, 20.000 x 30.000, matches the plan. You may set out." : "");
-    if (n === 4) { stepDone = true; markRight(); }
-    renderBoard();
+    if (n === 4) { stepDone = true; markRight(); speak("All four confirmed. Press Next."); }
+    renderBoard(); updateGuide(); if (n < 4) walkTo();
   }
   if (obj.userData.profile !== undefined) {
     var pr = profiles[obj.userData.profile];
     if (s.mode === "level") {
       if (pr.headErr !== 0) { pr.headErr = 0; pr.mesh.userData.board.position.y = 0.9; pr.mesh.children[0].scale.y = 1; pr.mesh.children[1].scale.y = 1; feedback = "That was the one - 45 mm high. Dropped to datum. All eight heads now at the same RL."; markRight(); stepDone = true; ding(); }
       else { feedback = "That head is level with the rest. Sight along the line again - one of them is proud."; markMiss(); }
-      renderBoard();
+      renderBoard(); updateGuide();
     }
     if (s.mode === "transfer" && !pr.nail) {
       pr.nail = true; var nl = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.06, 6), mNail); nl.position.set(0, 0.97, 0); pr.mesh.add(nl); thunk();
       var done = profiles.filter(function (p) { return p.nail; }).length;
       feedback = done + " of 8 lines transferred." + (done === 8 ? " Pegs are now expendable - the profiles hold the building." : "");
       if (done === 8) { stepDone = true; markRight(); rebuildProfileStrings(); }
-      renderBoard();
+      renderBoard(); updateGuide(); if (done < 8) walkTo();
     }
   }
 }
@@ -572,6 +633,8 @@ function rebuildProfileStrings() {
 function act(a) {
   var s = step();
   if (a.tab) { tab = a.tab; }
+  else if (a.act === "goto") { walkTo(); }
+  else if (a.act === "voice") { voiceOn = !voiceOn; if (!voiceOn) stopSpeech(); else speakStep(); }
   else if (a.act === "plan") showPlan = !showPlan;
   else if (a.key) { if (a.key === "<") estimate = estimate.slice(0, -1); else if (estimate.length < 8) estimate += a.key; }
   else if (a.act === "calc") {
@@ -614,10 +677,50 @@ function advance() {
   if (s.mode === "read") { /* boundary offsets */ }
   stepIdx++;
   var n = step();
-  if (n.mode === "read") { addString({ x: LOT.x0, z: TRUE.A.z }, { x: LOT.x1, z: TRUE.A.z }, mStringBlue, 0.3); addString({ x: TRUE.A.x, z: LOT.zFront }, { x: TRUE.A.x, z: LOT.zRear }, mStringBlue, 0.3); stepDone = true; }
+  if (n.mode === "tap2" && !n.built) { n.built = true; ribbon({ x: LOT.x0, z: TRUE.A.z }, { x: LOT.x1, z: TRUE.A.z }, "Front offset line - 6.000 setback"); ribbon({ x: TRUE.A.x, z: LOT.zFront }, { x: TRUE.A.x, z: LOT.zRear }, "West offset line - 1.500 setback"); crossHit.visible = true; tappables.push(crossHit); }
+  if (n.mode === "tap2") stepDone = false;
+  if (n.mode === "intro") stepDone = true;
   if (n.mode === "quiz" && checked.square) { stepIdx++; n = step(); } // skip the fix step when already square
-  renderBoard();
+  renderBoard(); updateGuide(); walkTo(); speakStep();
 }
+
+// ---------- voice ----------
+function stopSpeech() { try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {} }
+function speak(text) {
+  if (!voiceOn || !window.speechSynthesis) return;
+  try { stopSpeech(); var u = new SpeechSynthesisUtterance(text.replace(/\n+/g, ". ")); u.lang = "en-AU"; u.rate = 0.95; var vs = speechSynthesis.getVoices(); var v = vs.find(function (x) { return /en[-_]AU/i.test(x.lang); }) || vs.find(function (x) { return /en[-_]GB/i.test(x.lang); }); if (v) u.voice = v; speechSynthesis.speak(u); } catch (e) {}
+}
+function speakStep() { var s = step(); speak((s.mode === "done" ? "" : "Step " + s.n + ". ") + s.title + ". " + (s.mode === "done" ? "" : s.task) + (s.how ? " " + s.how : "")); }
+
+// ---------- walking you to the spot ----------
+// each step has a place to stand; the game puts you there, facing the work, when the step starts
+function vantageFor() {
+  var s = step(), t = null, back = { x: 0, z: 1 }, d = 3.2;
+  var bc = { x: TRUE.A.x + JOB.width / 2, z: TRUE.A.z - JOB.depth / 2 };
+  if (s.mode === "intro" || s.mode === "keypad" || s.mode === "measure" || s.mode === "quiz") { t = bc; d = 11; }
+  else if (s.mode === "pour" || s.mode === "done") { t = bc; d = 13; }
+  else if (guide.visible) { t = { x: guide.position.x, z: guide.position.z }; }
+  else t = bc;
+  if (!t) return null;
+  // stand between the target and the street when possible, otherwise between the target and where you are
+  var vx = rig.position.x - t.x, vz = rig.position.z - t.z, vl = Math.hypot(vx, vz);
+  if (s.mode === "intro" || s.mode === "pour" || s.mode === "done" || s.mode === "keypad" || s.mode === "measure" || s.mode === "quiz" || vl < 0.5) { vx = 0; vz = 1; vl = 1; }
+  vx /= vl; vz /= vl;
+  // keep inside the fences
+  var px = Math.max(LOT.x0 + 0.8, Math.min(LOT.x1 - 0.8, t.x + vx * d)), pz = Math.max(LOT.zRear + 0.8, Math.min(LOT.zFront + 2.5, t.z + vz * d));
+  return { x: px, z: pz, look: t };
+}
+function faceAndStand(v) {
+  var yawWanted = Math.atan2(-(v.look.x - v.x), -(v.look.z - v.z));
+  if (renderer.xr.isPresenting) {
+    var f = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); var headYaw = Math.atan2(-f.x, -f.z);
+    rig.rotation.y = yawWanted - headYaw;
+    var hx = camera.position.x, hz = camera.position.z, cy = Math.cos(rig.rotation.y), sy = Math.sin(rig.rotation.y);
+    rig.position.set(v.x - (hx * cy + hz * sy), 0, v.z - (-hx * sy + hz * cy));
+  } else { yaw = yawWanted; pitch = -0.25; rig.position.set(v.x, 0, v.z); }
+  tone(600, 0, 0.06, 0.06);
+}
+function walkTo() { updateGuide(); var v = vantageFor(); if (v) faceAndStand(v); }
 
 // ---------- interaction ----------
 var raycaster = new THREE.Raycaster(), tmpM = new THREE.Matrix4(), o3 = new THREE.Vector3(), d3 = new THREE.Vector3();
@@ -699,11 +802,11 @@ if (navigator.xr && navigator.xr.isSessionSupported) {
     else note.textContent = "No headset in this browser. Drag to look, W A S D to walk, click to act, right-click to jump to a spot.";
   });
 } else note.textContent = "No WebXR here. Drag to look, W A S D to walk, click to act, right-click to jump to a spot.";
-btn.addEventListener("click", function () { ac(); navigator.xr.requestSession("immersive-vr", { optionalFeatures: ["local-floor", "bounded-floor"] }).then(function (session) { session.addEventListener("end", function () { document.getElementById("ui").style.display = "block"; }); renderer.xr.setSession(session); document.getElementById("ui").style.display = "none"; }); });
+btn.addEventListener("click", function () { ac(); navigator.xr.requestSession("immersive-vr", { optionalFeatures: ["local-floor", "bounded-floor"] }).then(function (session) { session.addEventListener("end", function () { document.getElementById("ui").style.display = "block"; }); renderer.xr.setSession(session); document.getElementById("ui").style.display = "none"; setTimeout(function () { walkTo(); speakStep(); }, 1500); }); });
 
 // ---------- loop ----------
 // the clipboard rides in front of you, low and to the left, and turns with your head (yaw only)
-var boardTarget = new THREE.Vector3(), camPos = new THREE.Vector3(), camDir = new THREE.Vector3(), lastT = performance.now();
+var boardInit = false, boardFollow = true, boardTarget = new THREE.Vector3(), camPos = new THREE.Vector3(), camDir = new THREE.Vector3(), lastT = performance.now();
 scene.add(board.mesh);
 renderer.setAnimationLoop(function () {
   var now = performance.now(), dt = Math.min(0.1, (now - lastT) / 1000); lastT = now;
@@ -720,16 +823,21 @@ renderer.setAnimationLoop(function () {
     raycaster.setFromCamera(mouse, camera); updatePointer(castFrom(raycaster.ray.origin, raycaster.ray.direction));
   }
   camDir.y = 0; camDir.normalize();
-  var right = new THREE.Vector3(-camDir.z, 0, camDir.x);
-  boardTarget.copy(camPos).addScaledVector(camDir, 0.85).addScaledVector(right, -0.42); boardTarget.y = camPos.y - 0.35;
-  board.mesh.position.lerp(boardTarget, 0.12);
-  board.mesh.lookAt(camPos.x, board.mesh.position.y + 0.15, camPos.z);
+  // clipboard: centred, chest height, and it only re-centres once you have turned or walked well away from it
+  boardTarget.copy(camPos).addScaledVector(camDir, 0.95); boardTarget.y = camPos.y - 0.55;
+  var toBoard = new THREE.Vector3().subVectors(board.mesh.position, camPos); toBoard.y = 0; var dBoard = toBoard.length(); toBoard.normalize();
+  var ang = Math.acos(Math.max(-1, Math.min(1, toBoard.dot(camDir))));
+  if (!boardInit || ang > 0.6 || dBoard > 1.6 || dBoard < 0.5) boardFollow = true;
+  if (boardFollow) { board.mesh.position.lerp(boardTarget, boardInit ? 0.08 : 1); if (board.mesh.position.distanceTo(boardTarget) < 0.03) boardFollow = false; boardInit = true; }
+  board.mesh.lookAt(camPos.x, camPos.y - 0.1, camPos.z);
+  guideRing.scale.setScalar(1 + 0.12 * Math.sin(now / 250));
   // frame drops onto the slab
   if (frameDrop > 0 && frameMesh) { frameMesh.position.y = Math.max(0, frameMesh.position.y - 3 * dt); if (frameMesh.position.y === 0 && frameDrop === 1) { frameDrop = 2; thunk(); } }
   renderer.render(scene, camera);
 });
 
 renderBoard();
+updateGuide();
 
 </script>
 </body>
