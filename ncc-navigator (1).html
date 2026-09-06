@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NCC Navigator - build 5</title>
+<title>NCC Navigator - build 6</title>
 <style>
   body { margin: 0; overflow: hidden; background: #cfe0ee; font: 17px/1.5 Georgia, "Times New Roman", serif; color: #1e2a44; }
   canvas { display: block; }
@@ -33,7 +33,7 @@
 // Explain page on every step, auto-walk to each spot, spoken instructions.
 // =====================================================================
 
-var BUILD = 5;
+var BUILD = 6;
 var C = { ink: "#1e2a44", paper: "#f4f1e8", ply: "#c9a978", orange: "#e8801a", green: "#2f8f5b", red: "#c9302c", blue: "#2857c4", mute: "#6f7480", rule: "#cfc9b9", white: "#ffffff", gold: "#c99a2e", teal: "#2b8a8a" };
 var FONT = "Georgia, 'Noto Serif', 'Times New Roman', serif";
 
@@ -635,7 +635,7 @@ function renderBoard() {
   if (s.mode === "end") P.button(P.cw - L - 320, fy, 320, 60, "Next: " + s.nextLabel, "primary", { tab: s.nextTab }, 26);
   else if (guided && !stepDone && ["use", "beds", "beds2", "tenpc", "build", "stairdts", "stairperf", "count", "v1build", "anatomy", "v1chain", "v1chain2"].indexOf(s.mode) >= 0) P.button(P.cw - L - 300, fy, 300, 60, demoRunning ? "Working..." : "Do this step", demoRunning ? "dim" : "primary", demoRunning ? null : { act: "demo" }, 26);
   else P.button(P.cw - L - 190, fy, 190, 60, "Next", stepDone ? "primary" : "dim", stepDone ? { act: "next" } : null, 26);
-  P.text(score.right + " right, " + score.missed + " missed    build " + BUILD, L + 750, fy + 40, C.mute, 22);
+  P.text(score.right + " right, " + score.missed + " missed    build " + BUILD + "    you: " + Math.round(camPos.x) + ", " + Math.round(camPos.z), L + 750, fy + 40, C.mute, 20);
   P.end();
   renderPage();
 }
@@ -1013,13 +1013,20 @@ function faceAndStand(v) {
     var dx = v.x - v.look.x, dz = v.z - v.look.z, dl = Math.hypot(dx, dz) || 1;
     v = { x: v.look.x + dx / dl * 9, z: v.look.z + dz / dl * 9, y: Math.min(v.y, 3.5), look: v.look };
   }
-  var yawWanted = Math.atan2(-(v.look.x - v.x), -(v.look.z - v.z));
+  var yawWanted = Math.atan2(-(v.look.x - v.x), -(v.look.z - v.z)), stand = v.y !== undefined ? v.y : 0;
   if (renderer.xr.isPresenting) {
-    var f = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); var headYaw = Math.atan2(-f.x, -f.z);
-    rig.rotation.y = yawWanted - headYaw;
-    var hx = camera.position.x, hz = camera.position.z, cy = Math.cos(rig.rotation.y), sy = Math.sin(rig.rotation.y);
-    rig.position.set(v.x - (hx * cy + hz * sy), v.y !== undefined ? v.y : 0, v.z - (-hx * sy + hz * cy));
-  } else { yaw = yawWanted; pitch = v.y !== undefined ? -0.85 : -0.12; rig.position.set(v.x, v.y !== undefined ? v.y : 0, v.z); }
+    // Work entirely in world space: where the head is and which way it faces right now.
+    var hw = new THREE.Vector3(), fw = new THREE.Vector3();
+    camera.getWorldPosition(hw); camera.getWorldDirection(fw);
+    var headYaw = Math.atan2(-fw.x, -fw.z), oldYaw = rig.rotation.y, newYaw = oldYaw + (yawWanted - headYaw);
+    // head offset from the rig origin, expressed in the rig's own frame
+    var ox = hw.x - rig.position.x, oz = hw.z - rig.position.z, c0 = Math.cos(-oldYaw), s0 = Math.sin(-oldYaw);
+    var lx = ox * c0 + oz * s0, lz = -ox * s0 + oz * c0;
+    if (Math.hypot(lx, lz) > 4) { lx = 0; lz = 0; }   // implausible: ignore the offset rather than fling the rig
+    var c1 = Math.cos(newYaw), s1 = Math.sin(newYaw);
+    rig.rotation.y = newYaw;
+    rig.position.set(v.x - (lx * c1 + lz * s1), stand, v.z - (-lx * s1 + lz * c1));
+  } else { yaw = yawWanted; pitch = v.y !== undefined ? -0.85 : -0.12; rig.position.set(v.x, stand, v.z); }
   rigFixedY = v.y !== undefined ? v.y : null;
   tone(600, 0, 0.06, 0.06);
 }
