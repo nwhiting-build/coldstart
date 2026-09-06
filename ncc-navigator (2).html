@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NCC Navigator - build 7</title>
+<style>
+  body { margin: 0; overflow: hidden; background: #cfe0ee; font: 17px/1.5 Georgia, "Times New Roman", serif; color: #1e2a44; }
+  canvas { display: block; }
+  #ui { position: fixed; left: 0; right: 0; bottom: 24px; text-align: center; pointer-events: none; }
+  #ui > * { pointer-events: auto; }
+  #enter { display: none; font: inherit; font-size: 22px; padding: 12px 34px; border: 3px solid #1e2a44; background: #1e2a44; color: #f4f1e8; border-radius: 3px; cursor: pointer; }
+  #enter:hover { background: #e8801a; border-color: #e8801a; }
+  #note { margin: 10px auto 0; max-width: 62ch; font-size: 15px; color: #f4f1e8; background: rgba(30,42,68,0.8); padding: 6px 14px; border-radius: 3px; }
+  h1 { position: fixed; top: 16px; left: 22px; margin: 0; font-weight: normal; font-size: 22px; }
+</style>
+</head>
+<body>
+<h1>NCC Navigator</h1>
+<div id="ui"><button id="enter">Enter VR</button><p id="note">Loading the street.</p></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+
+// =====================================================================
+// NCC NAVIGATOR - Understanding the NCC in VR.
+// Four guided tours built from NCC 2025 Volume Two Section A and Section H,
+// and the ABCB Housing Provisions 2025.
+//   1 The street     - Part A6, the ten classes, classification by use
+//   2 The allotment  - Class 1 versus Class 10, the 1a/1b boundary
+//   3 The pathway    - Part A2, Performance Requirements, DTS and Performance Solutions
+//   4 The map        - point at the house, get the chain from Volume Two to the Housing Provisions
+// Same architecture as site-setout-vr.html: centred clipboard, guided steps,
+// Explain page on every step, auto-walk to each spot, spoken instructions.
+// =====================================================================
+
+var BUILD = 7;
+var C = { ink: "#1e2a44", paper: "#f4f1e8", ply: "#c9a978", orange: "#e8801a", green: "#2f8f5b", red: "#c9302c", blue: "#2857c4", mute: "#6f7480", rule: "#cfc9b9", white: "#ffffff", gold: "#c99a2e", teal: "#2b8a8a" };
+var FONT = "Georgia, 'Noto Serif', 'Times New Roman', serif";
+
+// ---------- world layout ----------
+// The street runs east-west along x. Road centre z = 0. You walk on the south footpath (z = +8).
+// Buildings sit on the north side, fronts at z = -6. The Class 1 allotment, the boarding house
+// and the vacant lot for the pathway tour are on the south side, fronts at z = 16.
+var STREET_Z_FRONT = -6, FOOTPATH_Z = 8, SPACING = 13, STREET_X0 = -91;
+var LOT = { x0: -12, x1: 8, z0: 16, z1: 46 };          // the Class 1a allotment
+var BH = { x0: 10, x1: 30, z0: 16, z1: 46 };           // the boarding house next door
+var VAC = { x0: -36, x1: -14, z0: 16, z1: 46 };        // vacant lot: pathway tour
+
+// =====================================================================
+// THE STREET - one of everything. Order east to west along the footpath.
+// cls: what the correct answer is. options: the quiz buttons.
+// =====================================================================
+var STREET = [
+  { key: "chameleon", name: "Vacant tenancy", sign: "TO LET", cls: "Depends on use", w: 10, d: 12, h: 4.2, col: 0xd8d2c4, roof: "flat",
+    note: "The same box. The sign and the fitout change; the building does not." },
+  { key: "house", name: "Detached house", sign: "12 Harrow St", cls: "Class 1a", w: 11, d: 9, h: 2.8, col: 0xc9a978, roof: "gable",
+    options: ["Class 1a", "Class 1b", "Class 2", "Class 10a"], answer: 0,
+    why: "A6G2(2)(a)(i): a detached house is a Class 1a building - one or more buildings that together form a single dwelling." },
+  { key: "terrace", name: "Row of three terraces", sign: "14, 16, 18 Harrow St", cls: "Class 1a (each one)", w: 12, d: 10, h: 5.6, col: 0xb8a07a, roof: "flat", units: 3,
+    options: ["Class 1a", "Class 2", "Class 3", "Class 1b"], answer: 0,
+    why: "A6G2(2)(a)(ii): one of a group of two or more attached dwellings, each being a building, separated by a fire-resisting wall. The red wall is what makes each terrace its own Class 1a building. Without it, they are sole-occupancy units in one Class 2 building." },
+  { key: "boarding", name: "Boarding house", sign: "Harrow Lodge - 10 rooms", cls: "Class 1b", w: 12, d: 11, h: 5.6, col: 0xd6c3a0, roof: "gable",
+    options: ["Class 1b", "Class 3", "Class 2", "Class 4"], answer: 0,
+    why: "A6G2(2)(b)(i): a boarding house, guest house or hostel that would ordinarily accommodate not more than 12 people, with a total floor area not more than 300 square metres. Ten rooms and 260 square metres sits inside both limits. Over either limit it becomes Class 3 and moves to Volume One." },
+  { key: "apartments", name: "Apartment building", sign: "Harrow Apartments", cls: "Class 2", w: 12, d: 11, h: 9.0, col: 0xb0b8c4, roof: "flat",
+    options: ["Class 2", "Class 1a", "Class 3", "Class 4"], answer: 0,
+    why: "A6G3: a building containing two or more sole-occupancy units, each a separate dwelling. Six flats, six sole-occupancy units, one Class 2 building. Class 2 to 9 is Volume One territory." },
+  { key: "motel", name: "Motel", sign: "Harrow Motor Inn", cls: "Class 3", w: 12, d: 11, h: 5.8, col: 0xc9c3b0, roof: "flat",
+    options: ["Class 3", "Class 2", "Class 1b", "Class 6"], answer: 0,
+    why: "A6G4(2)(b): the residential part of a hotel or motel is Class 3 - long-term or transient accommodation for a number of unrelated persons. The occupants do not know the building, so the code asks more of it than it asks of a Class 2." },
+  { key: "shopflat", name: "Shop with a flat above", sign: "Harrow Pharmacy", cls: "Class 6 below, Class 4 above", w: 10, d: 11, h: 6.6, col: 0xd0b8a8, roof: "flat",
+    options: ["Class 6 and Class 4", "Class 6 and Class 2", "Class 5 and Class 1a", "Class 6 only"], answer: 0,
+    why: "Two classes in one building. The shop is Class 6 (A6G7). The flat is Class 4 (A6G5): a dwelling in a Class 5, 6, 7, 8 or 9 building, if it is the only dwelling in the building. A6G12: a building can have more than one classification, and each part must meet the requirements for its own class." },
+  { key: "office", name: "Office", sign: "Harrow Chambers", cls: "Class 5", w: 12, d: 11, h: 7.4, col: 0xa9b7c6, roof: "flat",
+    options: ["Class 5", "Class 6", "Class 8", "Class 9b"], answer: 0,
+    why: "A6G6: an office building used for professional or commercial purposes, other than Class 6, 7, 8 or 9." },
+  { key: "cafe", name: "Cafe", sign: "Harrow Espresso", cls: "Class 6", w: 8, d: 9, h: 4.2, col: 0xd8b48a, roof: "flat",
+    options: ["Class 6", "Class 5", "Class 9b", "Class 7b"], answer: 0,
+    why: "A6G7: a shop or other building for the sale of goods by retail or the supply of services direct to the public - including a cafe, restaurant, milk bar or bar. The public walks in, so it is Class 6." },
+  { key: "carpark", name: "Public carpark", sign: "PARK", cls: "Class 7a", w: 14, d: 12, h: 5.6, col: 0xa0a0a0, roof: "flat", open: true,
+    options: ["Class 7a", "Class 7b", "Class 10a", "Class 6"], answer: 0,
+    why: "A6G8: Class 7a is a carpark. Class 7b is for storage, or display of goods for sale by wholesale. Same class number, different letter, different provisions." },
+  { key: "warehouse", name: "Wholesale warehouse", sign: "Harrow Trade Supplies - trade only", cls: "Class 7b", w: 16, d: 14, h: 7.0, col: 0x8fa3ad, roof: "flat",
+    options: ["Class 7b", "Class 6", "Class 8", "Class 10a"], answer: 0,
+    why: "A6G8: storage, or display of goods for sale by wholesale. The test the code gives: if the general public has access, it is a shop and therefore Class 6. Trade only keeps it 7b." },
+  { key: "factory", name: "Factory with a small office", sign: "Harrow Joinery", cls: "Class 8", w: 18, d: 16, h: 7.0, col: 0x9aa7b0, roof: "flat", officeFrac: 0.08,
+    options: ["Class 8", "Class 7b", "Class 5 and Class 8", "Class 6"], answer: 0,
+    why: "A6G9: a laboratory, or a building in which a process is carried on for trade, sale or gain - production, assembling, altering, repairing, packing, finishing or cleaning. The office is under 10 percent of the storey, so by the Exemption to A6G1 the whole storey can be Class 8." },
+  { key: "school", name: "Primary school", sign: "Harrow Primary School", cls: "Class 9b", w: 16, d: 12, h: 4.4, col: 0xd4c48c, roof: "gable",
+    options: ["Class 9b", "Class 9a", "Class 5", "Class 9c"], answer: 0,
+    why: "A6G10: Class 9b is an assembly building - a building where people may assemble for civic, theatrical, social, political or religious purposes, or for educational purposes in a school. Class 9a is health care. Class 9c is a residential care building." },
+  { key: "hospital", name: "Medical centre with beds", sign: "Harrow Day Hospital", cls: "Class 9a", w: 16, d: 13, h: 7.6, col: 0xe0e4e8, roof: "flat",
+    options: ["Class 9a", "Class 9b", "Class 9c", "Class 3"], answer: 0,
+    why: "A6G10: Class 9a is a health-care building, including any parts of the building set aside as a laboratory. The occupants may need help to get out, and the provisions reflect that." },
+  { key: "agedcare", name: "Residential aged care", sign: "Harrow House", cls: "Class 9c", w: 16, d: 13, h: 5.8, col: 0xd8cfc0, roof: "gable",
+    options: ["Class 9c", "Class 3", "Class 9a", "Class 2"], answer: 0,
+    why: "A6G10: Class 9c is a residential care building - accommodation for people who need personal care services, where 24-hour staff assistance is available. It used to sit inside Class 3; it has its own class because the evacuation problem is different." }
+];
+STREET.forEach(function (b, i) { b.x = STREET_X0 + i * SPACING + b.w / 2; b.z = STREET_Z_FRONT - b.d / 2;
+  // shuffle the quiz buttons so the right answer is not always the first one
+  if (b.options) { var right = b.options[b.answer], o = b.options.slice(); for (var k = o.length - 1; k > 0; k--) { var j = Math.floor(Math.random() * (k + 1)), t = o[k]; o[k] = o[j]; o[j] = t; } b.options = o; b.answer = o.indexOf(right); } });
+function bldg(key) { for (var i = 0; i < STREET.length; i++) if (STREET[i].key === key) return STREET[i]; return null; }
+var USES = [
+  { sign: "Harrow Accountants", cls: "Class 5", note: "an office, professional or commercial - A6G6" },
+  { sign: "Harrow Homewares - open to the public", cls: "Class 6", note: "sale of goods by retail to the public - A6G7" },
+  { sign: "Harrow Storage - trade only", cls: "Class 7b", note: "storage, or wholesale display - A6G8" },
+  { sign: "Harrow Packing Co.", cls: "Class 8", note: "a process carried on for trade - packing counts - A6G9" }
+];
+
+// =====================================================================
+// THE ALLOTMENT - what is part of the Class 1 and what is Class 10
+// =====================================================================
+var LOTITEMS = [
+  { key: "lothouse", name: "The house", cls: "Class 1a", x: -4, z: 26.5, w: 12, d: 9, h: 2.8, col: 0xc9a978, roof: "gable",
+    why: "A6G2: a single dwelling, one or more buildings which together form it. Everything habitable on this lot that goes with the house is part of the Class 1a building." },
+  { key: "sleepout", name: "Sleepout", cls: "Part of the Class 1a", x: -9, z: 38, w: 4, d: 3.5, h: 2.6, col: 0xc9a978, roof: "gable",
+    why: "Explanatory Information to A6G11: a sleepout on the same allotment as a Class 1 building is part of the Class 1 building. It is habitable, so it cannot be Class 10." },
+  { key: "entroom", name: "Entertainment room by the pool", cls: "Part of the Class 1a", x: 4, z: 41, w: 5, d: 4, h: 2.7, col: 0xc9a978, roof: "flat",
+    why: "Explanatory Information to A6G11: a detached entertainment room on the same allotment, perhaps associated with a swimming pool, is part of the Class 1 building. Habitable outbuildings cannot be classified as Class 10." },
+  { key: "shed", name: "Tool shed", cls: "Class 10a", x: -9.5, z: 44, w: 3, d: 2.4, h: 2.3, col: 0x9fa8a3, roof: "flat",
+    why: "A6G11(2)(a): Class 10a is a non-habitable building including a private garage, carport, shed or the like. A small tool shed used for hobbies or home repairs is the code's own example." },
+  { key: "carport", name: "Carport", cls: "Class 10a", x: 4.8, z: 21.5, w: 5.5, d: 6, h: 2.5, col: 0xc0c0c0, roof: "flat", open: true,
+    why: "A6G11(2)(a): a carport is a Class 10a building. Non-habitable, so Class 10, and a building rather than a structure, so 10a." },
+  { key: "pool", name: "Swimming pool", cls: "Class 10b", x: 1, z: 36, w: 7, d: 3.5, h: 0.05, col: 0x4fa3c9, roof: "none",
+    why: "A6G11(2)(b): Class 10b is a structure - a fence, mast, antenna, retaining wall or free-standing wall or swimming pool or the like. The pool barrier provisions are in Volume Two, H7D2." },
+  { key: "fence", name: "Boundary fence", cls: "Class 10b", x: 8, z: 31, w: 0.15, d: 30, h: 1.8, col: 0x8a7a66, roof: "none",
+    why: "A6G11(2)(b): a fence is a Class 10b structure. Some States and Territories exempt Class 10 structures of this size from needing a permit, but the classification does not change." },
+  { key: "retwall", name: "Retaining wall", cls: "Class 10b", x: -2, z: 45.5, w: 12, d: 0.4, h: 0.9, col: 0x9a9a92, roof: "none",
+    why: "A6G11(2)(b): a retaining wall is a Class 10b structure. Note that 11.3.3(2)(a) of the Housing Provisions does not ask for a barrier on it unless it forms part of a path of access to the building." },
+  { key: "shelter", name: "Private bushfire shelter", cls: "Class 10c", x: -3.5, z: 43.5, w: 2.4, d: 2.4, h: 1.6, col: 0x6f7a80, roof: "flat",
+    why: "A6G11(2)(c): Class 10c is a private bushfire shelter. The provisions only address shelters associated with a single Class 1a dwelling, and they sit in Volume Two - H7P6." }
+];
+function lotItem(key) { for (var i = 0; i < LOTITEMS.length; i++) if (LOTITEMS[i].key === key) return LOTITEMS[i]; return null; }
+
+// =====================================================================
+// THE MAP - every element of the house, and the chain that governs it:
+// Performance Requirement (Volume Two) -> DTS pointer (Volume Two) -> Housing Provisions
+// =====================================================================
+var MAPITEMS = [
+  { key: "m_slab", name: "Slab and footings", pr: "H1P1 Structural reliability and resistance", dts: "H1D4 Footings and slabs", hp: "Housing Provisions Section 4 - Part 4.2 Footings, slabs and associated elements",
+    plain: "The slab must not crack or move beyond what the house can tolerate. The footing design in the Housing Provisions depends on the site classification, A, S, M or H, from AS 2870. Damp-proofing of the slab is H2D3, pointing to the same Part 4.2." },
+  { key: "m_termite", name: "Termite management", pr: "H1P1 Structural reliability and resistance", dts: "H1D3 Site preparation", hp: "Housing Provisions Part 3.4 Termite risk management",
+    plain: "Termites are a structural problem, which is why this sits under H1. Part 3.4 gives the barrier systems: chemical, physical, or a combination, and the durable notice that must be fixed in the meter box." },
+  { key: "m_drain", name: "Site drainage and downpipes", pr: "H2P1 Rainwater management", dts: "H2D2 Drainage and H2D6 Roof and wall cladding", hp: "Housing Provisions Part 3.3 Drainage and Part 7.4 Gutters and downpipes",
+    plain: "Water off the roof and water across the site must be taken away without getting into the building. Part 3.3 covers surface water and the 50 mm finished-floor height above the paving. Part 7.4 sizes the gutters and downpipes to the roof catchment." },
+  { key: "m_wall", name: "Brick veneer walls", pr: "H1P1 Structural reliability and resistance", dts: "H1D5 Masonry", hp: "Housing Provisions Section 5 - Part 5.2 Masonry veneer, Part 5.7 Weatherproofing of masonry",
+    plain: "The brick skin is not structural; the frame behind it is. Part 5.2 gives the ties, the cavity and the height limits for a veneer skin. Damp in masonry is H2D4, which points to Part 5.7 for flashings, weep holes and damp-proof courses." },
+  { key: "m_frame", name: "Roof and wall framing", pr: "H1P1 Structural reliability and resistance", dts: "H1D6 Framing", hp: "AS 1684 for timber framing; Housing Provisions Section 6 for subfloor ventilation and steel members",
+    plain: "Timber framing is not in the Housing Provisions at all. H1D6 points straight to AS 1684 Parts 2, 3 or 4, and to NASH for steel. The span tables you teach from AS 1684.2 are the DTS for this element." },
+  { key: "m_roof", name: "Sheet roof cladding", pr: "H1P1 and H2P2 Weatherproofing", dts: "H1D7 Roof and wall cladding, H2D6", hp: "Housing Provisions Section 7 - Part 7.2 Sheet roofing",
+    plain: "Two performance requirements at once: the roof must stay on in the wind (H1P1) and keep the water out (H2P2). Part 7.2 gives fixing patterns by wind class, minimum pitch for the profile, and flashing details." },
+  { key: "m_window", name: "Windows and glazing", pr: "H1P1 and H2P2 Weatherproofing", dts: "H1D8 Glazing, H2D7", hp: "Housing Provisions Section 8 - Part 8.2 Windows, Part 8.3 Glass, Part 8.4 Glazing human impact",
+    plain: "Windows are AS 2047 by wind class. The glass itself is AS 1288. Part 8.4 is the one that bites on site: glazing in doors, low sills and bathrooms must be safety glass or protected." },
+  { key: "m_firewall", name: "Wall near the boundary", pr: "H3P1 Spread of fire", dts: "H3D3 Fire separation of external walls", hp: "Housing Provisions Part 9.2 Fire separation of external walls",
+    plain: "An external wall less than 900 mm from a side or rear boundary, or less than 1.8 m from another building on the lot, must have an FRL of 60/60/60 or be non-combustible, and openings in it are restricted. This wall is 800 mm off the boundary, so Part 9.2 applies to it." },
+  { key: "m_alarm", name: "Smoke alarms", pr: "H3P2 Automatic warning for occupants", dts: "H3D6 Smoke alarms and evacuation lighting", hp: "Housing Provisions Part 9.5 Smoke alarms and evacuation lighting",
+    plain: "Hard-wired, interconnected, AS 3786 alarms on every storey, in hallways serving bedrooms, and where there is no hallway, between the bedrooms and the rest of the house." },
+  { key: "m_bath", name: "Bathroom waterproofing", pr: "H4P1 Wet areas", dts: "H4D2 Wet areas, H4D3 Materials and installation", hp: "Housing Provisions Part 10.2 Wet area waterproofing, or AS 3740",
+    plain: "The two options are named in the pointer: comply with AS 3740, or with Part 10.2. Part 10.2 is the fuller of the two, with the shower, the bath, the floor waste and the falls all drawn." },
+  { key: "m_ceiling", name: "Ceiling height", pr: "H4P2 Room heights", dts: "H4D4 Room heights", hp: "Housing Provisions Part 10.3 Room heights",
+    plain: "2.4 m in a habitable room, 2.1 m in a kitchen, laundry, bathroom or hallway, 2.2 m at the nosing line of a stair. The number lives in Part 10.3; Volume Two only says that Part 10.3 satisfies H4P2." },
+  { key: "m_stair", name: "Deck stair", pr: "H5P1 Movement to and within a building", dts: "H5D2 Stairway and ramp construction", hp: "Housing Provisions Part 11.2 Stairway and ramp construction",
+    plain: "Riser 115 to 190, going 240 to 355, 2R plus G between 550 and 700, no more than 18 risers in a flight, no opening a 125 mm sphere can pass through. Table 11.2.2a." },
+  { key: "m_balustrade", name: "Deck balustrade", pr: "H5P2 Fall prevention barriers", dts: "H5D3 Barriers and handrails", hp: "Housing Provisions Part 11.3 Barriers and handrails",
+    plain: "A barrier is required where the fall is 1 m or more. 1 m high on the deck, 865 mm on the stair flight, no opening a 125 mm sphere can pass, and no climbable elements between 150 mm and 760 mm where the fall is 4 m or more." },
+  { key: "m_deck", name: "Deck attachment to the wall", pr: "H1P1 Structural reliability and resistance", dts: "H1D11 Attachment of framed decks and balconies", hp: "Housing Provisions Part 12.3",
+    plain: "A deck bolted to a house wall is the failure that put this Part in the code. Part 12.3 gives the ledger fixing, the flashing and the spacing so the deck does not pull off the wall with a crowd on it." },
+  { key: "m_insul", name: "Insulation and glazing performance", pr: "H6P1 Thermal performance", dts: "H6D2 Application of Part H6", hp: "Housing Provisions Parts 13.2 Building fabric, 13.3 External glazing, 13.4 Building sealing, 13.5 Ceiling fans",
+    plain: "Two routes in the one pointer: a NatHERS rating with house energy rating software, or the elemental provisions in Section 13 - R-values by climate zone, glazing calculators, sealing and ceiling fans. Whole-of-home energy usage is H6P2, Parts 13.6 and 13.7." },
+  { key: "m_flue", name: "Heating appliance and flue", pr: "H7P3 Heating appliances", dts: "H7D5 Heating appliances, fireplaces, chimneys and flues", hp: "Housing Provisions Part 12.4",
+    plain: "Solid-fuel heaters are AS/NZS 2918; the flue clearances and the hearth are in Part 12.4. The flue must clear the roof by the distances in the standard, and combustible material near it is controlled." },
+  { key: "m_livable", name: "Step-free entry and door widths", pr: "H8P1 Livable housing design", dts: "H8D2 Livable housing design", hp: "ABCB Standard for Livable Housing Design (a separate document, not the Housing Provisions)",
+    plain: "A step-free path and entry, 820 mm clear door openings, a toilet on the entry level, reinforced bathroom walls for future grab rails. This one points to its own ABCB Standard, not to the Housing Provisions." },
+  { key: "m_pool", name: "Pool barrier", pr: "H7P1 Swimming pool access", dts: "H7D2 Swimming pools", hp: "AS 1926.1 and AS 1926.2 - no Housing Provisions link",
+    plain: "The exception that proves the pattern. Pool barriers do not go to the Housing Provisions at all: H7D2 in Volume Two points straight to AS 1926.1, and WA varies the clause. Always read the pointer; do not assume." }
+];
+function mapItem(key) { for (var i = 0; i < MAPITEMS.length; i++) if (MAPITEMS[i].key === key) return MAPITEMS[i]; return null; }
+
+// =====================================================================
+// THE STEPS - four tours. Every step has: title, task (what you see), how (what to press),
+// mode, and where to stand. Explain is separate, keyed by tab:key.
+// =====================================================================
+function V(x, z, lx, lz, y) { var v = { x: x, z: z, look: { x: lx, z: lz } }; if (y !== undefined) v.y = y; return v; }
+function frontOf(b, d) { return V(b.x, STREET_Z_FRONT + Math.max(8, (d || 9) * 0.85), b.x, b.z); }
+
+var STREET_STEPS = [
+  { title: "The street: Part A6, building classification", mode: "intro", key: "s_intro", vantage: V(-40, 30, -40, -8, 22),
+    task: "Every building on this street has a class, 1 to 10. Part A6 of the NCC groups buildings by the purpose they are designed, constructed or adapted to be used for, and each class carries its own provisions.\n\nThe classification decides which volume you open: Class 1 and 10 are Volume Two, Class 2 to 9 are Volume One, and plumbing for all of them is Volume Three.\n\nYou will walk the street from east to west. At each building you name the class, and the Explain page gives the clause behind it. Press Next to start." },
+  { title: "Classification is by use, not by shape", mode: "use", key: "s_use", focus: "chameleon", vantage: frontOf(STREET[0], 12),
+    task: "A6G1(1): the classification of a building or part of a building is determined by the purpose for which it is designed, constructed or adapted to be used.\n\nThis box has no class yet. It will be fitted out four ways in turn. Watch the class change while the building does not.",
+    how: "Press Do this step and watch the sign.", watch: "Press Do this step and watch the sign." },
+  { title: "Detached house", mode: "quiz", key: "s_house", focus: "house", vantage: frontOf(STREET[1], 11),
+    task: "One dwelling, one building, on its own lot. Name the class." },
+  { title: "Row of terraces", mode: "quiz", key: "s_terrace", focus: "terrace", vantage: frontOf(STREET[2], 12),
+    task: "Three attached dwellings, each with its own front door. The walls between them, shown in red, are fire-resisting walls. Name the class of the middle one." },
+  { title: "Boarding house", mode: "quiz", key: "s_boarding", focus: "boarding", vantage: frontOf(STREET[3], 12),
+    task: "Ten rooms, ten beds, 260 square metres over two floors, run as a boarding house for unrelated people. Name the class." },
+  { title: "The 1b limits", mode: "beds", key: "s_beds", focus: "boarding", vantage: frontOf(STREET[3], 14),
+    task: "Class 1b has two ceilings: not more than 12 people, and not more than 300 square metres measured over the enclosing walls. Watch what happens to the class as beds are added.",
+    how: "Press Do this step and count the beds.", watch: "Press Do this step and count the beds." },
+  { title: "Apartment building", mode: "quiz", key: "s_apartments", focus: "apartments", vantage: frontOf(STREET[4], 13),
+    task: "Three storeys, six flats, one entry, shared stairs. Name the class." },
+  { title: "Motel", mode: "quiz", key: "s_motel", focus: "motel", vantage: frontOf(STREET[5], 12),
+    task: "Sixteen rooms rented by the night, each with a bathroom. Name the class." },
+  { title: "Shop with a flat above", mode: "quiz", key: "s_shopflat", focus: "shopflat", vantage: frontOf(STREET[6], 11),
+    task: "A pharmacy at street level, and one dwelling above it where the owner lives. There is no other dwelling in the building. Name the classes." },
+  { title: "Office", mode: "quiz", key: "s_office", focus: "office", vantage: frontOf(STREET[7], 13),
+    task: "Solicitors on two floors. Clients come in by appointment; nothing is sold over a counter. Name the class." },
+  { title: "Cafe", mode: "quiz", key: "s_cafe", focus: "cafe", vantage: frontOf(STREET[8], 10),
+    task: "Coffee and food served to anyone who walks in. Name the class." },
+  { title: "Carpark", mode: "quiz", key: "s_carpark", focus: "carpark", vantage: frontOf(STREET[9], 14),
+    task: "An open-deck public carpark. Name the class." },
+  { title: "Wholesale warehouse", mode: "quiz", key: "s_warehouse", focus: "warehouse", vantage: frontOf(STREET[10], 16),
+    task: "Building supplies stored and sold to trade account holders only. The public cannot walk in. Name the class." },
+  { title: "Factory with a small office", mode: "quiz", key: "s_factory", focus: "factory", vantage: frontOf(STREET[11], 17),
+    task: "A joinery workshop, single storey, with an office in one corner taking up 8 percent of the floor. Name the class of the whole storey." },
+  { title: "The 10 percent rule", mode: "tenpc", key: "s_tenpc", focus: "factory", vantage: V(STREET[11].x, STREET[11].z + 14, STREET[11].x, STREET[11].z, 26),
+    task: "Exemption (1) to A6G1: where a part of a storey is used for a different purpose and is less than 10 percent of the floor area of that storey, the classification of the rest of the storey may apply to the whole storey.\n\nYou are above the factory. Watch the office grow from 8 percent to 12 percent and the floor colour split.",
+    how: "Press Do this step and watch the floor.", watch: "Press Do this step and watch the floor." },
+  { title: "Primary school", mode: "quiz", key: "s_school", focus: "school", vantage: frontOf(STREET[12], 15),
+    task: "Classrooms, a library, an assembly area. Name the class." },
+  { title: "Day hospital", mode: "quiz", key: "s_hospital", focus: "hospital", vantage: frontOf(STREET[13], 15),
+    task: "A medical centre with procedure rooms and overnight beds. Name the class." },
+  { title: "Residential aged care", mode: "quiz", key: "s_agedcare", focus: "agedcare", vantage: frontOf(STREET[14], 15),
+    task: "Forty residents who need personal care, with staff on site 24 hours. Name the class." },
+  { title: "Which volume do you open?", mode: "end", key: "s_end", vantage: V(-40, 30, -40, -8, 22),
+    task: "Walk back along the street in your head. Class 1 and 10: Volume Two, and the Housing Provisions behind it. Class 2 to 9: Volume One. Plumbing and drainage for every class: Volume Three.\n\nWhere a building has more than one class, A6G12: each part complies with the requirements for its own class, and where they conflict the more stringent applies.\n\nNext tour: the allotment - what is part of the Class 1, and what is Class 10.", nextTab: "lot", nextLabel: "The allotment" }
+];
+
+var LOT_STEPS = [
+  { title: "The allotment: Class 1 and Class 10 on one lot", mode: "intro", key: "l_intro", vantage: V(-2, 6, -2, 31, 18),
+    task: "One Class 1a house, and a yard full of other things. Some of them are part of the Class 1 building. Some are Class 10a buildings. Some are Class 10b structures. The test is A6G11(1): Class 10 is non-habitable.\n\nYou will walk the lot and the game will tell you which is which. Then the boarding house next door shows where Class 1 ends and Volume One begins. Press Next." },
+  { title: "The house", mode: "look", key: "l_house", focus: "lothouse", vantage: V(-4, 14, -4, 26),
+    task: "A single dwelling. Class 1a under A6G2(2)(a)(i). This is the building that Volume Two and the Housing Provisions are written for." },
+  { title: "The sleepout", mode: "look", key: "l_sleepout", focus: "sleepout", vantage: V(-9, 32.5, -9, 38),
+    task: "A detached bedroom in the back yard. Habitable, so it cannot be Class 10. It is part of the Class 1a building, even though it is a separate structure. The code's own example." },
+  { title: "The entertainment room", mode: "look", key: "l_entroom", focus: "entroom", vantage: V(4, 34, 4, 41),
+    task: "A detached room by the pool with a bar and a couch. Habitable, so again part of the Class 1a. Every provision that applies to the house applies to this room." },
+  { title: "The tool shed", mode: "look", key: "l_shed", focus: "shed", vantage: V(-9.5, 39.9, -9.5, 44),
+    task: "Non-habitable. Class 10a: a non-habitable building including a private garage, carport, shed or the like. A building, not a structure, so the letter is a." },
+  { title: "The carport", mode: "look", key: "l_carport", focus: "carport", vantage: V(5, 13, 5, 21),
+    task: "Also Class 10a. Note the pattern: the a and b letters split Class 10 into buildings and structures." },
+  { title: "Pool, fence, retaining wall", mode: "look", key: "l_pool", focus: "pool", vantage: V(6.5, 36.5, 0, 36),
+    task: "Three Class 10b structures: the pool, the boundary fence and the retaining wall at the back. A6G11(2)(b) lists a fence, mast, antenna, retaining wall or free-standing wall or swimming pool or the like." },
+  { title: "The bushfire shelter", mode: "look", key: "l_shelter", focus: "shelter", vantage: V(-3.5, 38.5, -3.5, 43.5),
+    task: "Class 10c: a private bushfire shelter. Only shelters associated with a single Class 1a dwelling, and the provisions are in Volume Two, H7P6." },
+  { title: "Next door: the 1a to 1b to Class 3 boundary", mode: "look", key: "l_bh", focus: "bh", vantage: V(20, 12, 20, 24),
+    task: "A boarding house. Class 1b while it accommodates not more than 12 people and the total floor area is not more than 300 square metres. Cross either line and it is Class 3, which is Volume One, with fire, egress and access provisions written for a building full of strangers." },
+  { title: "Add a bed", mode: "beds2", key: "l_beds", focus: "bh", vantage: V(20, 12, 20, 24),
+    task: "Watch the count. At 12 it is still Class 1b. The 13th bed changes the volume you have to open.",
+    how: "Press Do this step and watch the count.", watch: "Press Do this step and watch the count." },
+  { title: "What you have seen", mode: "end", key: "l_end", vantage: V(-2, 6, -2, 31, 18),
+    task: "Habitable and going with the house: part of the Class 1. Non-habitable building: 10a. Non-habitable structure: 10b. Bushfire shelter: 10c. And a boarding house is Class 1 only while it stays under 12 people and 300 square metres.\n\nNext tour: the pathway - how the code is structured, and the two routes to compliance.", nextTab: "path", nextLabel: "The pathway" }
+];
+
+var PATH_STEPS = [
+  { title: "The pathway: Part A2, how compliance works", mode: "intro", key: "p_intro", vantage: V(-25, 16, -25, 30),
+    task: "The NCC is a performance-based code. It is built in three layers, and there are two doors through it. The structure will be built in front of you on this lot, then a stair will be taken through both doors.\n\nPress Next to see the three layers." },
+  { title: "Layer one: the Governing Requirements", mode: "build", key: "p_gov", stage: 1, vantage: V(-25, 17, -25, 30),
+    task: "Section A. The ground everything else stands on: how to read the code, how compliance is demonstrated, how buildings are classified, what counts as evidence. A2G1: to comply with the NCC, a solution must meet the Governing Requirements and the Performance Requirements.",
+    how: "Press Do this step to lay the slab.", watch: "Press Do this step to lay the slab." },
+  { title: "Layer two: the Performance Requirements", mode: "build", key: "p_perf", stage: 2, vantage: V(-25, 17, -25, 30),
+    task: "The frame. What the building must achieve, written as outcomes: H1P1, H2P1, H3P1 and so on. They are mandatory. Nothing in the layer above can replace them; it can only show how they are met.",
+    how: "Press Do this step to stand the frame.", watch: "Press Do this step to stand the frame." },
+  { title: "Layer three: the solutions", mode: "build", key: "p_sol", stage: 3, vantage: V(-25, 17, -25, 30),
+    task: "The cladding, in two colours. A Deemed-to-Satisfy Solution follows the DTS Provisions and is deemed to have met the Performance Requirements (A2G3). A Performance Solution meets them directly, by evidence, verification, expert judgement or comparison (A2G2). A2G4: you can combine the two.",
+    how: "Press Do this step to hang the cladding.", watch: "Press Do this step to hang the cladding." },
+  { title: "The stair, through the DTS door", mode: "stairdts", key: "p_dts", vantage: V(-17, 23.5, -17, 27.5),
+    task: "H5P1 is the why: people must be able to move safely to and within the building. H5D2 is one sentence: compliance with Part 11.2 of the Housing Provisions satisfies H5P1 for stairway construction. Part 11.2 is the numbers. Watch the stair build to them.",
+    how: "Press Do this step and watch the stair.", watch: "Press Do this step and watch the stair." },
+  { title: "The stair, through the Performance door", mode: "stairperf", key: "p_perf2", vantage: V(-17, 23.5, -17, 27.5),
+    task: "Same stair, same H5P1, but the riser is now 200 and the going 230. That is outside Table 11.2.2a, so the DTS door is shut. The only way through is a Performance Solution, and A2G2(4) says exactly what that involves. Watch the four documents appear.",
+    how: "Press Do this step and watch.", watch: "Press Do this step and watch." },
+  { title: "What you have seen", mode: "end", key: "p_end", vantage: V(-25, 16, -25, 30),
+    task: "Governing Requirements underneath. Performance Requirements as the frame. Two doors: DTS, which is a pointer to the Housing Provisions for a Class 1; or a Performance Solution, which is a design brief, analysis, evaluation and a report. Most housing goes through the DTS door, which is why the Housing Provisions are the book you actually open.\n\nNext tour: the map - point at any part of the house and follow the chain.", nextTab: "map", nextLabel: "The map" }
+];
+
+function mapStep(key, vantage, task) { var m = mapItem(key); return { title: m.name, mode: "chain", key: key, focus: key, vantage: vantage, task: task || ("Point at it. The chain is on the clipboard.") }; }
+var MAP_STEPS = [
+  { title: "The map: from Volume Two to the Housing Provisions", mode: "intro", key: "m_intro", vantage: V(-4, 12, -4, 26),
+    task: "Volume Two is short. Section H holds the Performance Requirements for a Class 1 and 10 building, and a set of one-line DTS pointers. The content those pointers point to is the Housing Provisions.\n\nThe house in front of you is the index. Each step takes you to one element and shows the chain: the Performance Requirement, the DTS pointer, and the Part of the Housing Provisions that actually has the numbers. In Hands-on mode you can point at any element and read its chain. Press Next." },
+  mapStep("m_slab", V(-4, 13, -4, 22)),
+  mapStep("m_termite", V(-1, 13, -1, 22)),
+  mapStep("m_drain", V(-11, 18, -8, 22)),
+  mapStep("m_wall", V(-13, 24, -10, 26)),
+  mapStep("m_frame", V(-4, 14, -4, 26, 8)),
+  mapStep("m_roof", V(-4, 14, -4, 26, 8)),
+  mapStep("m_window", V(-6, 13, -6, 22)),
+  mapStep("m_firewall", V(5, 24, 2, 26)),
+  mapStep("m_alarm", V(-4, 24, -4, 27)),
+  mapStep("m_bath", V(-7, 24, -8, 28)),
+  mapStep("m_ceiling", V(-2, 24, -2, 27)),
+  mapStep("m_deck", V(-7, 36, -1, 32.5)),
+  mapStep("m_stair", V(-7.5, 37, -3.6, 32.5)),
+  mapStep("m_balustrade", V(7, 36, 0.5, 32.5)),
+  mapStep("m_insul", V(-4, 14, -4, 26, 8)),
+  mapStep("m_flue", V(-4, 14, -3, 26, 8)),
+  mapStep("m_livable", V(-6, 13, -6, 22)),
+  mapStep("m_pool", V(1, 30, 1, 36)),
+  { title: "What you have seen", mode: "end", key: "m_end", vantage: V(-4, 12, -4, 26),
+    task: "Every element follows the same shape: H-P is the outcome, H-D is the pointer, and the Housing Provisions Part is the numbers. Three exceptions worth remembering: framing goes to AS 1684, livable housing goes to its own ABCB Standard, and pool barriers go to AS 1926 without touching the Housing Provisions.\n\nWhen a student cannot find a stair dimension in Volume Two, this is why. Volume Two never had it.", nextTab: "street", nextLabel: "The street" }
+];
+
+// =====================================================================
+// STOREYS - Schedule 1 definition of storey and mezzanine, C2D3 rise in storeys,
+// Table C2D2 Type of construction. Section models, front face cut away, on the
+// south side of the street east of the boarding house.
+// floors: y0 = floor level, h = floor-to-floor, x0/x1 = fraction of the width the floor spans.
+// ground: [[xFrac, y] ...] finished ground profile across the full width (soil drawn each side).
+// =====================================================================
+var STOREY_X0 = 40, STOREY_SP = 24, STOREY_W = 12, STOREY_D = 8, FH = 3.2;
+var MODELS = [
+  { key: "st_a", name: "Two storeys", sign: "Two-storey building", rise: 2, ground: [[0, 0], [1, 0]],
+    floors: [{ y0: 0, h: FH, tag: "Storey 1", counted: true, why: "floor level to the floor level next above" }, { y0: FH, h: FH, tag: "Storey 2", counted: true, why: "floor level to the ceiling or roof above" }] },
+  { key: "st_b", name: "The exclusions", sign: "Stair head, bathroom-only basement, two storeys", rise: 2, ground: [[0, FH], [1, FH]],
+    floors: [{ y0: 0, h: FH, tag: "Bathroom only", counted: false, why: "(a)(ii) a space that contains only a bathroom, laundry or sanitary compartment", x0: 0.3, x1: 0.7, room: "BATHROOM ONLY" }, { y0: FH, h: FH, tag: "Storey 1", counted: true }, { y0: 2 * FH, h: FH, tag: "Storey 2", counted: true }, { y0: 3 * FH, h: 2.6, tag: "Stairway only", counted: false, why: "(a)(i) a space that contains only a lift shaft, stairway or meter room", x0: 0.62, x1: 1, room: "STAIRWAY" }] },
+  { key: "st_c1", name: "Mezzanine", sign: "Room with a mezzanine - no wall", rise: 1, ground: [[0, 0], [1, 0]],
+    floors: [{ y0: 0, h: 2 * FH, tag: "Storey 1", counted: true }, { y0: FH, h: FH, tag: "Mezzanine", counted: false, why: "(b) a mezzanine - an intermediate floor within a room, not separated from it by walls", x0: 0, x1: 0.42, mezz: true, room: "MEZZANINE" }] },
+  { key: "st_c2", name: "Enclosed floor", sign: "Same floor, with a wall - now a storey", rise: 2, ground: [[0, 0], [1, 0]],
+    floors: [{ y0: 0, h: 2 * FH, tag: "Storey 1", counted: true }, { y0: FH, h: FH, tag: "Storey 2", counted: true, why: "walled off from the room, so it is not a mezzanine: it is a storey", x0: 0, x1: 0.42, wall: true, room: "ENCLOSED" }] },
+  { key: "st_d", name: "Greatest number at any part of the wall", sign: "Stepped building on stepped ground", rise: 3, ground: [[0, FH], [0.5, FH], [0.501, 0], [1, 0]],
+    floors: [{ y0: 0, h: FH, tag: "Storey 1", counted: true, x0: 0.5, x1: 1 }, { y0: FH, h: FH, tag: "Storey 2", counted: true }, { y0: 2 * FH, h: FH, tag: "Storey 3", counted: true }] },
+  { key: "st_e1", name: "Partly below ground: counted", sign: "Ceiling more than 1 m above ground", rise: 3, ground: [[0, 1.8], [1, 1.8]],
+    floors: [{ y0: 0, h: FH, tag: "Storey 1", counted: true, why: "ceiling underside 3.0, ground 1.8: 1.2 m above the average finished ground - counted" }, { y0: FH, h: FH, tag: "Storey 2", counted: true }, { y0: 2 * FH, h: FH, tag: "Storey 3", counted: true }] },
+  { key: "st_e2", name: "Partly below ground: not counted", sign: "Ceiling not more than 1 m above ground", rise: 2, ground: [[0, 2.4], [1, 2.4]],
+    floors: [{ y0: 0, h: FH, tag: "Not counted", counted: false, why: "C2D3(2)(b): ceiling underside 3.0, ground 2.4: only 0.6 m above the average finished ground" }, { y0: FH, h: FH, tag: "Storey 1", counted: true }, { y0: 2 * FH, h: FH, tag: "Storey 2", counted: true }] },
+  { key: "st_f", name: "Long wall on a slope: the 12 m rule", sign: "Wall longer than 12 m, sloping ground", rise: 3, ground: [[0, 2.8], [1, 1.0]], twelve: true,
+    floors: [{ y0: 0, h: FH, tag: "Storey 1", counted: true, why: "average over the lowest 12 m of the wall: ceiling about 1.4 m above it - counted" }, { y0: FH, h: FH, tag: "Storey 2", counted: true }, { y0: 2 * FH, h: FH, tag: "Storey 3", counted: true }] },
+  { key: "st_g", name: "Plant on the top", sign: "Plant room and lift motor room on the roof", rise: 2, ground: [[0, 0], [1, 0]],
+    floors: [{ y0: 0, h: FH, tag: "Storey 1", counted: true }, { y0: FH, h: FH, tag: "Storey 2", counted: true }, { y0: 2 * FH, h: 2.6, tag: "Not counted", counted: false, why: "C2D3(2)(a): at the top of the building and contains only heating, ventilating or lift equipment, water tanks or similar", room: "PLANT - LIFT MOTOR ROOM" }] },
+  { key: "st_h1", name: "Class 7 or 8, one tall storey", sign: "Warehouse, 7 m internal height, nothing above", rise: 1, ground: [[0, 0], [1, 0]],
+    floors: [{ y0: 0, h: 7.2, tag: "Storey 1", counted: true, why: "C2D3(3)(a): over 6 m, but the only storey above the ground - counted as one", room: "WAREHOUSE" }] },
+  { key: "st_h2", name: "Class 7 or 8, tall storey with offices above", sign: "Same warehouse, offices on top", rise: 3, ground: [[0, 0], [1, 0]],
+    floors: [{ y0: 0, h: 7.2, tag: "Storeys 1 and 2", counted: true, double: true, why: "C2D3(3)(b): over 6 m and not the only storey - counted as two", room: "WAREHOUSE" }, { y0: 7.2, h: FH, tag: "Storey 3", counted: true, room: "OFFICES" }] },
+  { key: "st_i1", name: "Mezzanine under the limit", sign: "450 m2 room, 120 m2 mezzanine", rise: 1, ground: [[0, 0], [1, 0]],
+    floors: [{ y0: 0, h: 2 * FH, tag: "Storey 1", counted: true, room: "ROOM 450 m2" }, { y0: FH, h: FH, tag: "Mezzanine 120 m2", counted: false, why: "limit is 200 m2 or one third of the room, whichever is less: one third of 450 is 150. 120 is under - not a storey", x0: 0.62, x1: 1, mezz: true, room: "MEZZ 120 m2" }] },
+  { key: "st_i2", name: "Mezzanine over the limit", sign: "450 m2 room, 180 m2 mezzanine", rise: 2, ground: [[0, 0], [1, 0]],
+    floors: [{ y0: 0, h: 2 * FH, tag: "Storey 1", counted: true, room: "ROOM 450 m2" }, { y0: FH, h: FH, tag: "Storey 2", counted: true, why: "C2D3(4)(a): 180 is over the 150 limit, so for rise in storeys the mezzanine is regarded as a storey", x0: 0.45, x1: 1, mezz: true, room: "MEZZ 180 m2" }] }
+];
+MODELS.forEach(function (m, i) { m.x = STOREY_X0 + i * STOREY_SP; m.z = 16 + STOREY_D / 2; m.w = STOREY_W; m.d = STOREY_D; var top = 0; m.floors.forEach(function (f) { top = Math.max(top, f.y0 + f.h); }); m.h = top; });
+function modelByKey(k) { for (var i = 0; i < MODELS.length; i++) if (MODELS[i].key === k) return MODELS[i]; return null; }
+function modelV(m, d, y) { return V(m.x, 16 - Math.max(6, (d || 10) * 0.65), m.x, m.z + 1, y); }
+
+var STOREY_STEPS = [
+  { title: "Storeys: what counts, and why it matters", mode: "intro", key: "t_intro", vantage: V(100, -6, 100, 20, 20),
+    task: "Nearly every fire provision in Volume One starts from one number: the rise in storeys. Table C2D2 turns it, with the class, into the Type of construction, A, B or C, and the Type decides the fire resistance of every element in the building.\n\nSo the count has to be right. Schedule 1 defines a storey. C2D3 says how to calculate the rise. Thirteen section models along this side of the street show every rule in the definition and the calculation, one at a time. The front face of each is cut away so you can see the floors. Press Next." },
+  { title: "What a storey is", mode: "count", key: "t_a", focus: "st_a", vantage: modelV(modelByKey("st_a"), 11),
+    task: "Schedule 1: a storey is a space within a building situated between one floor level and the floor level next above, or if there is no floor above, the ceiling or roof above. Count this one.", how: "Press Do this step and watch each floor get tagged.", watch: "Press Do this step and watch each floor get tagged." },
+  { title: "The exclusions", mode: "count", key: "t_b", focus: "st_b", vantage: modelV(modelByKey("st_b"), 13),
+    task: "The definition then lists what is not a storey: a space that contains only a lift shaft, stairway or meter room; only a bathroom, shower room, laundry, water closet or sanitary compartment; only accommodation for not more than 3 vehicles; or a combination of those. They have low occupancy and low fire load. This building has four floor levels.", how: "Press Do this step. Four levels, two storeys.", watch: "Press Do this step. Four levels, two storeys." },
+  { title: "A mezzanine is not a storey", mode: "count", key: "t_c1", focus: "st_c1", vantage: modelV(modelByKey("st_c1"), 11),
+    task: "Schedule 1: a mezzanine is an intermediate floor within a room, that is not separated from that room by walls. The definition of storey excludes it outright at (b). This room has a mezzanine, open to the room, with a handrail.", how: "Press Do this step.", watch: "Press Do this step." },
+  { title: "Wall it off and it is a storey", mode: "count", key: "t_c2", focus: "st_c2", vantage: modelV(modelByKey("st_c2"), 11),
+    task: "Same floor at the same height, but now a wall separates it from the room. It no longer meets the definition of mezzanine, so the exclusion is gone: it is a space between one floor level and the ceiling above. A storey.", how: "Press Do this step.", watch: "Press Do this step." },
+  { title: "Rise in storeys: the greatest number at any part of the wall", mode: "count", key: "t_d", focus: "st_d", vantage: modelV(modelByKey("st_d"), 13),
+    task: "C2D3(1): the rise in storeys is the sum of the greatest number of storeys at any part of the external walls of the building, and any storeys within the roof space, above the finished ground next to that part. The ground steps, and so does the building. On the left the wall shows two storeys; on the right, three. The building takes the greater.", how: "Press Do this step.", watch: "Press Do this step." },
+  { title: "Partly below ground: the 1 m test", mode: "count", key: "t_e1", focus: "st_e1", vantage: modelV(modelByKey("st_e1"), 12),
+    task: "C2D3(2)(b): a storey partly below the finished ground is not counted if the underside of its ceiling is not more than 1 m above the average finished level of the ground at the external wall. Here the lowest floor is 1.8 m into the ground and its ceiling is 3.0 up, so the ceiling sits 1.2 m above ground.", how: "Press Do this step.", watch: "Press Do this step." },
+  { title: "Same building, deeper", mode: "count", key: "t_e2", focus: "st_e2", vantage: modelV(modelByKey("st_e2"), 12),
+    task: "Now the ground is at 2.4 m. The ceiling of the lowest floor is 0.6 m above it, not more than 1 m. That floor drops out of the count. A fully buried basement fails the test the same way.", how: "Press Do this step.", watch: "Press Do this step." },
+  { title: "A long wall on a slope: the 12 m rule", mode: "count", key: "t_f", focus: "st_f", vantage: modelV(modelByKey("st_f"), 14),
+    task: "The ground falls 1.8 m across this wall. Averaging the whole wall would flatter the building. C2D3(2)(b): if the external wall is more than 12 m long, take the average for the 12 m part where the ground is lowest. The bracket shows that 12 m.", how: "Press Do this step.", watch: "Press Do this step." },
+  { title: "Plant on the top storey", mode: "count", key: "t_g", focus: "st_g", vantage: modelV(modelByKey("st_g"), 12),
+    task: "C2D3(2)(a): a storey is not counted if it is at the top of the building and contains only heating, ventilating or lift equipment, water tanks, or similar service units or equipment. Low occupancy, low fire load, same reasoning as the exclusions in the definition.", how: "Press Do this step.", watch: "Press Do this step." },
+  { title: "Class 7 or 8: one tall storey", mode: "count", key: "t_h1", focus: "st_h1", vantage: modelV(modelByKey("st_h1"), 14),
+    task: "A warehouse with a 7 m internal height. C2D3(3) is a special rule for Class 7 and 8 buildings: a storey with an average internal height of more than 6 m is counted as one storey if it is the only storey above the ground.", how: "Press Do this step.", watch: "Press Do this step." },
+  { title: "Class 7 or 8: tall storey with offices above", mode: "count", key: "t_h2", focus: "st_h2", vantage: modelV(modelByKey("st_h2"), 15),
+    task: "Same warehouse, with an office floor on top. Now the tall storey is not the only storey above the ground, and C2D3(3)(b) counts it as two. Two floor levels, rise in storeys of three, and Table C2D2 moves a Class 5 to 8 building from Type C to Type B.", how: "Press Do this step.", watch: "Press Do this step." },
+  { title: "Mezzanine under the limit", mode: "count", key: "t_i1", focus: "st_i1", vantage: modelV(modelByKey("st_i1"), 12),
+    task: "The definition excludes mezzanines, but C2D3(4) brings the big ones back for the rise calculation: a mezzanine is regarded as a storey if its floor area is more than 200 square metres or more than one third of the floor area of the room, whichever is the lesser. The room is 450, so the limit is 150. This mezzanine is 120.", how: "Press Do this step.", watch: "Press Do this step." },
+  { title: "Mezzanine over the limit", mode: "count", key: "t_i2", focus: "st_i2", vantage: modelV(modelByKey("st_i2"), 12),
+    task: "Same room, mezzanine now 180 square metres, over the 150 limit. For rise in storeys it counts. C2D3(4)(b): two or more mezzanines at or near the same level are added together and tested the same way.", how: "Press Do this step.", watch: "Press Do this step." },
+  { title: "Table C2D2: what the number decides", mode: "quiz", key: "t_q1", vantage: V(100, -6, 100, 20, 20),
+    task: "A Class 5 office building with a rise in storeys of 3. What Type of construction does Table C2D2 require?", options: ["Type A", "Type B", "Type C", "No Type - it is Volume Two"], answer: 1,
+    why: "Table C2D2: Class 5, 6, 7 or 8 with a rise of 3 is Type B. Class 2, 3 or 9 with a rise of 3 would be Type A. Four or more is Type A for every class." },
+  { title: "One more", mode: "quiz", key: "t_q2", vantage: V(100, -6, 100, 20, 20),
+    task: "A Class 2 apartment building with a rise in storeys of 2, and a plant room on the roof containing only lift equipment. What Type?", options: ["Type A", "Type B", "Type C", "Type B, or Type C under C2D6"], answer: 3,
+    why: "The plant room is not counted, so the rise stays at 2. Table C2D2: Class 2 with a rise of 2 is Type B. C2D6 allows Type C for a two-storey Class 2 if each sole-occupancy unit has access to at least two exits or its own direct access to a road or open space." },
+  { title: "What you have seen", mode: "end", key: "t_end", vantage: V(100, -6, 100, 20, 20),
+    task: "A storey is floor level to the next floor level, or to the ceiling, but not a space with only a stair, lift, meter room, bathroom, laundry, sanitary compartment or three-car garage, and not a mezzanine. The rise in storeys is the greatest count at any part of the external wall; drop a top storey that is only plant, and drop a partly buried storey whose ceiling is not more than 1 m above the average ground, using the lowest 12 m of a long wall. In a Class 7 or 8, a storey over 6 m is two unless it is the only one. A mezzanine over 200 square metres or a third of the room, whichever is less, comes back into the count.\n\nThen Table C2D2.", nextTab: "street", nextLabel: "The street" }
+];
+var STOREY_EXPLAIN = {
+  t_intro: { terms: [["Rise in storeys", "Schedule 1: the greatest number of storeys calculated in accordance with C2D3 of Volume One."], ["Type of construction", "Type A, B or C. A is the most fire-resisting. Table C2D2 fixes it from the rise in storeys and the class; Specification 5 then gives the FRL of each element for that Type."]], working: ["Table C2D2. Class 2, 3, 9: rise 1 Type C, rise 2 Type B, rise 3 Type A, 4 or more Type A.", "Class 5, 6, 7, 8: rise 1 Type C, rise 2 Type C, rise 3 Type B, 4 or more Type A.", "C2D4: in a building of multiple classifications, apply the class of the top storey to all storeys and take the most fire-resisting result.", "Volume Two uses the same definition of storey; a two-storey Class 1a is a two-storey Class 1a by this test."] },
+  t_a: { terms: [["Storey", "A space within a building situated between one floor level and the floor level next above, or if there is no floor above, the ceiling or roof above."], ["Floor level", "The top of the floor. Floor-to-floor is what is measured, not floor-to-ceiling."]], working: ["Ground floor level to first floor level: one storey.", "First floor level to the ceiling: one storey.", "Two."] },
+  t_b: { terms: [["Sanitary compartment", "A room or space containing a closet pan or urinal."], ["Meter room", "A room containing only meters and the like."], ["Not more than 3 vehicles", "A garage for up to three cars is not a storey. A fourth car makes it one."]], working: ["Basement: bathroom only. Excluded by (a)(ii).", "Ground and first: storeys.", "Stair head at the top: stairway only. Excluded by (a)(i).", "Four floor levels, two storeys."] },
+  t_c1: { terms: [["Mezzanine", "Schedule 1: an intermediate floor within a room, that is not separated from that room by walls."], ["Handrail, not wall", "A balustrade or handrail at the mezzanine edge does not separate it from the room. A wall does."]], working: ["Definition of storey, (b): not a mezzanine.", "One storey, floor to ceiling, with a mezzanine inside it.", "Until C2D3(4) is applied, which is a later model."] },
+  t_c2: { terms: [["Enclosed", "Separated from the room by walls. It is then a room of its own, and the space from its floor to the ceiling above is a storey."]], working: ["The floor did not change. The wall did.", "Two storeys."] },
+  t_d: { terms: [["Greatest number at any part", "Walk around the outside. Wherever the wall shows the most storeys above the finished ground next to it, that is the rise."], ["Finished ground", "The ground as it is after the site works. On a boundary wall, C2D3(1)(b) uses natural ground level at the boundary instead."]], working: ["Left wall: two storeys above the ground next to it.", "Right wall: three.", "Rise in storeys: three. The whole building is treated as three."] },
+  t_e1: { terms: [["Average finished level of the ground", "The ground level along the external wall, averaged."], ["Underside of the ceiling", "The measurement point for the 1 m test. Not the floor, not the top of the wall."]], working: ["Floor level 0. Ceiling underside 3.0. Ground 1.8.", "3.0 minus 1.8 equals 1.2. More than 1 m.", "Counted. Rise three."] },
+  t_e2: { terms: [["Not more than 1 m", "Exactly 1 m is out. 1.01 m is in."]], working: ["Ceiling underside 3.0. Ground 2.4.", "3.0 minus 2.4 equals 0.6. Not more than 1 m.", "Not counted. Rise two.", "A fully buried basement: ceiling below ground, so the number is negative. Not counted."] },
+  t_f: { terms: [["The 12 m part where the ground is lowest", "Slide a 12 m window along the wall to where the ground is lowest, and average the ground level inside that window only."]], working: ["Wall 12 m long here, so the whole wall is the window in this model; on a 30 m wall you would take the lowest 12 m of it.", "Ground falls from 2.8 to 1.0 across the wall. On the low side the ceiling clears the ground by 2.0 m; on the high side by 0.2 m.", "Average over the lowest 12 m is well over 1 m. Counted. Rise three.", "Averaging a 40 m wall that mostly sits high would have hidden that."] },
+  t_g: { terms: [["Service units or equipment", "Heating, ventilating or lift equipment, water tanks, or similar. Add an office up there and the storey counts."]], working: ["C2D3(2)(a). At the top, and containing only plant.", "Two storeys plus a plant level: rise two."] },
+  t_h1: { terms: [["Average internal height", "Floor to underside of the roof or ceiling, averaged across the storey."], ["Only storey above the ground", "Nothing above it that counts as a storey."]], working: ["C2D3(3)(a): 7 m, but the only storey. Counted as one.", "Rise one. Type C for a Class 7 or 8."] },
+  t_h2: { terms: [["Any other case", "The tall storey with anything else above it."]], working: ["C2D3(3)(b): 7 m and not the only storey. Counted as two.", "Two plus the office floor: rise three.", "Table C2D2, Class 5 to 8, rise three: Type B. The office floor cost the owner a Type."] },
+  t_i1: { terms: [["Whichever is the lesser", "Work out both limits, 200 square metres and one third of the room, and use the smaller one."]], working: ["Room 450. One third is 150. 200 is bigger, so the limit is 150.", "Mezzanine 120. Under. Not a storey for the rise. Rise one."] },
+  t_i2: { terms: [["Aggregate", "C2D3(4)(b): two or more mezzanines at or near the same level are added together before the test."]], working: ["Limit still 150.", "Mezzanine 180. Over. Regarded as a storey for the rise. Rise two.", "It is still a mezzanine for every other purpose in the code; C2D3(4) only reaches the rise calculation."] },
+  t_q1: { terms: [], working: ["Table C2D2, Class 5, 6, 7, 8 column: rise 3 is Type B."] },
+  t_q2: { terms: [["C2D6", "A building with a rise of 2 may be Type C if it is Class 2 or 3 and each sole-occupancy unit has access to at least two exits or its own direct access to a road or open space; or a sprinklered Class 9c within the Type C compartment size."]], working: ["Plant room: not counted. Rise 2.", "Table C2D2, Class 2 column: rise 2 is Type B.", "C2D6 may take it to Type C if the exits condition is met."] },
+  t_end: { terms: [], working: ["Definition: Schedule 1, storey and mezzanine.", "Calculation: C2D3(1) to (4).", "Consequence: Table C2D2, then Specification 5."] }
+};
+
+// =====================================================================
+// VOLUME ONE - Sections B to J, the Specifications, and how a Specification
+// takes its status from the clause that calls it. Monument on the second vacant lot.
+// =====================================================================
+var VAC2 = { x0: -60, x1: -38, z0: 16, z1: 46 }, V1C = { x: -49, z: 30 };
+var SPEC_NAMES = { 1: "Fire-resistance of building elements", 3: "Fire hazard properties", 5: "Fire-resisting construction", 13: "Service penetrations", 17: "Fire sprinkler systems", 20: "Smoke detection and alarm", 26: "Wet area waterproofing", 28: "Sound insulation", 34: "Modelling parameters for J1V3", 35: "Modelling profiles for J1V3" };
+var V1_STEPS = [
+  { title: "Volume One: the same pathway, one more link", mode: "intro", key: "v_intro", vantage: V(V1C.x, 12, V1C.x, V1C.z, 16),
+    task: "Volume One is Class 2 to 9. Section A is the same Section A. The Performance Requirements are the same idea, now across nine Sections, B to J. The two doors are the same two doors.\n\nWhat is new is where the DTS door leads. In Volume Two it points outward, to the Housing Provisions. In Volume One it points inward, to 48 Specifications bound into the back of the same book. The monument on this lot will be built again with the Volume One shape, and one chain will be run through each door. Press Next." },
+  { title: "Section A, again", mode: "v1build", key: "v_gov", stage: 1, vantage: V(V1C.x, 17, V1C.x, V1C.z),
+    task: "Same slab. The Governing Requirements are written once and apply to all three volumes. A1G1 is the scope of Volume One; A6 classifies the building; A2 is how compliance is shown. Nothing here changes between volumes.", how: "Press Do this step.", watch: "Press Do this step." },
+  { title: "Nine Sections of Performance Requirements", mode: "v1build", key: "v_perf", stage: 2, vantage: V(V1C.x, 17, V1C.x, V1C.z),
+    task: "The frame, with a beam for each technical Section: B Structure, C Fire resistance, D Access and egress, E Services and equipment, F Health and amenity, G Ancillary provisions, I Special use buildings, J Energy efficiency. There is no Section H in Volume One; H is Volume Two. Each beam carries its P clauses, C1P1 to C1P9 for fire, and they are mandatory.", how: "Press Do this step.", watch: "Press Do this step." },
+  { title: "The two doors, with Volume One wording", mode: "v1build", key: "v_doors", stage: 3, vantage: V(V1C.x, 17, V1C.x, V1C.z),
+    task: "The DTS door in Section C is C2D1: where a Deemed-to-Satisfy Solution is proposed, C1P1 to C1P9 are satisfied by complying with C2D2 to C2D15, C3D2 to C3D15 and C4D2 to C4D17. Every Section has a D1 clause that says the same thing for its own Parts. The Performance door is A2G2, unchanged, and C2D1(2) points straight back to it.", how: "Press Do this step.", watch: "Press Do this step." },
+  { title: "The Specifications", mode: "v1build", key: "v_specs", stage: 4, vantage: V(V1C.x, 20, V1C.x, V1C.z),
+    task: "Behind the doors, a shelf of 48 Specifications. Specification 1 is how fire resistance is proved by test. 5 is the FRL tables for Type A, B and C. 17 sprinklers, 20 smoke detection, 26 wet areas, 28 sound, 34 to 48 the energy modelling rules. A Specification is detail that was too long, or too reusable, to sit inside a clause. On its own it has no standing at all.", how: "Press Do this step.", watch: "Press Do this step." },
+  { title: "How to read a clause number", mode: "anatomy", key: "v_anatomy", vantage: V(V1C.x, 17, V1C.x, V1C.z),
+    task: "Section, Part, Type, Clause. S5C21: S means Specification rather than a Section letter, because one Specification can be called from several Sections. 5 is the Specification number, numbered across all three volumes. C is the clause type. 21 is the clause. The type letter tells you the status: G governing, O objective, F functional statement, P performance requirement, V verification method, D deemed-to-satisfy, C a Specification clause.", how: "Press Do this step and watch the letters.", watch: "Press Do this step and watch the letters." },
+  { title: "Through the DTS door: a Class 5 office, rise 3", mode: "v1chain", key: "v_chain1", vantage: V(V1C.x + 4, 18, V1C.x + 3, V1C.z),
+    task: "One building, one element, followed all the way down. A Class 5 office with a rise in storeys of 3, and its loadbearing external wall, 5 m from the side boundary. What FRL must that wall have? Watch the chain light up, link by link.", how: "Press Do this step.", watch: "Press Do this step." },
+  { title: "Through the Performance door: J1V3", mode: "v1chain2", key: "v_chain2", vantage: V(V1C.x + 4, 18, V1C.x + 3, V1C.z),
+    task: "Specifications also serve the Performance side. J1V3 is a Verification Method for energy efficiency: model the proposed building against a reference building using Specification 34 and Specification 35. A Verification Method is optional, so the Specifications it calls are optional too. Same shelf, different door, different status.", how: "Press Do this step.", watch: "Press Do this step." },
+  { title: "Status test", mode: "quiz", key: "v_q1", vantage: V(V1C.x, 17, V1C.x, V1C.z),
+    task: "A designer takes the DTS route for a Type B building. C2D2(2) says each building element must comply with Specification 5. What is the status of Specification 5 for that building?", options: ["Optional - Specifications are guidance", "Mandatory - called up by a DTS Provision on the route taken", "Mandatory only if the certifier asks", "It is a Performance Requirement"], answer: 1,
+    why: "A Specification takes its status from the clause that calls it. C2D2 is a DTS Provision, the designer chose the DTS door, so C2D2(2) applies and Specification 5 is mandatory for that building. Through the Performance door, Specification 5 would only be one way of demonstrating C1P1." },
+  { title: "One more", mode: "quiz", key: "v_q2", vantage: V(V1C.x, 17, V1C.x, V1C.z),
+    task: "A student quotes C1O1 as the requirement a wall must meet. What is C1O1?", options: ["A Performance Requirement - mandatory", "A DTS Provision", "An Objective - guidance, not a requirement", "A Governing Requirement"], answer: 2,
+    why: "O is Objective. O and F clauses are guidance that explains why the Performance Requirements exist. The mandatory clause is C1P1. Reading the type letter is the whole skill." },
+  { title: "What you have seen", mode: "end", key: "v_end", vantage: V(V1C.x, 12, V1C.x, V1C.z, 16),
+    task: "Same slab, same frame, same two doors. In Volume One the DTS door leads to D clauses in nine Sections, and the D clauses call up Specifications, which are then mandatory. The Performance door leads to A2G2, and Verification Methods call up Specifications too, where they are optional.\n\nVolume Two: the D clause points to the Housing Provisions. Volume One: the D clause points to a Specification. Same move, different destination.", nextTab: "street", nextLabel: "The street" }
+];
+var V1_EXPLAIN = {
+  v_intro: { terms: [["Volume One", "Class 2 to 9 buildings, plus disability access for Class 1b and 10a and certain 10b structures. Sections A to J, no H, then Schedules and 48 Specifications."], ["Specification", "A body of technical detail at the back of the volume, numbered across all three volumes, given force only by the clause that calls it up."]], working: ["Governing Requirements: Section A.", "Performance Requirements: B to J, the P clauses.", "DTS Provisions: the D clauses, which call up Specifications.", "Performance Solutions: A2G2, with Verification Methods, the V clauses, which may also call up Specifications."] },
+  v_gov: { terms: [["A1G1", "Scope of Volume One."], ["A2G1", "To comply, a solution must meet the Governing Requirements and the Performance Requirements."]], working: ["Section A is common to Volumes One, Two and Three."] },
+  v_perf: { terms: [["P clause", "Performance Requirement. Mandatory. C1P1: a building must have elements which will, to the degree necessary, maintain structural stability during a fire appropriate to the function, the fire load, the fire intensity, the fire hazard and so on."], ["O and F clauses", "Objective and Functional Statement. Guidance. They explain the intent of the P clauses and are not requirements."]], working: ["B Structure, C Fire resistance, D Access and egress, E Services and equipment, F Health and amenity, G Ancillary provisions, I Special use buildings, J Energy efficiency.", "Each Part 1 of each Section holds the O, F, P and V clauses. Parts 2 onward hold the D clauses."] },
+  v_doors: { terms: [["C2D1", "The DTS door for fire resistance: C1P1 to C1P9 are satisfied by complying with C2D2 to C2D15, C3D2 to C3D15 and C4D2 to C4D17, plus Parts G3, G6, I1 or I3 where they apply."], ["C2D1(2)", "Where a Performance Solution is proposed, the relevant Performance Requirements must be determined in accordance with A2G2(3) and A2G4(3)."]], working: ["Every Section has this pair: a D1 clause naming the DTS Provisions, and a pointer back to A2G2 for the other door.", "B1D1, C2D1, D2D1, E1D1 and so on."] },
+  v_specs: { terms: [["Called up", "A clause names the Specification and says comply with it. That is the only way a Specification acquires force."], ["Mandatory or optional", "Preface to the NCC: clauses in Specifications may be mandatory or optional, depending on how the Specification is called up by the NCC."]], working: ["Specification 1: fire-resistance of building elements - how an FRL is established by test to AS 1530.4.", "Specification 5: fire-resisting construction - the FRL tables for Type A, B and C.", "Specification 17: sprinklers. 20: smoke detection. 26: wet areas. 28: sound.", "Specifications 34 to 48: the energy efficiency modelling rules for Section J."] },
+  v_anatomy: { terms: [["SPTC", "Section - Part - Type - Clause. The NCC's uniform numbering across all three volumes."], ["The S prefix", "Used in place of a Section letter because the same Specification may be called up in several different Sections."]], working: ["S5C21: Specification 5, clause 21. Type B fire-resisting construction.", "C2D2: Section C, Part 2, Deemed-to-Satisfy, clause 2.", "C1P1: Section C, Part 1, Performance Requirement, clause 1.", "J1V3: Section J, Part 1, Verification Method, clause 3.", "G governing: mandatory. O objective, F functional statement: guidance. P performance requirement: mandatory. V verification method: optional. D deemed-to-satisfy: optional. C specification clause: mandatory or optional, depending on how it is called up."] },
+  v_chain1: { terms: [["Fire-source feature", "The far boundary of a road, a side or rear boundary, or an external wall of another building on the same allotment. Distance to it sets the FRL."], ["FRL", "Fire resistance level: structural adequacy / integrity / insulation, in minutes, from a test to AS 1530.4 under Specification 1."]], working: ["Class 5, rise in storeys 3. Table C2D2: Type B.", "C2D2(2): each building element must comply with Specification 5.", "S5C21(1)(a): each element in Tables S5C21a to S5C21g must have the FRL listed.", "Table S5C21a, loadbearing external wall, Class 5, 3 m to less than 9 m from a fire-source feature: 120/30/30.", "Six links. The number lives at the bottom of the chain, in a Specification, called up by a D clause."] },
+  v_chain2: { terms: [["Verification Method", "An optional way of showing a Performance Requirement is met, by test, calculation or modelling. A V clause."], ["J1V3", "Verification using a reference building: the proposed building's annual emissions modelled against a reference building, with the modelling parameters of Specification 34 and the profiles of Specification 35."]], working: ["J1P1 is the Performance Requirement.", "J1V3 is one optional route to it.", "J1V3 calls up Specification 34 and 35 for the modelling rules.", "Optional route, so the Specifications are optional too: use them only if you use J1V3."] },
+  v_q1: { terms: [], working: ["C2D2 is a D clause. The route taken was DTS. C2D2(2) applies. Specification 5 is mandatory for that building."] },
+  v_q2: { terms: [], working: ["Type letter O: Objective. Guidance.", "The requirement is C1P1."] },
+  v_end: { terms: [], working: ["Volume Two D clause: comply with Part 11.2 of the Housing Provisions.", "Volume One D clause: each building element must comply with Specification 5.", "Same move, different destination."] }
+};
+
+var TOURS = { street: STREET_STEPS, lot: LOT_STEPS, path: PATH_STEPS, map: MAP_STEPS, storeys: STOREY_STEPS, v1: V1_STEPS };
+var TABS = [["street", "The street"], ["lot", "The allotment"], ["path", "The pathway"], ["map", "The map"], ["storeys", "Storeys"], ["v1", "Volume One"]];
+Object.keys(TOURS).forEach(function (k) { TOURS[k].forEach(function (s, i) { s.n = i; }); });
+
+// =====================================================================
+// EXPLAIN - the words, and the clause, for each step. Keyed by step key.
+// =====================================================================
+var EXPLAIN = {
+  s_intro: { terms: [["Classification", "The class a building or part is given from its use. Part A6, clauses A6G1 to A6G12."], ["Volume One", "Class 2 to 9 buildings. Sections B to J."], ["Volume Two", "Class 1 and 10 buildings. Section H, with the ABCB Housing Provisions holding the DTS content."], ["Volume Three", "The Plumbing Code of Australia. All classes."]], working: ["A6G1(2): each part of a building must be classified according to its purpose and comply with all the appropriate requirements for its classification.", "A6G1(3): a plant room, switch room or the like takes the classification of the part of the building it serves.", "A6G1(4): an occupiable outdoor area takes the classification of the part it is associated with, unless another is more suitable."] },
+  s_use: { terms: [["Purpose", "What the building is designed, constructed or adapted to be used for. Not what it looks like, and not what it was built as."], ["Adapted", "A change of use is a change of class. A warehouse converted to apartments becomes Class 2 and has to meet Class 2 provisions."]], working: ["The same 10 by 12 box: accountants - Class 5. Homewares open to the public - Class 6. Trade-only storage - Class 7b. Packing - Class 8.", "Four classes, four sets of provisions, one building. This is why the first question on any job is what it is for."] },
+  s_house: { terms: [["Dwelling", "A place where people live. Class 1 is a dwelling; Class 1a is a single dwelling."], ["Detached", "Standing on its own, not attached to another dwelling."]], working: ["A6G2(1): a Class 1 building is a dwelling.", "A6G2(2)(a): Class 1a is one or more buildings, which together form a single dwelling, including a detached house."] },
+  s_terrace: { terms: [["Fire-resisting wall", "A wall with a fire resistance level, built to Part 9.3 of the Housing Provisions, that separates one dwelling from the next. It is what makes each terrace a separate building."], ["Sole-occupancy unit", "A room or set of rooms in one occupancy - in a Class 2 building, one flat."]], working: ["A6G2(2)(a)(ii): one of a group of two or more attached dwellings, each being a building, separated by a fire-resisting wall, including a row house, terrace house, town house or villa unit.", "Take the fire-resisting wall away and you have one building with three sole-occupancy units: A6G3, Class 2, Volume One."] },
+  s_boarding: { terms: [["Class 1b", "A small boarding house, guest house or hostel, or four or more holiday dwellings on one lot. It is Class 1 because the risk is judged to be closer to a house than to a hotel."], ["Total area of all floors", "Measured over the enclosing walls. Not net lettable area."]], working: ["A6G2(2)(b)(i)(A): would ordinarily accommodate not more than 12 people.", "A6G2(2)(b)(i)(B): have a total area of all floors not more than 300 square metres.", "Both limits must hold. Ten people and 260 square metres: Class 1b."] },
+  s_beds: { terms: [["Ordinarily accommodate", "The number of people it is set up for in normal use, not the maximum you could squeeze in."]], working: ["Beds 1 to 12: Class 1b, Volume Two.", "Bed 13: not more than 12 no longer holds. A6G4(2)(a): a boarding house is Class 3. Volume One.", "Class 3 brings fire compartmentation, egress, accessible units and a different sound and energy regime. The 13th bed is expensive."] },
+  s_apartments: { terms: [["Sole-occupancy unit", "A room or set of rooms in one occupancy. Each flat is one."], ["Separate dwelling", "Each unit is a home in its own right, with its own kitchen and bathroom."]], working: ["A6G3(1): a Class 2 building is a building containing two or more sole-occupancy units.", "A6G3(2): each sole-occupancy unit in a Class 2 building must be a separate dwelling.", "Class 2 does not require the flats to be stacked; side by side without fire-resisting walls between them is still Class 2."] },
+  s_motel: { terms: [["Transient accommodation", "People who stay for a short time and do not know the building."], ["Class 2 or 3?", "The code admits this is a fine line. Short-term holiday flats and motel rooms with kitchens can look identical. The authority decides on the most likely use and the risk."]], working: ["A6G4(1): a Class 3 building is a residential building providing long-term or transient accommodation for a number of unrelated persons.", "A6G4(2)(b): a residential part of a hotel or motel.", "The occupants have minimum control over the safety of the building, so the code asks for more."] },
+  s_shopflat: { terms: [["Class 4", "A dwelling in a Class 5, 6, 7, 8 or 9 building, if it is the only dwelling in the building. Two flats above the shop and it is a Class 2 part instead."], ["Multiple classification", "A6G12. One building, more than one class, each part meeting its own provisions."]], working: ["A6G7: Class 6 is a shop, or other building for the sale of goods by retail or the supply of services direct to the public.", "A6G5: Class 4 is a dwelling in a Class 5, 6, 7, 8 or 9 building if it is the only dwelling in the building.", "Application to A6G12: a building must comply with all the relevant requirements that apply to each of its classifications."] },
+  s_office: { terms: [["Professional or commercial purposes", "Work done at desks: law, accounting, design, administration."]], working: ["A6G6: a Class 5 building is an office building used for professional or commercial purposes, excluding buildings of Class 6, 7, 8 or 9."] },
+  s_cafe: { terms: [["Direct to the public", "The test for Class 6. Anyone can walk in and buy."]], working: ["A6G7(2) lists the kinds: an eating room, cafe, restaurant, milk bar, kiosk, dining room, bar, shop or kiosk part of a hotel or motel, hairdresser, barber, public laundry, undertaker, market, sale room, showroom, service station."] },
+  s_carpark: { terms: [["Class 7a", "A carpark."], ["Class 7b", "Storage, or display of goods for sale by wholesale."]], working: ["A6G8: Class 7 is split by letter. Same number, different provisions, because a carpark full of petrol tanks and a warehouse full of pallets burn differently."] },
+  s_warehouse: { terms: [["Wholesale", "Selling to trade or to other businesses, not to the public."]], working: ["A6G8(2)(b): a building that is for storage, or display of goods for sale by wholesale.", "Explanatory Information to A6G12: if the general public has access to the building, it is considered a shop, and therefore a Class 6 building. The door policy decides the class."] },
+  s_factory: { terms: [["Process for trade, sale or gain", "Production, assembling, altering, repairing, packing, finishing or cleaning. Packing counts; so does cleaning."], ["Laboratory", "Also Class 8, and excluded from the 10 percent concession because of its fire hazard."]], working: ["A6G9: a Class 8 building is a laboratory, or a building in which a process is carried on for trade, sale or gain.", "The 8 percent office would be Class 5 on its own. Exemption (1) to A6G1 lets it take the class of the rest of the storey."] },
+  s_tenpc: { terms: [["Exemption (1) to A6G1", "Where a part of a storey used for a different purpose is less than 10 percent of the floor area of that storey, the classification of the rest of the storey may apply to the whole storey."], ["Limitation", "The concession does not apply where the minor use is a laboratory, a Class 9b early childhood centre, or a Class 2, 3 or 4 part."]], working: ["Office at 8 percent of the storey: the whole storey can be Class 8.", "Office at 12 percent: that part must be Class 5, the remainder Class 8. Two classes, and the fire separation between them becomes a question.", "The code's own example, in the Explanatory Information to A6G1, uses exactly these numbers.", "Even inside the concession, occupant numbers and energy loads for the office area are still worked out for its actual use."] },
+  s_school: { terms: [["Assembly building", "A building where people may assemble for civic, theatrical, social, political or religious purposes, for education in a school, or for entertainment, recreation or sport."], ["Early childhood centre", "A Class 9b that carries extra provisions and is excluded from the 10 percent concession."]], working: ["A6G10: Class 9b is an assembly building, including a trade workshop, laboratory or the like in a primary or secondary school."] },
+  s_hospital: { terms: [["Health-care building", "A building whose occupants or patients may be undergoing medical treatment and generally need physical assistance to evacuate."]], working: ["A6G10: Class 9a is a health-care building, including any parts of the building set aside as a laboratory."] },
+  s_agedcare: { terms: [["Residential care building", "Accommodation for people who need personal care services, where 24-hour staff assistance is available, and the residents are not able to evacuate unaided."]], working: ["A6G10: Class 9c is a residential care building.", "Compare A6G4(2)(d): accommodation for the aged is Class 3 where the residents can look after themselves. The difference is the level of care."] },
+  s_end: { terms: [["More stringent", "Explanatory Information to A6G1: where there is any conflict between what requirements a part should comply with, the more stringent requirement applies."]], working: ["Class 1, 10: Volume Two and the Housing Provisions.", "Class 2 to 9: Volume One.", "All classes: Volume Three for plumbing and drainage."] },
+
+  l_intro: { terms: [["Non-habitable", "The test for Class 10. A6G11(1): a Class 10 building or structure is non-habitable."], ["Habitable room", "A room used for normal domestic activities: bedroom, living room, kitchen, study, sleepout. Not a bathroom, laundry, garage or shed."]], working: ["Habitable and on the same lot as the house: part of the Class 1.", "Non-habitable building: Class 10a. Non-habitable structure: Class 10b."] },
+  l_house: { terms: [["Class 1a", "A single dwelling: a detached house, or one of a group of attached dwellings separated by fire-resisting walls."]], working: ["A6G2(2)(a)(i): a detached house."] },
+  l_sleepout: { terms: [["Appurtenant", "Belonging to and going with the main building. A sleepout is appurtenant to the house."]], working: ["Explanatory Information to A6G11: a sleepout on the same allotment as a Class 1 building is part of the Class 1 building.", "So its ceiling height, its smoke alarm, its energy efficiency and its glazing all follow Volume Two as part of the house."] },
+  l_entroom: { terms: [["Habitable outbuilding", "A detached room used for living. The code says habitable outbuildings cannot be classified as Class 10 buildings."]], working: ["Explanatory Information to A6G11: a detached entertainment room on the same allotment as a Class 1 building, perhaps associated with a swimming pool, is part of the Class 1 building."] },
+  l_shed: { terms: [["Class 10a", "A non-habitable building including a private garage, carport, shed or the like."]], working: ["A6G11(2)(a).", "The code's example: a small toolshed, used for trade-related hobbies for non-commercial purposes or home repairs, on the same allotment as a Class 1 building, would be classified as a Class 10 building."] },
+  l_carport: { terms: [["Building versus structure", "A carport and a shed are buildings, Class 10a. A fence and a pool are structures, Class 10b."]], working: ["A6G11(2)(a): a private garage, carport, shed or the like."] },
+  l_pool: { terms: [["Class 10b", "A structure that is a fence, mast, antenna, retaining wall or free-standing wall or swimming pool or the like."]], working: ["A6G11(2)(b).", "The pool barrier is not a Housing Provisions matter: H7D2 in Volume Two points to AS 1926.1 and 1926.2, and WA varies it.", "The retaining wall needs no fall barrier under 11.3.3(2)(a) unless it is part of a path of access to the building."] },
+  l_shelter: { terms: [["Class 10c", "A private bushfire shelter."]], working: ["A6G11(2)(c).", "H7P6 and the ABCB Standard for Private Bushfire Shelters. Only for a shelter associated with a single Class 1a dwelling."] },
+  l_bh: { terms: [["Class 1b", "Not more than 12 people and not more than 300 square metres."], ["Class 3", "A boarding house over either limit. Volume One."]], working: ["A6G2(2)(b)(i): the two limits.", "A6G4(2)(a): a boarding house, guest house, hostel, lodging house or backpacker accommodation is Class 3 once it is outside Class 1b."] },
+  l_beds: { terms: [["Not more than 12", "Twelve is in. Thirteen is out."]], working: ["Beds 1 to 12: Class 1b. Beds 13 and on: Class 3.", "The floor area limit works the same way at 300 square metres, measured over the enclosing walls."] },
+  l_end: { terms: [], working: ["Part of the Class 1: the house, the sleepout, the entertainment room.", "Class 10a: the shed, the carport.", "Class 10b: the pool, the fence, the retaining wall.", "Class 10c: the bushfire shelter."] },
+
+  p_intro: { terms: [["Performance-based code", "The code states what a building must achieve, and lets you show you have achieved it either by following the deemed-to-satisfy recipe or by demonstrating it directly."], ["Compliance", "A2G1: a solution complies with the NCC if it satisfies the Governing Requirements and the Performance Requirements."]], working: ["Three layers: Governing Requirements, Performance Requirements, and the solutions that satisfy them.", "Two doors through the third layer: DTS and Performance Solution."] },
+  p_gov: { terms: [["Governing Requirements", "Section A. Parts A1 to A7: interpreting the code, compliance, State and Territory application, referenced documents, documentation and evidence of suitability, classification, united buildings."], ["Evidence of suitability", "Part A5. How you show a material or system is fit for purpose: a certificate, a test report, a CodeMark, a professional's certificate, or another form of documentary evidence."]], working: ["A2G1(1): compliance with the NCC is achieved by complying with the Governing Requirements and the Performance Requirements.", "Section A applies to every volume and every class."] },
+  p_perf: { terms: [["Performance Requirement", "A mandatory statement of what must be achieved, written as an outcome. In Volume Two they are the H-P clauses: H1P1, H2P1, H3P1, H4P1 and so on."], ["Mandatory", "Cannot be varied, traded away or ignored. Every solution, DTS or performance, must end at one of these."]], working: ["H5P1(a): a stairway or ramp must be safe to use, with a slope, a step size and a surface that people can move on without falling.", "That is the outcome. It does not say 190 or 240. The numbers are in the next layer."] },
+  p_sol: { terms: [["Deemed-to-Satisfy Solution", "A2G3: a solution that complies with the Deemed-to-Satisfy Provisions is deemed to have met the Performance Requirements."], ["Performance Solution", "A2G2: achieved by demonstrating compliance with all relevant Performance Requirements, or that the solution is at least equivalent to the DTS Provisions."], ["Assessment Methods", "Evidence of suitability under Part A5, a Verification Method, Expert Judgement, or comparison with the DTS Provisions."]], working: ["A2G3(2): a DTS Solution shows compliance through evidence of suitability, or Expert Judgement.", "A2G2(2): a Performance Solution shows compliance through one or a combination of the four Assessment Methods.", "A2G4: Performance Requirements may be satisfied by using a combination of Performance Solutions and DTS Solutions."] },
+  p_dts: { terms: [["DTS pointer", "In Volume Two the DTS Provisions for a Class 1 are mostly single sentences that point to a Part of the Housing Provisions."], ["Riser and going", "Riser: the height of one step. Going: the horizontal depth of the tread, nosing to nosing. 2R plus G: the slope relationship."]], working: ["H5D2: compliance with Part 11.2 of the ABCB Housing Provisions satisfies Performance Requirement H5P1 for stairway and ramp construction.", "Table 11.2.2a, stairs other than spiral: riser 115 to 190, going 240 to 355, 2R plus G 550 to 700.", "This stair: riser 175, going 260. 2 times 175 plus 260 equals 610. Inside every limit. Deemed to satisfy H5P1."] },
+  p_perf2: { terms: [["Performance-based design brief", "A2G2(4)(a): prepared in consultation with relevant stakeholders. It sets out what will be analysed and what counts as acceptable."], ["Expert Judgement", "A2G2(2)(c). Limited: it cannot be used on its own for structural or fire safety Performance Requirements, including H1P1(2)."]], working: ["Riser 200, going 230. Riser exceeds 190 and going is under 240: outside Table 11.2.2a. The DTS door is shut.", "A2G2(4)(a): prepare a performance-based design brief.", "A2G2(4)(b): carry out analysis, as proposed by the brief.", "A2G2(4)(c): evaluate results against the acceptance criteria in the brief.", "A2G2(4)(d): prepare a final report - the Performance Requirements addressed, the Assessment Methods used, the steps, confirmation the requirement is met, and any conditions or limitations.", "A2G2(3): identify H5P1, and any other Performance Requirement the stair affects."] },
+  p_end: { terms: [], working: ["Governing Requirements: Section A, the ground.", "Performance Requirements: the frame, mandatory.", "DTS Solution: follow the pointer to the Housing Provisions.", "Performance Solution: brief, analysis, evaluation, report."] },
+
+  m_intro: { terms: [["Section H", "Volume Two Parts H1 to H8: Structure, Damp and weatherproofing, Fire safety, Health and amenity, Safe movement and access, Energy efficiency, Ancillary provisions, Livable housing design."], ["Housing Provisions", "The ABCB Housing Provisions Standard 2025, Sections 2 to 13. The DTS content for a Class 1 and 10 building."]], working: ["Volume Two H-P clause: the outcome.", "Volume Two H-D clause: one sentence pointing to a Part of the Housing Provisions, or to a Standard.", "Housing Provisions Part: the numbers, tables and figures."] },
+  m_end: { terms: [], working: ["Framing: H1D6 points to AS 1684 and NASH, not to the Housing Provisions.", "Livable housing: H8D2 points to the ABCB Standard for Livable Housing Design.", "Pool barriers: H7D2 points to AS 1926.1 and 1926.2.", "Everything else on the house: Housing Provisions Sections 3 to 13."] }
+};
+MAPITEMS.forEach(function (m) { EXPLAIN[m.key] = { terms: [["Performance Requirement", m.pr], ["DTS pointer in Volume Two", m.dts], ["Where the content is", m.hp]], working: [m.plain] }; });
+Object.keys(STOREY_EXPLAIN).forEach(function (k) { EXPLAIN[k] = STOREY_EXPLAIN[k]; });
+Object.keys(V1_EXPLAIN).forEach(function (k) { EXPLAIN[k] = V1_EXPLAIN[k]; });
+function explainFor(s) { return EXPLAIN[s.key] || null; }
+
+// =====================================================================
+// STATE
+// =====================================================================
+var tab = "street", STEPS = TOURS.street, stepIdx = 0, stepDone = true, guided = true, demoRunning = false, voiceOn = true, quizPicked = -1, feedback = "", lastSpoken = "";
+var showExplain = false, showSteps = false, score = { right: 0, missed: 0 }, pathStage = 0, freeHit = null;
+function step() { return STEPS[stepIdx]; }
+
+// ---------- canvas panel (same class as the set-out build) ----------
+function Panel(wM, hM, cw, ch) {
+  this.cw = cw; this.ch = ch; this.wM = wM; this.hM = hM;
+  this.canvas = document.createElement("canvas"); this.canvas.width = cw; this.canvas.height = ch;
+  this.ctx = this.canvas.getContext("2d");
+  this.tex = new THREE.CanvasTexture(this.canvas); this.tex.minFilter = THREE.LinearFilter; this.tex.anisotropy = 8; this.tex.encoding = THREE.sRGBEncoding;
+  this.mesh = new THREE.Mesh(new THREE.PlaneGeometry(wM, hM), new THREE.MeshBasicMaterial({ map: this.tex, transparent: false }));
+  this.mesh.userData.panel = this; this.hits = []; this.hover = -1;
+}
+Panel.prototype.begin = function () { var x = this.ctx; this.hits = []; x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = C.paper; x.fillRect(0, 0, this.cw, this.ch); x.lineWidth = 10; x.strokeStyle = C.ink; x.strokeRect(5, 5, this.cw - 10, this.ch - 10); };
+Panel.prototype.end = function () { this.tex.needsUpdate = true; };
+Panel.prototype.font = function (px, style) { this.ctx.font = (style || "") + " " + px + "px " + FONT; };
+Panel.prototype.text = function (s, x, y, color, px, style, align) { this.font(px, style); this.ctx.fillStyle = color || C.ink; this.ctx.textAlign = align || "left"; this.ctx.fillText(s, x, y); this.ctx.textAlign = "left"; };
+Panel.prototype.para = function (s, x, y, maxW, color, px, style, lh) {
+  var ctx = this.ctx; this.font(px, style); ctx.fillStyle = color || C.ink; ctx.textAlign = "left"; lh = lh || Math.round(px * 1.42);
+  String(s).split("\n").forEach(function (p) {
+    if (p === "") { y += lh * 0.5; return; }
+    var words = p.split(" "), line = "";
+    for (var i = 0; i < words.length; i++) { var t = line ? line + " " + words[i] : words[i]; if (ctx.measureText(t).width > maxW && line) { ctx.fillText(line, x, y); y += lh; line = words[i]; } else line = t; }
+    if (line) { ctx.fillText(line, x, y); y += lh; }
+  });
+  return y;
+};
+Panel.prototype.rule = function (y, x1, x2) { var c = this.ctx; c.strokeStyle = C.rule; c.lineWidth = 3; c.beginPath(); c.moveTo(x1, y); c.lineTo(x2, y); c.stroke(); };
+Panel.prototype.button = function (x, y, w, h, label, kind, action, px) {
+  var c = this.ctx, idx = this.hits.length, hov = this.hover === idx;
+  this.hits.push({ x: x, y: y, w: w, h: h, action: action });
+  var fill = C.paper, stroke = C.ink, color = C.ink, alpha = 1;
+  if (kind === "on" || kind === "primary") { fill = C.ink; color = C.paper; }
+  if (kind === "track-on") { fill = C.orange; stroke = C.orange; color = C.white; }
+  if (kind === "good") { fill = C.green; stroke = C.green; color = C.white; }
+  if (kind === "bad") { fill = C.red; stroke = C.red; color = C.white; }
+  if (kind === "dim") alpha = 0.4;
+  if (hov && action && kind === "") fill = C.white;
+  c.globalAlpha = alpha; c.fillStyle = fill; c.fillRect(x, y, w, h); c.lineWidth = 4; c.strokeStyle = stroke; c.strokeRect(x, y, w, h);
+  if (hov && action) { c.lineWidth = 6; c.strokeStyle = C.orange; c.strokeRect(x - 6, y - 6, w + 12, h + 12); }
+  if (label) { this.font(px || 28); c.fillStyle = color; c.textAlign = "center"; c.fillText(label, x + w / 2, y + h / 2 + (px || 28) * 0.36); c.textAlign = "left"; }
+  c.globalAlpha = 1; return idx;
+};
+Panel.prototype.hitAt = function (u, v) { var px = u * this.cw, py = (1 - v) * this.ch; for (var i = 0; i < this.hits.length; i++) { var r = this.hits[i]; if (px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h) return i; } return -1; };
+
+var board = new Panel(0.9, 0.504, 1500, 840);
+var page = new Panel(0.62, 0.80, 930, 1200);
+
+// ---------- the clipboard ----------
+function renderBoard() {
+  if (feedback && feedback !== lastSpoken) { lastSpoken = feedback; speak(feedback); }
+  var P = board, L = 40, W = P.cw - 80, s = step();
+  P.begin();
+  var bx = L;
+  TABS.forEach(function (t) { P.button(bx, 22, 180, 54, t[1], t[0] === tab ? "track-on" : "", { tab: t[0] }, 22); bx += 186; });
+  bx = P.cw - L - 270;
+  if (explainFor(s)) P.button(bx, 22, 130, 54, "Explain", showExplain ? "on" : "track-on", { act: "explain" }, 24); bx += 138;
+  P.button(bx, 22, 130, 54, "Steps", showSteps ? "on" : "", { act: "steps" }, 24);
+  var y = 122;
+  P.text(s.n === 0 ? "Before you start" : (s.mode === "end" ? "End of the tour" : "Step " + s.n + " of " + (STEPS.length - 2)), L, y, C.mute, 24);
+  y = P.para(s.title, L, y + 44, W, C.ink, 36, "", 44); y += 4; P.rule(y, L, L + W); y += 40;
+  var top = y, wide = s.mode === "intro" || s.mode === "end" || (s.mode !== "quiz" && s.mode !== "chain" && String(s.task).length > 520);
+  var LW = wide ? W : 800, RX = L + 850, RW = W - 850, ry = top;
+  if (s.mode === "chain" && !guided && freeHit) {
+    // hands-on: the thing you are pointing at
+    var m = freeHit; P.text(m.name, L, y, C.orange, 30); y += 44;
+    y = renderChain(P, L, y, W, m);
+  } else if (s.mode === "chain") {
+    var mi = mapItem(s.key); y = P.para(s.task, L, y, LW, C.ink, 26, "", 34); y += 8; y = renderChain(P, L, y, LW, mi);
+    if (mi.plain) P.para(mi.plain, RX, ry, RW, C.mute, 24, "italic", 31);
+  } else {
+    y = P.para(s.task, L, y, LW, C.ink, wide ? 26 : 27, "", wide ? 34 : 36); y += 10;
+    var how = s.how; if (how && guided) how = s.watch || how;
+    if (how && !stepDone) { var y0 = y; y = P.para(how, L + 24, y, LW - 24, C.blue, 26, "", 34); P.ctx.fillStyle = C.blue; P.ctx.fillRect(L, y0 - 26, 6, y - y0 - 8); y += 12; }
+    if (feedback && y < P.ch - 170) { var fy0 = y; y = P.para(feedback, L + 24, y, (wide ? W : LW) - 24, C.ink, 26, "", 34); P.ctx.fillStyle = feedback.indexOf("Right") === 0 ? C.green : (feedback.indexOf("Not") === 0 ? C.red : C.orange); P.ctx.fillRect(L, fy0 - 26, 6, y - fy0 - 8); }
+    if (!wide) {
+      if (s.mode === "quiz") {
+        var b = s.options ? s : bldg(s.focus);
+        b.options.forEach(function (o, i) { var kind = ""; if (quizPicked >= 0) kind = i === b.answer ? "good" : (i === quizPicked ? "bad" : "dim"); P.button(RX, ry, RW, 60, o, kind, quizPicked < 0 ? { quiz: i } : null, 25); ry += 72; });
+        ry += 16; if (quizPicked >= 0 && b.why) P.para(b.why, RX, ry, RW, C.mute, 22, "italic", 29);
+      } else if (s.mode === "look") {
+        var it = s.focus === "bh" ? { cls: "Class 1b", why: "A6G2(2)(b)(i): a boarding house that would ordinarily accommodate not more than 12 people, with a total floor area not more than 300 square metres." } : lotItem(s.focus);
+        P.ctx.fillStyle = C.orange; P.ctx.fillRect(RX, ry - 4, RW, 64); P.text(it.cls, RX + RW / 2, ry + 40, C.white, 32, "", "center"); ry += 84;
+        P.para(it.why, RX, ry, RW, C.mute, 23, "italic", 30);
+      } else if (s.mode === "use") {
+        P.text("Current fitout", RX, ry + 30, C.mute, 24); ry += 50;
+        var u = useIdx < 0 ? { sign: "TO LET", cls: "No class yet", note: "vacant - no purpose, no class" } : USES[useIdx];
+        P.ctx.fillStyle = C.orange; P.ctx.fillRect(RX, ry - 4, RW, 64); P.text(u.cls, RX + RW / 2, ry + 40, C.white, 32, "", "center"); ry += 84;
+        P.para(u.sign + "\n" + u.note, RX, ry, RW, C.mute, 24, "italic", 31);
+      } else if (s.mode === "beds" || s.mode === "beds2") {
+        P.text("People it accommodates", RX, ry + 30, C.mute, 24); ry += 60;
+        P.text(String(bedCount), RX, ry + 60, C.ink, 96); P.text(bedCount <= 12 ? "Class 1b - Volume Two" : "Class 3 - Volume One", RX + 130, ry + 50, bedCount <= 12 ? C.green : C.red, 30); ry += 110;
+        P.para("Floor area 260 square metres, under the 300 square metre limit. The people count is the line being crossed here.", RX, ry, RW, C.mute, 23, "italic", 30);
+      } else if (s.mode === "tenpc") {
+        P.text("Office share of the storey", RX, ry + 30, C.mute, 24); ry += 60;
+        P.text(Math.round(officeFrac * 100) + " %", RX, ry + 60, C.ink, 96); P.text(officeFrac < 0.10 ? "Whole storey: Class 8" : "Office: Class 5. Rest: Class 8", RX + 200, ry + 50, officeFrac < 0.10 ? C.green : C.red, 30); ry += 110;
+      } else if (s.mode === "count") {
+        var mdl = modelByKey(s.focus), counted = 0; mdl.floors.forEach(function (f) { if (f.tagged) counted += f.counted ? (f.double ? 2 : 1) : 0; });
+        P.text("Floor levels", RX, ry + 30, C.mute, 24); P.text(String(mdl.floors.length), RX + 220, ry + 34, C.ink, 40); ry += 60;
+        P.text("Storeys counted", RX, ry + 30, C.mute, 24); P.text(String(counted), RX + 220, ry + 34, C.ink, 40); ry += 70;
+        if (stepDone) { P.ctx.fillStyle = C.orange; P.ctx.fillRect(RX, ry - 4, RW, 64); P.text("Rise in storeys = " + mdl.rise, RX + RW / 2, ry + 40, C.white, 32, "", "center"); ry += 84; }
+        mdl.floors.forEach(function (f) { if (!f.tagged) return; P.text((f.counted ? "\u2713  " : "\u2717  ") + f.tag, RX, ry + 24, f.counted ? C.green : C.red, 24); ry += 32; });
+      } else if (s.mode === "v1build") {
+        var layers1 = [["Governing Requirements", "Section A"], ["Performance Requirements", "Sections B to J - the P clauses"], ["Two doors", "D1 clauses (teal) - A2G2 (gold)"], ["Specifications 1 to 48", "called up by D and V clauses"]];
+        layers1.forEach(function (l, i) { var onIt = v1Stage >= i + 1; P.ctx.fillStyle = onIt ? [C.ink, C.orange, C.teal, C.gold][i] : C.rule; P.ctx.fillRect(RX, ry, RW, 52); P.text(l[0], RX + 16, ry + 36, C.white, 25); ry += 56; P.text(l[1], RX + 16, ry + 20, C.mute, 21, "italic"); ry += 40; });
+      } else if (s.mode === "anatomy") {
+        [["S", "Specification (not a Section letter)"], ["5", "Specification number"], ["C", "clause type: Specification clause"], ["21", "clause number"]].forEach(function (r) { P.ctx.fillStyle = C.ink; P.ctx.fillRect(RX, ry, 70, 56); P.text(r[0], RX + 35, ry + 42, C.paper, 34, "", "center"); P.text(r[1], RX + 86, ry + 38, C.ink, 24); ry += 64; }); ry += 8;
+        [["G", "governing", "mandatory", C.ink], ["O", "objective", "guidance", C.mute], ["F", "functional statement", "guidance", C.mute], ["P", "performance requirement", "mandatory", C.ink], ["V", "verification method", "optional", C.teal], ["D", "deemed-to-satisfy", "optional", C.teal], ["C", "specification clause", "as called up", C.gold]].forEach(function (r) { P.ctx.fillStyle = r[3]; P.ctx.fillRect(RX, ry, 44, 34); P.text(r[0], RX + 22, ry + 26, C.white, 22, "", "center"); P.text(r[1], RX + 56, ry + 25, C.ink, 21); P.text(r[2], RX + 330, ry + 25, r[3], 21, "italic"); ry += 40; });
+      } else if (s.mode === "v1chain" || s.mode === "v1chain2") {
+        var links = s.mode === "v1chain" ? [["A6G6", "Class 5"], ["C2D3", "rise in storeys 3"], ["Table C2D2", "Type B"], ["C2D2(2)", "comply with Specification 5"], ["S5C21(1)(a)", "FRL from the Tables"], ["Table S5C21a", "Class 5, 3 to 9 m: 120/30/30"]] : [["J1P1", "energy efficiency - the outcome"], ["J1V3", "verification using a reference building - optional"], ["Specification 34", "modelling parameters - optional"], ["Specification 35", "modelling profiles - optional"]];
+        links.forEach(function (l, i) { var lit = i < v1Docs.length; P.ctx.fillStyle = lit ? (s.mode === "v1chain" ? C.teal : C.gold) : C.rule; P.ctx.fillRect(RX, ry, 14, 50); P.text(l[0], RX + 30, ry + 22, lit ? C.ink : C.mute, 24, "bold"); P.text(l[1], RX + 30, ry + 46, lit ? C.ink : C.mute, 21); ry += 60; });
+      } else if (s.mode === "build") {
+        var layers = [["Governing Requirements", "Section A - the ground"], ["Performance Requirements", "the frame - mandatory outcomes"], ["Solutions", "DTS (teal) or Performance (gold)"]];
+        layers.forEach(function (l, i) { var onIt = pathStage >= i + 1; P.ctx.fillStyle = onIt ? (i === 0 ? C.ink : (i === 1 ? C.orange : C.teal)) : C.rule; P.ctx.fillRect(RX, ry, RW, 56); P.text(l[0], RX + 16, ry + 38, C.white, 26); ry += 62; P.text(l[1], RX + 16, ry + 22, C.mute, 22, "italic"); ry += 44; });
+      } else if (s.mode === "stairdts" || s.mode === "stairperf") {
+        var st = s.mode === "stairdts" ? { r: 175, g: 260 } : { r: 200, g: 230 }, ok = st.r <= 190 && st.r >= 115 && st.g >= 240 && st.g <= 355;
+        P.text("Riser " + st.r + " mm", RX, ry + 30, C.ink, 30); P.text(st.r <= 190 && st.r >= 115 ? "115 to 190: in" : "outside 115 to 190", RX + 300, ry + 30, st.r <= 190 ? C.green : C.red, 24); ry += 46;
+        P.text("Going " + st.g + " mm", RX, ry + 30, C.ink, 30); P.text(st.g >= 240 && st.g <= 355 ? "240 to 355: in" : "outside 240 to 355", RX + 300, ry + 30, st.g >= 240 ? C.green : C.red, 24); ry += 46;
+        P.text("2R + G = " + (2 * st.r + st.g), RX, ry + 30, C.ink, 30); P.text((2 * st.r + st.g) >= 550 && (2 * st.r + st.g) <= 700 ? "550 to 700: in" : "outside 550 to 700", RX + 300, ry + 30, C.green, 24); ry += 60;
+        P.ctx.fillStyle = ok ? C.teal : C.gold; P.ctx.fillRect(RX, ry - 4, RW, 64); P.text(ok ? "DTS door: open" : "DTS door: shut. Performance Solution.", RX + RW / 2, ry + 40, C.white, 28, "", "center");
+      }
+    }
+  }
+  var fy = P.ch - 90; P.rule(fy - 22, L, L + W);
+  if (stepIdx > 0) P.button(L, fy, 130, 60, "Back", "", { act: "back" }, 26);
+  P.button(L + 145, fy, 210, 60, "Take me there", "", { act: "goto" }, 24);
+  P.button(L + 370, fy, 160, 60, voiceOn ? "Voice on" : "Voice off", voiceOn ? "on" : "", { act: "voice" }, 24);
+  P.button(L + 545, fy, 190, 60, guided ? "Guided" : "Hands-on", guided ? "on" : "", { act: "mode" }, 24);
+  if (s.mode === "end") P.button(P.cw - L - 320, fy, 320, 60, "Next: " + s.nextLabel, "primary", { tab: s.nextTab }, 26);
+  else if (guided && !stepDone && ["use", "beds", "beds2", "tenpc", "build", "stairdts", "stairperf", "count", "v1build", "anatomy", "v1chain", "v1chain2"].indexOf(s.mode) >= 0) P.button(P.cw - L - 300, fy, 300, 60, demoRunning ? "Working..." : "Do this step", demoRunning ? "dim" : "primary", demoRunning ? null : { act: "demo" }, 26);
+  else P.button(P.cw - L - 190, fy, 190, 60, "Next", stepDone ? "primary" : "dim", stepDone ? { act: "next" } : null, 26);
+  P.text(score.right + " right, " + score.missed + " missed    build " + BUILD + "    you: " + Math.round(camPos.x) + ", " + Math.round(camPos.z) + (renderer.xr.isPresenting ? " xr" : ""), L + 750, fy + 40, C.mute, 20);
+  P.end();
+  renderPage();
+}
+function renderChain(P, L, y, W, m) {
+  var rows = [["Performance Requirement", m.pr, C.orange], ["DTS pointer - Volume Two", m.dts, C.ink], ["The content", m.hp, C.teal]];
+  rows.forEach(function (r, i) {
+    P.ctx.fillStyle = r[2]; P.ctx.fillRect(L, y, 14, 70); P.text(r[0], L + 30, y + 26, C.mute, 22); y = P.para(r[1], L + 30, y + 58, W - 30, C.ink, 26, "", 32) + 8;
+    if (i < 2) { P.ctx.fillStyle = C.rule; P.ctx.fillRect(L + 4, y - 8, 6, 14); y += 12; }
+  });
+  return y;
+}
+function renderPage() {
+  var P = page, L = 40, W = P.cw - 80, y = 90, any = showSteps || showExplain;
+  P.mesh.visible = any; if (!any) return;
+  P.begin();
+  if (showSteps) renderSteps(P, L, y, W); else renderExplain(P, L, y, W);
+  P.end();
+}
+function renderSteps(P, L, y, W) {
+  P.text("Steps in this tour", L, y, C.mute, 26); P.button(P.cw - L - 150, y - 36, 150, 52, "Close", "", { act: "steps" }, 24); y += 56;
+  STEPS.forEach(function (s, i) { if (y > P.ch - 80) return; var lab = (i === 0 ? "Start" : (s.mode === "end" ? "End" : String(i))) + "   " + s.title; P.button(L, y, W, 50, "", i === stepIdx ? "track-on" : "", { jump: i }, 22); P.text(lab.length > 62 ? lab.slice(0, 60) + "..." : lab, L + 16, y + 34, i === stepIdx ? C.white : C.ink, 22); y += 56; });
+}
+function renderExplain(P, L, y, W) {
+  var s = step(), ex = explainFor(s);
+  P.text("Explain - " + (s.n === 0 ? "start" : "step " + s.n), L, y, C.mute, 26); P.button(P.cw - L - 150, y - 36, 150, 52, "Close", "", { act: "explain" }, 24); y += 50;
+  y = P.para(s.title, L, y, W, C.ink, 34, "", 42); y += 10; P.rule(y, L, L + W); y += 40;
+  if (!ex) { P.para("Nothing extra on this step.", L, y, W, C.mute, 28); return; }
+  if (ex.terms.length) { P.text("What the words mean", L, y, C.orange, 28); y += 40; ex.terms.forEach(function (t) { if (y > P.ch - 360) return; P.text(t[0], L, y, C.ink, 27, "bold"); y += 34; y = P.para(t[1], L + 24, y, W - 24, C.ink, 24, "", 31) + 10; }); y += 10; }
+  if (y < P.ch - 200) { P.rule(y, L, L + W); y += 40; P.text("The clause, and how it works out", L, y, C.orange, 28); y += 40; var lines = ex.working; for (var i = 0; i < lines.length; i++) { if (y > P.ch - 130) { P.text("...", L, y, C.mute, 25); break; } y = P.para(lines[i], L, y, W, C.blue, 24, "", 31) + 4; } }
+  P.button(L, P.ch - 100, 220, 52, "Read aloud", "", { act: "readExplain" }, 24);
+}
+
+// =====================================================================
+// SCENE
+// =====================================================================
+var renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio); renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.outputEncoding = THREE.sRGBEncoding; renderer.xr.enabled = true;
+document.body.appendChild(renderer.domElement);
+var scene = new THREE.Scene(); scene.background = new THREE.Color(0xcfe0ee); scene.fog = new THREE.Fog(0xcfe0ee, 90, 220);
+var camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.05, 400);
+var rig = new THREE.Group(); rig.add(camera); scene.add(rig); camera.position.set(0, 1.6, 0); rig.position.set(-40, 0, 8);
+scene.add(new THREE.HemisphereLight(0xdfe9f5, 0x6b5a3a, 0.95));
+var sunL = new THREE.DirectionalLight(0xfff1d6, 0.85); sunL.position.set(30, 50, 20); scene.add(sunL);
+
+function mat(c, o) { var p = { color: c, roughness: 0.9, metalness: 0 }; if (o) { Object.keys(o).forEach(function (k) { p[k] = o[k]; }); } return new THREE.MeshStandardMaterial(p); }
+var mGround = mat(0x7d9a5c), mRoad = mat(0x5b5b5b), mPath = mat(0xbdb6a6), mRoof = mat(0x6d6a63), mFire = mat(0xc9302c), mGlass = mat(0x9fc4d8, { transparent: true, opacity: 0.55 }), mBrick = mat(0xb9836a), mTimber = mat(0xc9a978), mWater = mat(0x4fa3c9, { transparent: true, opacity: 0.8 });
+var ground = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), mGround); ground.rotation.x = -Math.PI / 2; scene.add(ground);
+var road = new THREE.Mesh(new THREE.BoxGeometry(260, 0.02, 10), mRoad); road.position.set(0, 0.01, 0); scene.add(road);
+var pathN = new THREE.Mesh(new THREE.BoxGeometry(260, 0.03, 3), mPath); pathN.position.set(0, 0.015, -5 + 0.5); scene.add(pathN);
+var pathS = new THREE.Mesh(new THREE.BoxGeometry(260, 0.03, 3.5), mPath); pathS.position.set(0, 0.015, 7); scene.add(pathS);
+(function () { var g = new THREE.BufferGeometry(), pts = []; for (var x = -120; x < 120; x += 4) { pts.push(new THREE.Vector3(x, 0.03, 0), new THREE.Vector3(x + 2, 0.03, 0)); } g.setFromPoints(pts); scene.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0xf4f1e8 }))); })();
+function tree(x, z, h) { var t = new THREE.Group(); var tr = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.22, h, 8), mat(0x6b4f36)); tr.position.y = h / 2; t.add(tr); var cr = new THREE.Mesh(new THREE.SphereGeometry(h * 0.45, 10, 8), mat(0x4f7a3c)); cr.position.y = h * 1.05; cr.scale.y = 0.8; t.add(cr); t.position.set(x, 0, z); scene.add(t); }
+for (var ti = -100; ti <= 100; ti += 26) { tree(ti, 12.5, 3 + (ti % 3)); }
+
+// ---------- text labels in the world ----------
+function makeLabel(w, h, cw, ch) { var p = new Panel(w, h, cw, ch); p.mesh.material.transparent = true; return p; }
+function fitPx(p, text, px, maxW) { p.font(px); while (px > 14 && p.ctx.measureText(text).width > maxW) { px -= 2; p.font(px); } return px; }
+function drawSign(p, lines, big) {
+  var x = p.ctx; p.hits = []; x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = C.paper; x.fillRect(0, 0, p.cw, p.ch); x.lineWidth = 8; x.strokeStyle = C.ink; x.strokeRect(4, 4, p.cw - 8, p.ch - 8);
+  big = big || 48; var maxW = p.cw - 60, sizes = lines.map(function (l, i) { return fitPx(p, l, i === 0 ? big : big * 0.72, maxW); });
+  var total = 0; sizes.forEach(function (sz) { total += sz * 1.2; }); var scale = Math.min(1, (p.ch - 24) / total); sizes = sizes.map(function (sz) { return sz * scale; });
+  var y = p.ch / 2 - total * scale / 2 + sizes[0] * 0.95;
+  lines.forEach(function (l, i) { p.text(l, p.cw / 2, y, i === 0 ? C.ink : C.mute, sizes[i], "", "center"); y += sizes[i] * 1.2; });
+  p.tex.needsUpdate = true;
+}
+function drawClassLabel(p, cls, sub) {
+  var x = p.ctx; x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, p.cw, p.ch); x.fillStyle = C.orange; x.fillRect(0, 0, p.cw, p.ch);
+  var a = fitPx(p, cls, sub ? 64 : 76, p.cw - 40), b2 = sub ? fitPx(p, sub, 34, p.cw - 40) : 0;
+  p.text(cls, p.cw / 2, sub ? p.ch * 0.48 : p.ch * 0.62, C.white, a, "", "center"); if (sub) p.text(sub, p.cw / 2, p.ch * 0.84, C.white, b2, "", "center");
+  p.tex.needsUpdate = true;
+}
+
+// ---------- buildings ----------
+var tappables = [], world = new THREE.Group(); scene.add(world);
+function gableRoof(w, d, h, m) {
+  var shape = new THREE.Shape(); shape.moveTo(-w / 2 - 0.3, 0); shape.lineTo(w / 2 + 0.3, 0); shape.lineTo(0, h); shape.lineTo(-w / 2 - 0.3, 0);
+  var g = new THREE.ExtrudeGeometry(shape, { depth: d + 0.6, bevelEnabled: false }); g.translate(0, 0, -(d + 0.6) / 2);
+  return new THREE.Mesh(g, m || mRoof);
+}
+function building(b, group) {
+  var g = new THREE.Group(); g.position.set(b.x, 0, b.z); var F = group ? -1 : 1;   // which way the front faces: +z for the street, -z for the lots
+  var m = mat(b.col), body;
+  if (b.open) { for (var cx = -1; cx <= 1; cx += 2) for (var cz = -1; cz <= 1; cz += 2) { var post = new THREE.Mesh(new THREE.BoxGeometry(0.3, b.h, 0.3), mat(0x777777)); post.position.set(cx * (b.w / 2 - 0.3), b.h / 2, cz * (b.d / 2 - 0.3)); g.add(post); } body = new THREE.Mesh(new THREE.BoxGeometry(b.w, 0.3, b.d), mat(0x9a9a9a)); body.position.y = b.h; g.add(body); if (b.key === "carpark") { var deck = new THREE.Mesh(new THREE.BoxGeometry(b.w, 0.25, b.d), mat(0x9a9a9a)); deck.position.y = b.h / 2; g.add(deck); } }
+  else if (b.roof === "none") { body = new THREE.Mesh(new THREE.BoxGeometry(b.w, Math.max(b.h, 0.05), b.d), b.key === "pool" ? mWater : m); body.position.y = Math.max(b.h, 0.05) / 2; g.add(body); if (b.key === "pool") { var coping = new THREE.Mesh(new THREE.BoxGeometry(b.w + 0.8, 0.12, b.d + 0.8), mPath); coping.position.y = 0.06; g.add(coping); body.position.y = 0.13; } }
+  else { body = new THREE.Mesh(new THREE.BoxGeometry(b.w, b.h, b.d), m); body.position.y = b.h / 2; g.add(body);
+    if (b.roof === "gable") { var r = gableRoof(b.w, b.d, Math.min(2.2, b.w * 0.22)); r.position.y = b.h; g.add(r); } else { var cap = new THREE.Mesh(new THREE.BoxGeometry(b.w + 0.3, 0.25, b.d + 0.3), mRoof); cap.position.y = b.h + 0.1; g.add(cap); }
+    // windows: a strip per storey on the street face
+    var storeys = Math.max(1, Math.round(b.h / 3)); for (var s = 0; s < storeys; s++) { var win = new THREE.Mesh(new THREE.BoxGeometry(b.w * 0.7, Math.min(1.3, b.h / storeys * 0.45), 0.06), mGlass); win.position.set(0, (s + 0.55) * (b.h / storeys), F * (b.d / 2 + 0.02)); g.add(win); }
+    if (b.units) { for (var u = 1; u < b.units; u++) { var fw = new THREE.Mesh(new THREE.BoxGeometry(0.25, b.h + 0.6, b.d + 0.4), mFire); fw.position.set(-b.w / 2 + u * (b.w / b.units), (b.h + 0.6) / 2, 0); g.add(fw); } }
+    if (b.key === "shopflat") { var band = new THREE.Mesh(new THREE.BoxGeometry(b.w + 0.1, 0.3, b.d + 0.1), mat(0x3a4a5a)); band.position.y = 3.3; g.add(band); }
+    if (b.officeFrac !== undefined) { b.office = new THREE.Mesh(new THREE.BoxGeometry(1, b.h + 0.5, 1), mat(0xd8b07a)); g.add(b.office); setOffice(b, b.officeFrac); }
+  }
+  body.userData.building = b; tappables.push(body); b.body = body; b.baseMat = m;
+  // sign
+  var sign = makeLabel(Math.min(b.w * 0.8, 8), 1.1, 900, 124); drawSign(sign, [b.sign || b.name], 56); sign.mesh.position.set(0, b.h + 0.9, F * (b.d / 2 + 0.05)); if (F < 0) sign.mesh.rotation.y = Math.PI; if (b.roof === "none" || b.open) sign.mesh.position.y = Math.max(b.h, 1.2) + 0.9; g.add(sign.mesh); b.signPanel = sign;
+  var lab = makeLabel(3.4, 1.0, 680, 200); lab.mesh.position.set(0, b.h + 2.6 + (b.roof === "gable" ? 1.2 : 0), F * (b.d / 2 - 1)); lab.mesh.visible = false; g.add(lab.mesh); b.label = lab;
+  (group || world).add(g); b.group = g; return g;
+}
+function setOffice(b, frac) { b.officeFrac = frac; var area = b.w * b.d * frac, side = Math.sqrt(area); b.office.scale.set(side, 1, side); b.office.position.set(-b.w / 2 + side / 2, (b.h + 0.5) / 2, b.d / 2 - side / 2); b.office.material.color.set(frac < 0.10 ? 0xd8b07a : 0xc9302c); }
+STREET.forEach(function (b) { building(b); });
+var useIdx = -1, bedCount = 10, officeFrac = 0.08;
+
+// the Class 1a allotment
+var lotG = new THREE.Group(); world.add(lotG);
+function slabOutline(l, m) { var e = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(l.x1 - l.x0, l.z1 - l.z0)), new THREE.LineBasicMaterial({ color: 0xf4f1e8 })); e.rotation.x = -Math.PI / 2; e.position.set((l.x0 + l.x1) / 2, 0.04, (l.z0 + l.z1) / 2); world.add(e); }
+slabOutline(LOT); slabOutline(BH); slabOutline(VAC);
+LOTITEMS.forEach(function (b) { building(b, lotG); });
+// the boarding house next door, with countable beds
+var bh = { key: "bh", name: "Boarding house next door", sign: "Harrow Lodge annexe - 10 rooms", cls: "Class 1b", x: 20, z: 24, w: 12, d: 11, h: 5.6, col: 0xd6c3a0, roof: "gable" }; building(bh, lotG);
+var bedMeshes = [];
+function rebuildBeds(n) { bedMeshes.forEach(function (m) { bh.group.remove(m); }); bedMeshes = []; for (var i = 0; i < n; i++) { var bm = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 1.9), mat(i < 12 ? 0xf4f1e8 : 0xc9302c)); var row = i < 6 ? 0 : 1, col = i % 6; bm.position.set(-4.5 + col * 1.7, 0.25 + row * 0.02, -(bh.d / 2 + 1.8 + row * 2.6)); bh.group.add(bm); bedMeshes.push(bm); } }
+rebuildBeds(10);
+// street-side beds for the street tour too
+var beds2 = []; function rebuildBeds2(n) { var b = bldg("boarding"); beds2.forEach(function (m) { b.group.remove(m); }); beds2 = []; for (var i = 0; i < n; i++) { var bm = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 1.9), mat(i < 12 ? 0xf4f1e8 : 0xc9302c)); var row = i < 6 ? 0 : 1, col = i % 6; bm.position.set(-4.5 + col * 1.7, 0.25, b.d / 2 + 1.8 + row * 2.6); b.group.add(bm); beds2.push(bm); } }
+rebuildBeds2(10);
+
+// house detail for the map tour: deck, stair, balustrade, bathroom, alarm, flue, insulation, boundary wall band
+var house = lotItem("lothouse"), hg = house.group, mapMeshes = {};
+function mapMesh(key, mesh, hidden) { mesh.userData.mapKey = key; mesh.userData.name = mapItem(key).name; if (!hidden) tappables.push(mesh); mapMeshes[key] = mesh; hg.add(mesh); return mesh; }
+mapMesh("m_slab", new THREE.Mesh(new THREE.BoxGeometry(house.w + 0.3, 0.2, house.d + 0.3), mat(0x9a9a92))).position.y = 0.1;
+mapMesh("m_termite", new THREE.Mesh(new THREE.BoxGeometry(house.w + 0.36, 0.05, house.d + 0.36), mat(0x2b8a8a))).position.y = 0.21;
+(function () { var dp = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, house.h, 8), mat(0xe0e0e0)); dp.position.set(-house.w / 2 - 0.1, house.h / 2, -house.d / 2 + 0.3); mapMesh("m_drain", dp); var pit = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.1, 0.5), mat(0x555555)); pit.position.set(-house.w / 2 - 0.9, 0.05, -house.d / 2 - 0.3); hg.add(pit); })();
+mapMesh("m_wall", new THREE.Mesh(new THREE.BoxGeometry(0.12, house.h - 0.4, house.d * 0.6), mBrick)).position.set(-house.w / 2 - 0.07, house.h / 2 - 0.1, -house.d * 0.1);
+(function () { var fr = new THREE.Group(); for (var i = -4; i <= 4; i++) { var raf = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.25, house.d + 0.2), mTimber); raf.position.set(i * 1.3, house.h + 0.9 + Math.abs(i) * -0.05, 0); fr.add(raf); } var ridge = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, house.d + 0.2), mTimber); ridge.position.set(0, house.h + Math.min(2.2, house.w * 0.22) - 0.15, 0); fr.add(ridge); var rm = new THREE.Mesh(new THREE.BoxGeometry(house.w, 0.1, house.d), mTimber); rm.position.y = house.h + 0.05; rm.userData.mapKey = "m_frame"; fr.add(rm); mapMesh("m_frame", rm, true); hg.add(fr); })();
+(function () { var r = hg.children.filter(function (c) { return c.geometry && c.geometry.type === "ExtrudeGeometry"; })[0]; if (r) { r.userData.mapKey = "m_roof"; r.userData.name = "Sheet roof cladding"; tappables.push(r); mapMeshes.m_roof = r; } })();
+(function () { var w = hg.children.filter(function (c) { return c.material === mGlass; })[0]; if (w) { w.userData.mapKey = "m_window"; w.userData.name = "Windows and glazing"; tappables.push(w); mapMeshes.m_window = w; } })();
+mapMesh("m_firewall", new THREE.Mesh(new THREE.BoxGeometry(0.14, house.h - 0.2, house.d), mat(0xe8801a))).position.set(house.w / 2 + 0.08, house.h / 2, 0);
+(function () { var a = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.06, 16), mat(0xffffff)); a.position.set(0, house.h - 0.05, 0.5); mapMesh("m_alarm", a); })();
+(function () { var b = new THREE.Mesh(new THREE.BoxGeometry(2.4, house.h - 0.5, 2.2), mat(0x4fa3c9, { transparent: true, opacity: 0.6 })); b.position.set(-3.5, (house.h - 0.5) / 2 + 0.2, 1.5); mapMesh("m_bath", b); })();
+(function () { var c = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.06, 3.5), mat(0xf4f1e8)); c.position.set(2.5, house.h - 0.3, 1.5); mapMesh("m_ceiling", c); var post = new THREE.Mesh(new THREE.BoxGeometry(0.05, house.h - 0.3, 0.05), mat(0x1e2a44)); post.position.set(2.5, (house.h - 0.3) / 2 + 0.2, 1.5); hg.add(post); })();
+// deck at the rear, 1.2 m up, with a stair and a balustrade
+var DECK = { w: 7, d: 3, y: 1.2 };
+(function () { var dk = new THREE.Mesh(new THREE.BoxGeometry(DECK.w, 0.15, DECK.d), mTimber); dk.position.set(0.5, DECK.y, house.d / 2 + DECK.d / 2); mapMesh("m_deck", dk);
+  var led = new THREE.Mesh(new THREE.BoxGeometry(DECK.w, 0.25, 0.1), mat(0x8a6a4a)); led.position.set(0.5, DECK.y - 0.1, house.d / 2 + 0.05); hg.add(led);
+  for (var px = -1; px <= 1; px += 2) { var pst = new THREE.Mesh(new THREE.BoxGeometry(0.12, DECK.y, 0.12), mTimber); pst.position.set(0.5 + px * (DECK.w / 2 - 0.3), DECK.y / 2, house.d / 2 + DECK.d - 0.2); hg.add(pst); }
+  var bal = new THREE.Group(); var rail = new THREE.Mesh(new THREE.BoxGeometry(DECK.w, 0.06, 0.06), mTimber); rail.position.set(0, 1.0, 0); bal.add(rail); for (var i = 0; i <= 20; i++) { var bl = new THREE.Mesh(new THREE.BoxGeometry(0.03, 1.0, 0.03), mTimber); bl.position.set(-DECK.w / 2 + i * (DECK.w / 20), 0.5, 0); bal.add(bl); } bal.position.set(0.5, DECK.y + 0.07, house.d / 2 + DECK.d - 0.05); var balHit = new THREE.Mesh(new THREE.BoxGeometry(DECK.w, 1.05, 0.1), mat(0xffffff, { transparent: true, opacity: 0.0 })); balHit.position.set(0, 0.52, 0); bal.add(balHit); balHit.userData.mapKey = "m_balustrade"; balHit.userData.name = "Deck balustrade"; tappables.push(balHit); mapMeshes.m_balustrade = balHit; hg.add(bal);
+  // stair: 7 risers of 171 mm, going 260, down the west end of the deck
+  var st = new THREE.Group(); var R = DECK.y / 7, G = 0.26; for (var s = 0; s < 7; s++) { var tr = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.04, G), mTimber); tr.position.set(0, DECK.y - s * R - 0.02, (s + 0.5) * G); st.add(tr); var rs = new THREE.Mesh(new THREE.BoxGeometry(1.0, R, 0.03), mTimber); rs.position.set(0, DECK.y - s * R - R / 2, (s) * G + 0.015); st.add(rs); }
+  st.position.set(0.5 - DECK.w / 2 - 0.6, 0, house.d / 2 + DECK.d); var stHit = new THREE.Mesh(new THREE.BoxGeometry(1.0, DECK.y, 7 * G), mat(0xffffff, { transparent: true, opacity: 0.0 })); stHit.position.set(0, DECK.y / 2, 3.5 * G); st.add(stHit); stHit.userData.mapKey = "m_stair"; stHit.userData.name = "Deck stair"; tappables.push(stHit); mapMeshes.m_stair = stHit; hg.add(st);
+})();
+(function () { var ins = new THREE.Mesh(new THREE.BoxGeometry(house.w - 0.4, 0.2, house.d - 0.4), mat(0xf2a7c2)); ins.position.y = house.h + 0.25; mapMesh("m_insul", ins); })();
+(function () { var fl = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 2.2, 10), mat(0x555555)); fl.position.set(3.5, house.h + 1.9, -1.5); mapMesh("m_flue", fl); })();
+(function () { var ramp = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.2, 2.2), mPath); ramp.position.set(-2.5, 0.1, -house.d / 2 - 1.1); mapMesh("m_livable", ramp); var door = new THREE.Mesh(new THREE.BoxGeometry(0.82, 2.1, 0.08), mat(0x1e2a44)); door.position.set(-2.5, 1.05 + 0.2, -house.d / 2 - 0.04); hg.add(door); })();
+(function () { var pool = lotItem("pool"); var fence = new THREE.Group(); var pw = pool.w + 3, pd = pool.d + 3; [[0, -pd / 2], [0, pd / 2]].forEach(function (p) { var f = new THREE.Mesh(new THREE.BoxGeometry(pw, 1.2, 0.04), mat(0x333333, { transparent: true, opacity: 0.5 })); f.position.set(p[0], 0.6, p[1]); fence.add(f); }); [[-pw / 2, 0], [pw / 2, 0]].forEach(function (p) { var f = new THREE.Mesh(new THREE.BoxGeometry(0.04, 1.2, pd), mat(0x333333, { transparent: true, opacity: 0.5 })); f.position.set(p[0], 0.6, p[1]); fence.add(f); }); fence.position.set(pool.x, 0, pool.z); var hit = new THREE.Mesh(new THREE.BoxGeometry(pw, 1.2, pd), mat(0xffffff, { transparent: true, opacity: 0 })); hit.position.set(pool.x, 0.6, pool.z); hit.userData.mapKey = "m_pool"; hit.userData.name = "Pool barrier"; tappables.push(hit); mapMeshes.m_pool = hit; lotG.add(fence); lotG.add(hit); })();
+
+// ---------- the section models ----------
+var mSoil = mat(0x6b5f52), mSlab = mat(0xf4f1e8), mWallS = mat(0x3a3a3a), mBelow = mat(0xc9c9c4), mFloorTint = mat(0xe8c97a, { transparent: true, opacity: 0.55 }), mRail = mat(0x1e2a44), mBracket = mat(0xe8801a);
+function groundAt(m, xf) { var g = m.ground; for (var i = 1; i < g.length; i++) { if (xf <= g[i][0]) { var t = (xf - g[i - 1][0]) / Math.max(1e-6, g[i][0] - g[i - 1][0]); return g[i - 1][1] + t * (g[i][1] - g[i - 1][1]); } } return g[g.length - 1][1]; }
+function soilBlock(m, xa, xb, ya, yb) { // xa..xb in metres from model centre, ya/yb ground heights at each end
+  var s = new THREE.Shape(); s.moveTo(xa, 0); s.lineTo(xb, 0); s.lineTo(xb, yb); s.lineTo(xa, ya); s.lineTo(xa, 0);
+  var g = new THREE.ExtrudeGeometry(s, { depth: STOREY_D + 3, bevelEnabled: false }); g.translate(0, 0, -(STOREY_D + 3) / 2 - 1.5); return new THREE.Mesh(g, mSoil);
+}
+function buildModel(m) {
+  var g = new THREE.Group(); g.position.set(m.x, 0, m.z); world.add(g); m.group = g; m.tags = [];
+  var W = STOREY_W, D = STOREY_D;
+  // soil on each side, following the ground profile at the wall
+  var gl = groundAt(m, 0), gr = groundAt(m, 1);
+  var extra = 4;
+  g.add(soilBlock(m, -W / 2 - extra, -W / 2, gl, gl)); g.add(soilBlock(m, W / 2, W / 2 + extra, gr, gr));
+  // ground surface strip on top of the soil (thin, lighter)
+  m.floors.forEach(function (f) {
+    var x0 = (f.x0 || 0) * W - W / 2, x1 = (f.x1 === undefined ? 1 : f.x1) * W - W / 2, fw = x1 - x0, cx = (x0 + x1) / 2, ceil = f.y0 + f.h;
+    var slab = new THREE.Mesh(new THREE.BoxGeometry(fw, 0.25, D), mSlab); slab.position.set(cx, f.y0 - 0.125, 0); g.add(slab);
+    if (!f.mezz) {
+      var back = new THREE.Mesh(new THREE.BoxGeometry(fw, f.h, 0.15), mWallS); back.position.set(cx, f.y0 + f.h / 2, D / 2); g.add(back);
+      var wl = new THREE.Mesh(new THREE.BoxGeometry(0.2, f.h, D), mWallS); wl.position.set(x0 - 0.1, f.y0 + f.h / 2, 0); g.add(wl);
+      var wr = new THREE.Mesh(new THREE.BoxGeometry(0.2, f.h, D), mWallS); wr.position.set(x1 + 0.1, f.y0 + f.h / 2, 0); g.add(wr);
+      // interior tint: grey below ground, straw above
+      var below = Math.max(0, Math.min(f.h, groundAt(m, 0.5) - f.y0));
+      if (below > 0) { var bb = new THREE.Mesh(new THREE.BoxGeometry(fw - 0.1, below, D - 0.3), mBelow); bb.position.set(cx, f.y0 + below / 2, 0.15); g.add(bb); }
+      if (f.h - below > 0.05) { var ab = new THREE.Mesh(new THREE.BoxGeometry(fw - 0.1, f.h - below, D - 0.3), mFloorTint); ab.position.set(cx, f.y0 + below + (f.h - below) / 2, 0.15); g.add(ab); }
+      var ceilM = new THREE.Mesh(new THREE.BoxGeometry(fw + 0.4, 0.25, D), mSlab); ceilM.position.set(cx, ceil + 0.125, 0); g.add(ceilM);
+    } else {
+      var rail = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.0, D), mRail); rail.position.set(x1 > 0 ? x0 : x1, f.y0 + 0.5, 0); g.add(rail);
+      var mzt = new THREE.Mesh(new THREE.BoxGeometry(fw - 0.1, 0.05, D - 0.3), mFloorTint); mzt.position.set(cx, f.y0 + 0.03, 0.15); g.add(mzt);
+    }
+    if (f.wall) { var wm = new THREE.Mesh(new THREE.BoxGeometry(0.2, f.h, D), mWallS); wm.position.set(x1 + 0.1, f.y0 + f.h / 2, 0); g.add(wm); }
+    if (f.room) { var rl = makeLabel(Math.min(fw * 0.85, 7), 1.0, 900, 130); drawSign(rl, [f.room], 60); rl.mesh.position.set(cx, f.y0 + Math.min(f.h, 3.2) * 0.55, D / 2 - 0.25); rl.mesh.rotation.y = Math.PI; g.add(rl.mesh); }
+    f.cx = cx; f.x0m = x0; f.ceilY = ceil;
+  });
+  if (m.twelve) { var br = new THREE.Mesh(new THREE.BoxGeometry(W, 0.12, 0.12), mBracket); br.position.set(0, 0.3, -D / 2 - 0.6); g.add(br); var bl = makeLabel(2.2, 0.5, 440, 100); drawSign(bl, ["12 m"], 48); bl.mesh.position.set(0, 0.9, -D / 2 - 0.6); bl.mesh.rotation.y = Math.PI; g.add(bl.mesh); }
+  // stair in the exclusions model, and in the mezzanine models
+  var sign = makeLabel(7, 0.9, 900, 116); drawSign(sign, [m.sign], 50); sign.mesh.position.set(0, m.h + 1.6, -D / 2 + 1); sign.mesh.rotation.y = Math.PI; g.add(sign.mesh); m.signPanel = sign;
+  var lab = makeLabel(3.4, 1.0, 680, 200); lab.mesh.position.set(0, m.h + 3.0, -D / 2 + 1); lab.mesh.visible = false; g.add(lab.mesh); m.label = lab;
+  var hit = new THREE.Mesh(new THREE.BoxGeometry(W, m.h, D), mat(0xffffff, { transparent: true, opacity: 0 })); hit.position.set(0, m.h / 2, 0); hit.userData.model = m; hit.userData.name = m.name; tappables.push(hit); g.add(hit);
+  // lift the whole model so its lowest floor sits at world ground: models are drawn with floor 0 at y = 0 already
+}
+MODELS.forEach(buildModel);
+function clearTags() { MODELS.forEach(function (m) { m.tags.forEach(function (t) { m.group.remove(t.mesh); }); m.tags = []; }); }
+function tagFloor(m, f, txt, good) { var t = makeLabel(3.2, 0.62, 640, 124); var x = t.ctx; x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = good ? C.green : C.red; x.fillRect(0, 0, t.cw, t.ch); t.text(txt, t.cw / 2, t.ch * 0.68, C.white, fitPx(t, txt, 52, t.cw - 30), "", "center"); t.tex.needsUpdate = true; t.mesh.position.set(f.cx, f.y0 + Math.min(f.h, 3.2) * 0.5, -STOREY_D / 2 - 0.15); t.mesh.rotation.y = Math.PI; m.group.add(t.mesh); m.tags.push(t); }
+
+// house walls go translucent in the map tour so the inside shows
+var houseBody = house.body, houseSolid = house.baseMat, houseGhost = mat(house.col, { transparent: true, opacity: 0.35 });
+
+// the pathway monument and its stair, on the vacant lot
+var pathG = new THREE.Group(); pathG.position.set(-25, 0, 30); world.add(pathG);
+var monoSlab = new THREE.Mesh(new THREE.BoxGeometry(10, 0.5, 8), mat(0x1e2a44)); monoSlab.position.y = 0.25; monoSlab.visible = false; pathG.add(monoSlab);
+var monoFrame = new THREE.Group(); [[-4.5, -3.5], [4.5, -3.5], [-4.5, 3.5], [4.5, 3.5], [0, -3.5], [0, 3.5]].forEach(function (p) { var c = new THREE.Mesh(new THREE.BoxGeometry(0.3, 4, 0.3), mat(0xe8801a)); c.position.set(p[0], 2.5, p[1]); monoFrame.add(c); }); [[0, -3.5], [0, 3.5]].forEach(function (p) { var b = new THREE.Mesh(new THREE.BoxGeometry(9.3, 0.3, 0.3), mat(0xe8801a)); b.position.set(p[0], 4.5, p[1]); monoFrame.add(b); }); [[-4.5, 0], [4.5, 0], [0, 0]].forEach(function (p) { var b = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 7.3), mat(0xe8801a)); b.position.set(p[0], 4.5, p[1]); monoFrame.add(b); }); monoFrame.visible = false; pathG.add(monoFrame);
+var doorDTS = new THREE.Mesh(new THREE.BoxGeometry(4.2, 3.9, 0.15), mat(0x2b8a8a, { transparent: true, opacity: 0.6 })); doorDTS.position.set(2.3, 2.45, -3.6); var doorPerf = new THREE.Mesh(new THREE.BoxGeometry(4.2, 3.9, 0.15), mat(0xc99a2e, { transparent: true, opacity: 0.6 })); doorPerf.position.set(-2.3, 2.45, -3.6); doorDTS.visible = doorPerf.visible = false; pathG.add(doorDTS); pathG.add(doorPerf);
+var lblSlab = makeLabel(6, 0.9, 900, 135), lblFrame = makeLabel(6, 0.9, 900, 135), lblDTS = makeLabel(3.6, 1.4, 720, 280), lblPerf = makeLabel(3.6, 1.4, 720, 280);
+drawSign(lblSlab, ["Governing Requirements", "Section A"], 60); drawSign(lblFrame, ["Performance Requirements", "H1P1, H2P1, H3P1 ... mandatory"], 56); drawSign(lblDTS, ["Deemed-to-Satisfy", "A2G3 - follow the pointer"], 60); drawSign(lblPerf, ["Performance Solution", "A2G2 - brief, analysis, report"], 60);
+lblSlab.mesh.position.set(0, 0.9, -4.2); lblFrame.mesh.position.set(0, 5.3, -3.8); lblDTS.mesh.position.set(2.3, 2.5, -3.75); lblPerf.mesh.position.set(-2.3, 2.5, -3.75);
+[lblSlab, lblFrame, lblDTS, lblPerf].forEach(function (l) { l.mesh.visible = false; l.mesh.rotation.y = Math.PI; pathG.add(l.mesh); });
+// the demonstration stair: built step by step, to whichever riser and going the step asks for
+var demoStair = new THREE.Group(); demoStair.position.set(8, 0, -3); pathG.add(demoStair);
+var stairSteps = [], stairLabel = makeLabel(3.2, 1.0, 640, 200); stairLabel.mesh.position.set(0, 2.9, 0); stairLabel.mesh.visible = false; demoStair.add(stairLabel.mesh);
+function clearStair() { stairSteps.forEach(function (m) { demoStair.remove(m); }); stairSteps = []; }
+function addStairStep(i, R, G, bad) { var tr = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.04, G), bad ? mat(0xc99a2e) : mat(0x2b8a8a)); tr.position.set(0, (i + 1) * R - 0.02, (i + 0.5) * G); demoStair.add(tr); stairSteps.push(tr); var rs = new THREE.Mesh(new THREE.BoxGeometry(1.0, R, 0.03), mTimber); rs.position.set(0, i * R + R / 2, i * G + 0.015); demoStair.add(rs); stairSteps.push(rs); }
+var docs = []; function clearDocs() { docs.forEach(function (d) { pathG.remove(d.mesh); }); docs = []; }
+
+
+// ---------- the Volume One monument ----------
+slabOutline(VAC2);
+var v1G = new THREE.Group(); v1G.position.set(V1C.x, 0, V1C.z); world.add(v1G);
+var v1Slab = new THREE.Mesh(new THREE.BoxGeometry(12, 0.5, 9), mat(0x1e2a44)); v1Slab.position.y = 0.25; v1Slab.visible = false; v1G.add(v1Slab);
+var v1Frame = new THREE.Group(), SECTIONS = ["B", "C", "D", "E", "F", "G", "I", "J"];
+[[-5.5, -4], [5.5, -4], [-5.5, 4], [5.5, 4], [0, -4], [0, 4]].forEach(function (p) { var c = new THREE.Mesh(new THREE.BoxGeometry(0.3, 4.2, 0.3), mat(0xe8801a)); c.position.set(p[0], 2.6, p[1]); v1Frame.add(c); });
+SECTIONS.forEach(function (sec, i) { var b = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 8.3), mat(0xe8801a)); var x = 5.5 - i * (11 / 7); b.position.set(x, 4.7, 0); v1Frame.add(b); var l = makeLabel(0.9, 0.9, 200, 200); drawSign(l, [sec], 120); l.mesh.position.set(x, 5.4, -4.2); l.mesh.rotation.y = Math.PI; v1Frame.add(l.mesh); });
+v1Frame.visible = false; v1G.add(v1Frame);
+var v1DoorDTS = new THREE.Mesh(new THREE.BoxGeometry(4.6, 4.0, 0.15), mat(0x2b8a8a, { transparent: true, opacity: 0.6 })); v1DoorDTS.position.set(2.6, 2.5, -4.1); var v1DoorPerf = new THREE.Mesh(new THREE.BoxGeometry(4.6, 4.0, 0.15), mat(0xc99a2e, { transparent: true, opacity: 0.6 })); v1DoorPerf.position.set(-2.6, 2.5, -4.1); v1DoorDTS.visible = v1DoorPerf.visible = false; v1G.add(v1DoorDTS); v1G.add(v1DoorPerf);
+var v1LblDTS = makeLabel(4.0, 1.6, 720, 290), v1LblPerf = makeLabel(4.0, 1.6, 720, 290), v1LblSlab = makeLabel(7, 0.9, 900, 120);
+drawSign(v1LblDTS, ["C2D1: C1P1 to C1P9 satisfied by", "C2D2 to C2D15, C3D2 to C3D15,", "C4D2 to C4D17"], 44); drawSign(v1LblPerf, ["A2G2: Performance Solution", "assessment methods,", "verification methods (V clauses)"], 44); drawSign(v1LblSlab, ["Section A - Governing Requirements"], 54);
+v1LblDTS.mesh.position.set(2.6, 2.5, -4.25); v1LblPerf.mesh.position.set(-2.6, 2.5, -4.25); v1LblSlab.mesh.position.set(0, 0.95, -4.7);
+[v1LblDTS, v1LblPerf, v1LblSlab].forEach(function (l) { l.mesh.visible = false; l.mesh.rotation.y = Math.PI; v1G.add(l.mesh); });
+// the shelf of 48 Specifications along the back of the monument
+var shelf = new THREE.Group(), books = {};
+(function () { var plank = new THREE.Mesh(new THREE.BoxGeometry(11.6, 0.12, 0.7), mTimber); plank.position.set(0, 1.0, 3.5); shelf.add(plank); var plank2 = new THREE.Mesh(new THREE.BoxGeometry(11.6, 0.12, 0.7), mTimber); plank2.position.set(0, 2.5, 3.5); shelf.add(plank2);
+  for (var n = 1; n <= 48; n++) { var row = n <= 24 ? 1 : 0, col = (n - 1) % 24; var bk = new THREE.Mesh(new THREE.BoxGeometry(0.34, 1.25, 0.55), mat(SPEC_NAMES[n] ? 0x8fa3ad : 0xb0b8c4)); bk.position.set(-5.5 + col * (11 / 23), (row ? 2.5 : 1.0) + 0.7, 3.5); bk.userData.spec = n; shelf.add(bk); books[n] = bk;
+    if (SPEC_NAMES[n]) { var sl = makeLabel(0.32, 1.1, 90, 300); var x = sl.ctx; x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = C.paper; x.fillRect(0, 0, 90, 300); x.save(); x.translate(45, 150); x.rotate(-Math.PI / 2); sl.text(String(n), 0, 18, C.ink, 54, "", "center"); x.restore(); sl.tex.needsUpdate = true; sl.mesh.position.set(bk.position.x, bk.position.y, bk.position.z - 0.29); sl.mesh.rotation.y = Math.PI; shelf.add(sl.mesh); } }
+  var t = makeLabel(6, 0.8, 900, 120); drawSign(t, ["Specifications 1 to 48"], 54); t.mesh.position.set(0, 3.9, 3.3); t.mesh.rotation.y = Math.PI; shelf.add(t.mesh);
+})();
+shelf.visible = false; v1G.add(shelf);
+var v1Docs = []; function clearV1Docs() { v1Docs.forEach(function (d) { v1G.remove(d.mesh); }); v1Docs = []; Object.keys(books).forEach(function (n) { var b = books[n]; b.position.z = 3.5; b.material.color.set(SPEC_NAMES[n] ? 0x8fa3ad : 0xb0b8c4); }); }
+function v1Doc(lines, x, y, z, w, col) { var d = makeLabel(w || 3.2, 1.3, 760, 310); var c = d.ctx; c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = col || C.paper; c.fillRect(0, 0, d.cw, d.ch); c.lineWidth = 8; c.strokeStyle = C.ink; c.strokeRect(4, 4, d.cw - 8, d.ch - 8); var yy = d.ch / 2 - (lines.length - 1) * 30 + 16; lines.forEach(function (l, i) { d.text(l, d.cw / 2, yy, col ? C.white : (i === 0 ? C.ink : C.mute), i === 0 ? 46 : 36, "", "center"); yy += 60; }); d.tex.needsUpdate = true; d.mesh.position.set(x, y, z); d.mesh.rotation.y = Math.PI; v1G.add(d.mesh); v1Docs.push(d); return d; }
+function showV1Stage(n) { v1Slab.visible = v1LblSlab.mesh.visible = n >= 1; v1Frame.visible = n >= 2; v1DoorDTS.visible = v1DoorPerf.visible = v1LblDTS.mesh.visible = v1LblPerf.mesh.visible = n >= 3; shelf.visible = n >= 4; }
+var v1Stage = 0;
+
+// ---------- focus ring and class label ----------
+var focusRing = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.15, 40), new THREE.MeshBasicMaterial({ color: 0xe8801a, side: THREE.DoubleSide, transparent: true, opacity: 0.85 })); focusRing.rotation.x = -Math.PI / 2; focusRing.visible = false; scene.add(focusRing);
+var focusTarget = null;
+function setFocus(key) {
+  focusTarget = null; STREET.concat(LOTITEMS).concat([bh]).concat(MODELS).forEach(function (b) { b.label.mesh.visible = false; if (b.body && b.baseMat) b.body.material = b.baseMat; });
+  Object.keys(mapMeshes).forEach(function (k) { var m = mapMeshes[k]; if (m.userData.baseMat) { m.material = m.userData.baseMat; delete m.userData.baseMat; } });
+  focusRing.visible = false;
+  if (!key) return;
+  var b = bldg(key) || lotItem(key) || modelByKey(key) || (key === "bh" ? bh : null);
+  if (b) { focusTarget = b; focusRing.visible = true; focusRing.position.set(b.x, 0.06, b.z + b.d / 2 + 1.6); focusRing.scale.setScalar(Math.max(1, b.w / 8)); return; }
+  var m = mapMeshes[key]; if (m) { focusTarget = m; m.userData.baseMat = m.material; m.material = mat(0xe8801a, { emissive: 0xe8801a, emissiveIntensity: 0.35, transparent: true, opacity: 0.95 }); }
+}
+function revealClass(b, text, sub) { drawClassLabel(b.label, text, sub); b.label.mesh.visible = true; }
+
+// =====================================================================
+// ACTIONS
+// =====================================================================
+function tone(freq, t0, dur, gain) { try { var a = ac(), o = a.createOscillator(), g = a.createGain(); o.type = "sine"; o.frequency.value = freq; g.gain.setValueAtTime(0, a.currentTime + t0); g.gain.linearRampToValueAtTime(gain, a.currentTime + t0 + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + t0 + dur); o.connect(g); g.connect(a.destination); o.start(a.currentTime + t0); o.stop(a.currentTime + t0 + dur + 0.05); } catch (e) {} }
+var _ac = null; function ac() { if (!_ac) _ac = new (window.AudioContext || window.webkitAudioContext)(); return _ac; }
+function ding() { tone(880, 0, 0.15, 0.15); tone(1320, 0.12, 0.25, 0.12); }
+function buzz() { tone(180, 0, 0.25, 0.2); }
+function thunk() { tone(140, 0, 0.12, 0.35); tone(90, 0.02, 0.2, 0.25); }
+
+function pickQuiz(i) {
+  var s = step(); if (s.mode !== "quiz" || quizPicked >= 0) return; var b = s.options ? s : bldg(s.focus); quizPicked = i;
+  var right = b.options[b.answer];
+  if (i === b.answer) { score.right++; ding(); feedback = "Right. " + right + "."; } else { score.missed++; buzz(); feedback = "Not that one. It is " + right + ". " + b.options[i] + " is what you picked."; }
+  if (b.cls) revealClass(b, b.cls); stepDone = true; renderBoard();
+}
+function act(a) {
+  if (a.tab) { switchTab(a.tab); return; }
+  if (a.quiz !== undefined) { pickQuiz(a.quiz); return; }
+  if (a.jump !== undefined) { jumpTo(a.jump); return; }
+  if (a.act === "next") { if (stepDone) advance(); }
+  else if (a.act === "back") { if (stepIdx > 0) { stepIdx--; enterStep(); } }
+  else if (a.act === "goto") { walkTo(); }
+  else if (a.act === "demo") { runDemo(); }
+  else if (a.act === "mode") { guided = !guided; feedback = guided ? "Guided: the game takes you to each spot." : "Hands-on: point at any building or any part of the house and press the trigger to read its class or its chain."; }
+  else if (a.act === "voice") { voiceOn = !voiceOn; if (!voiceOn) stopSpeech(); else speakStep(); }
+  else if (a.act === "steps") { showSteps = !showSteps; showExplain = false; }
+  else if (a.act === "explain") { showExplain = !showExplain; showSteps = false; }
+  else if (a.act === "readExplain") { var ex = explainFor(step()); if (ex) speak(ex.terms.map(function (t) { return t[0] + ". " + t[1]; }).join(" ") + " The clause, and how it works out. " + ex.working.join(" ")); }
+  renderBoard();
+}
+function switchTab(t) {
+  tab = t; STEPS = TOURS[t]; stepIdx = 0; feedback = ""; quizPicked = -1; showExplain = false; showSteps = false; freeHit = null;
+  houseBody.material = t === "map" ? houseGhost : houseSolid;
+  enterStep();
+}
+function enterStep() {
+  var s = step(); feedback = ""; quizPicked = -1; showExplain = false; demoRunning = false;
+  stepDone = ["intro", "end", "look", "chain"].indexOf(s.mode) >= 0;
+  setFocus(s.focus || null); houseBody.material = tab === "map" ? houseGhost : houseSolid; clearTags(); MODELS.forEach(function (m) { m.floors.forEach(function (f) { f.tagged = false; }); });
+  if (s.mode === "look") { var it = s.focus === "bh" ? bh : lotItem(s.focus); revealClass(it, it.cls === "Part of the Class 1a" ? "Class 1a" : it.cls, it.cls === "Part of the Class 1a" ? "part of the house" : null); }
+  if (s.mode === "use") { useIdx = -1; drawSign(bldg("chameleon").signPanel, ["TO LET"], 56); }
+  if (s.mode === "beds") { bedCount = 10; rebuildBeds2(10); revealClass(bldg("boarding"), "Class 1b", "10 people"); }
+  if (s.mode === "beds2") { bedCount = 10; rebuildBeds(10); revealClass(bh, "Class 1b", "10 people"); }
+  if (s.mode === "tenpc") { officeFrac = 0.08; setOffice(bldg("factory"), 0.08); revealClass(bldg("factory"), "Class 8", "office 8% - whole storey"); }
+  if (tab === "v1") { v1Stage = s.stage ? s.stage - 1 : (s.mode === "intro" || s.mode === "anatomy" ? (s.mode === "intro" ? 0 : 4) : 4); showV1Stage(v1Stage); clearV1Docs(); }
+  if (tab === "path") { pathStage = s.stage ? s.stage - 1 : (s.mode === "intro" ? 0 : 3); showPathStage(pathStage); clearStair(); clearDocs(); stairLabel.mesh.visible = false; if (s.mode === "stairperf") { buildStairNow(0.175, 0.26, false); } }
+  renderBoard(); walkTo(); speakStep();
+}
+function advance() { if (stepIdx < STEPS.length - 1) { stepIdx++; enterStep(); } }
+function jumpTo(i) { stepIdx = Math.max(0, Math.min(STEPS.length - 1, i)); showSteps = false; enterStep(); }
+function showPathStage(n) { monoSlab.visible = n >= 1; lblSlab.mesh.visible = n >= 1; monoFrame.visible = n >= 2; lblFrame.mesh.visible = n >= 2; doorDTS.visible = doorPerf.visible = n >= 3; lblDTS.mesh.visible = lblPerf.mesh.visible = n >= 3; }
+function buildStairNow(R, G, bad) { clearStair(); for (var i = 0; i < 7; i++) addStairStep(i, R, G, bad); }
+
+// ---------- guided demo: the game does the step, slowly, and narrates ----------
+function later(fn, ms) { return function (next) { setTimeout(function () { try { fn(); } catch (e) { feedback = "Something went wrong in this step: " + (e && e.message); demoRunning = false; renderBoard(); return; } next(); }, ms); }; }
+function runQueue(q, done) { var i = 0; (function step_() { if (i >= q.length) { done && done(); return; } q[i++](step_); })(); }
+function runDemo() {
+  var s = step(); if (demoRunning || stepDone) return; demoRunning = true; renderBoard();
+  var q = [];
+  if (s.mode === "use") {
+    var b = bldg("chameleon");
+    USES.forEach(function (u, i) { q.push(later(function () { useIdx = i; drawSign(b.signPanel, [u.sign], 52); revealClass(b, u.cls); feedback = u.cls + ": " + u.note + "."; renderBoard(); ding(); }, i === 0 ? 400 : 3200)); });
+    q.push(later(function () { feedback = "Four fitouts, four classes, one building. Classification is by use."; }, 3000));
+  } else if (s.mode === "beds" || s.mode === "beds2") {
+    var bb = s.mode === "beds" ? bldg("boarding") : bh, rb = s.mode === "beds" ? rebuildBeds2 : rebuildBeds;
+    for (var i = 11; i <= 14; i++) (function (n) { q.push(later(function () { bedCount = n; rb(n); revealClass(bb, n <= 12 ? "Class 1b" : "Class 3", n + " people" + (n <= 12 ? "" : " - Volume One")); feedback = n <= 12 ? n + " people. Still not more than 12. Class 1b." : n + " people. More than 12. Class 3, Volume One."; renderBoard(); if (n <= 12) ding(); else buzz(); }, n === 11 ? 600 : 2600)); })(i);
+  } else if (s.mode === "tenpc") {
+    var f = bldg("factory");
+    [0.08, 0.09, 0.10, 0.12].forEach(function (fr, i) { q.push(later(function () { officeFrac = fr; setOffice(f, fr); revealClass(f, fr < 0.10 ? "Class 8" : "Class 5 + 8", "office " + Math.round(fr * 100) + "%"); feedback = fr < 0.10 ? "Office at " + Math.round(fr * 100) + " percent: less than 10. The whole storey can be Class 8." : "Office at " + Math.round(fr * 100) + " percent: the concession is gone. The office is Class 5, the rest Class 8, and the boundary between them now matters."; renderBoard(); if (fr < 0.10) ding(); else buzz(); }, i === 0 ? 500 : 2800)); });
+  } else if (s.mode === "count") {
+    var mdl = modelByKey(s.focus), order = mdl.floors.slice().sort(function (a, b) { return a.y0 - b.y0; }), n = 0;
+    order.forEach(function (f, i) { q.push(later(function () { f.tagged = true; if (f.counted) n += f.double ? 2 : 1; tagFloor(mdl, f, f.counted ? f.tag : "Not a storey", f.counted); feedback = (f.counted ? "Counted: " + f.tag + ". " : "Not counted: " + f.tag + ". ") + (f.why ? f.why + "." : ""); renderBoard(); if (f.counted) ding(); else buzz(); }, i === 0 ? 500 : 3200)); });
+    q.push(later(function () { revealClass(mdl, "Rise = " + mdl.rise, mdl.rise === 1 ? "storey" : "storeys"); feedback = "Rise in storeys: " + mdl.rise + "."; }, 2600));
+  } else if (s.mode === "v1build") {
+    q.push(later(function () { v1Stage = s.stage; showV1Stage(v1Stage); thunk(); feedback = ["Section A. Same slab as Volume Two.", "Eight beams, eight Sections. The P clauses hang off them and they are mandatory.", "Two doors. Teal: C2D1 and its cousins, the D1 clause in every Section. Gold: A2G2.", "Forty-eight Specifications on the shelf behind the doors. The numbered ones are the ones you will meet most."][s.stage - 1]; renderBoard(); }, 600));
+  } else if (s.mode === "anatomy") {
+    var parts = [["S", "Specification, not a Section"], ["5", "Specification number 5"], ["C", "Type: Specification clause"], ["21", "Clause 21"]];
+    parts.forEach(function (pt, i) { q.push(later(function () { v1Doc([pt[0], pt[1]], 4.8 - i * 3.2, 7.2, -4.5, 2.9); feedback = pt[0] + ": " + pt[1] + "."; renderBoard(); ding(); }, i === 0 ? 500 : 2200)); });
+    q.push(later(function () { v1Doc(["S5C21", "Specification 5, clause 21: Type B construction"], 0, 9.0, -4.5, 6.5, C.ink); feedback = "S5C21. The letter in the third position is the status. Read it before you read the clause."; renderBoard(); }, 2400));
+  } else if (s.mode === "v1chain") {
+    var chain = [["A6G6", "Class 5 office"], ["C2D3", "rise in storeys 3"], ["Table C2D2", "Class 5, rise 3: Type B"], ["C2D2(2)", "each element must comply with Specification 5"], ["S5C21(1)(a)", "FRL not less than the Tables"], ["Table S5C21a", "loadbearing external wall, Class 5, 3 m to 9 m: 120/30/30"]];
+    chain.forEach(function (l, i) { q.push(later(function () { v1Doc([l[0], l[1]], 8.5, 8.6 - i * 1.5, -1.5, 5.6, i === 3 ? C.teal : null); if (i === 3) { books[5].position.z = 2.9; books[5].material.color.set(0x2b8a8a); } feedback = l[0] + ": " + l[1] + "."; renderBoard(); if (i === 5) ding(); else tone(700 + i * 60, 0, 0.1, 0.1); }, i === 0 ? 500 : 2800)); });
+    q.push(later(function () { feedback = "120/30/30. Six links from the class to the number, and the number is in a Specification, called up by a D clause, so it is mandatory."; renderBoard(); }, 2600));
+  } else if (s.mode === "v1chain2") {
+    var chain2 = [["J1P1", "energy efficiency: the outcome"], ["J1V3", "verification using a reference building: optional"], ["Specification 34", "modelling parameters: optional, because J1V3 is"], ["Specification 35", "modelling profiles: optional, because J1V3 is"]];
+    chain2.forEach(function (l, i) { q.push(later(function () { v1Doc([l[0], l[1]], 8.5, 8.6 - i * 1.5, -1.5, 5.6, i >= 2 ? C.gold : null); if (i >= 2) { var b = books[i === 2 ? 34 : 35]; b.position.z = 2.9; b.material.color.set(0xc99a2e); } feedback = l[0] + ": " + l[1] + "."; renderBoard(); tone(700 + i * 60, 0, 0.1, 0.1); }, i === 0 ? 500 : 2800)); });
+    q.push(later(function () { feedback = "Same shelf, gold door. Specification 34 and 35 bind you only if you chose J1V3."; ding(); renderBoard(); }, 2600));
+  } else if (s.mode === "build") {
+    q.push(later(function () { pathStage = s.stage; showPathStage(pathStage); thunk(); feedback = s.stage === 1 ? "Section A. Everything stands on it." : (s.stage === 2 ? "The Performance Requirements. Mandatory. The frame that every solution must hang off." : "Two doors. Teal: deemed to satisfy. Gold: performance solution. Both lead to the same frame."); renderBoard(); }, 600));
+  } else if (s.mode === "stairdts") {
+    q.push(later(function () { drawSign(stairLabel, ["H5P1", "safe movement - the outcome"], 56); stairLabel.mesh.visible = true; feedback = "H5P1: the outcome. A stair that is safe to use."; renderBoard(); }, 500));
+    q.push(later(function () { drawSign(stairLabel, ["H5D2", "comply with Part 11.2 - the pointer"], 52); feedback = "H5D2: one sentence. Comply with Part 11.2 of the Housing Provisions."; renderBoard(); }, 3200));
+    q.push(later(function () { drawSign(stairLabel, ["Part 11.2, Table 11.2.2a", "riser 175, going 260, 2R+G 610"], 48); feedback = "Part 11.2: the numbers. Riser 175, going 260. Watch it build."; renderBoard(); }, 3200));
+    for (var k = 0; k < 7; k++) (function (i) { q.push(later(function () { addStairStep(i, 0.175, 0.26, false); thunk(); }, i === 0 ? 1200 : 450)); })(k);
+    q.push(later(function () { feedback = "Right. Every riser and going inside Table 11.2.2a. Deemed to satisfy H5P1. Through the teal door."; ding(); renderBoard(); }, 800));
+  } else if (s.mode === "stairperf") {
+    q.push(later(function () { clearStair(); for (var i = 0; i < 7; i++) addStairStep(i, 0.2, 0.23, true); drawSign(stairLabel, ["Riser 200, going 230", "outside Table 11.2.2a - DTS door shut"], 46); stairLabel.mesh.visible = true; buzz(); feedback = "Riser 200 is over 190. Going 230 is under 240. The DTS door is shut."; renderBoard(); }, 600));
+    var pages = [["1  Design brief", "A2G2(4)(a) - with stakeholders"], ["2  Analysis", "A2G2(4)(b) - as the brief proposed"], ["3  Evaluation", "A2G2(4)(c) - against the acceptance criteria"], ["4  Final report", "A2G2(4)(d) - PRs, methods, steps, conditions"]];
+    pages.forEach(function (p, i) { q.push(later(function () { var d = makeLabel(2.4, 1.4, 600, 350); drawSign(d, p, 48); d.mesh.position.set(-2.3 - (i - 1.5) * 2.6, 6.3, -3.9); d.mesh.rotation.y = Math.PI; pathG.add(d.mesh); docs.push(d); feedback = p[0].slice(3) + ". " + p[1] + "."; renderBoard(); ding(); }, i === 0 ? 2800 : 3000)); });
+    q.push(later(function () { feedback = "Four documents, and the gold door opens. Same H5P1, satisfied by a different route."; renderBoard(); }, 2800));
+  }
+  runQueue(q, function () { demoRunning = false; stepDone = true; renderBoard(); });
+}
+
+// ---------- free roam in hands-on mode ----------
+function tapObject(obj) {
+  if (obj.userData.building) { var b = obj.userData.building; setFocus(b.key); revealClass(b, b.cls === "Depends on use" ? "Use decides" : (b.cls === "Part of the Class 1a" ? "Class 1a" : b.cls), b.cls === "Part of the Class 1a" ? "part of the house" : null); feedback = b.name + ": " + b.cls + ". " + (b.why || b.note || ""); renderBoard(); ding(); return; }
+  if (obj.userData.model) { var md = obj.userData.model; setFocus(md.key); revealClass(md, "Rise = " + md.rise, md.rise === 1 ? "storey" : "storeys"); feedback = md.name + ". Rise in storeys " + md.rise + ". " + md.floors.filter(function (f) { return f.why; }).map(function (f) { return f.tag + ": " + f.why; }).join(". "); renderBoard(); ding(); return; }
+  if (obj.userData.mapKey) { var m = mapItem(obj.userData.mapKey); setFocus(m.key); freeHit = m; feedback = m.name + ". " + m.pr + ". " + m.dts + ". " + m.hp + "."; renderBoard(); ding(); }
+}
+
+// ---------- voice ----------
+var voices = [];
+function stopSpeech() { try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {} }
+function loadVoices() { try { voices = speechSynthesis.getVoices() || []; } catch (e) {} }
+if (window.speechSynthesis) { loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
+function pickVoice() { if (!voices.length) loadVoices(); return voices.find(function (x) { return /en[-_]AU/i.test(x.lang); }) || voices.find(function (x) { return /en[-_]GB/i.test(x.lang); }) || voices.find(function (x) { return /^en/i.test(x.lang); }) || null; }
+function speak(text) { if (!voiceOn) return; try { stopSpeech(); var u = new SpeechSynthesisUtterance(text.replace(/\n+/g, ". ")); var v = pickVoice(); if (v) { u.voice = v; u.lang = v.lang; } u.rate = 0.95; u.pitch = 1.0; speechSynthesis.speak(u); } catch (e) {} }
+function primeSpeech() { try { if (window.speechSynthesis) { loadVoices(); var u = new SpeechSynthesisUtterance(" "); speechSynthesis.speak(u); } } catch (e) {} }
+function stepText(s) { var t = (s.n === 0 || s.mode === "end" ? "" : "Step " + s.n + ". ") + s.title + ". " + s.task; if (s.mode === "chain") { var m = mapItem(s.key); t = s.title + ". " + m.pr + ". Then " + m.dts + ". Which points to " + m.hp + ". " + m.plain; } if (s.how && !stepDone) t += " " + (guided ? (s.watch || s.how) : s.how); return t; }
+function speakStep() { lastSpoken = ""; speak(stepText(step())); }
+
+// ---------- walking you to the spot ----------
+var rigFixedY = null;
+function faceAndStand(v) {
+  if (renderer.xr.isPresenting && v.y !== undefined) {
+    var dx = v.x - v.look.x, dz = v.z - v.look.z, dl = Math.hypot(dx, dz) || 1;
+    v = { x: v.look.x + dx / dl * 10, z: v.look.z + dz / dl * 10, y: Math.min(v.y, 3), look: v.look };
+  }
+  var yawWanted = Math.atan2(-(v.look.x - v.x), -(v.look.z - v.z)), stand = v.y !== undefined ? v.y : 0;
+  if (renderer.xr.isPresenting) {
+    // camera.position and camera.quaternion are the head pose in the rig's own frame (WebXRManager.getCamera).
+    var f = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); var headYaw = Math.atan2(-f.x, -f.z);
+    rig.rotation.y = yawWanted - headYaw;
+    rig.position.set(v.x, stand, v.z);
+  } else { yaw = yawWanted; pitch = v.y !== undefined ? -Math.atan2(v.y, Math.hypot(v.look.x - v.x, v.look.z - v.z) || 1) : 0.04; rig.position.set(v.x, stand, v.z); }
+  rigFixedY = v.y !== undefined ? v.y : null;
+  tone(600, 0, 0.06, 0.06);
+}
+function walkTo() { var v = step().vantage; if (v) faceAndStand(v); }
+
+// ---------- interaction ----------
+var raycaster = new THREE.Raycaster(), tmpM = new THREE.Matrix4(), o3 = new THREE.Vector3(), d3 = new THREE.Vector3();
+var hoverIdx = -1, hoverPanel = null, pointerObj = null, hoverLabel = makeLabel(2.4, 0.5, 720, 150); hoverLabel.mesh.visible = false; scene.add(hoverLabel.mesh);
+function castFrom(origin, dir) {
+  raycaster.ray.origin.copy(origin); raycaster.ray.direction.copy(dir); raycaster.far = 80;
+  var hb = raycaster.intersectObjects(page.mesh.visible ? [board.mesh, page.mesh] : [board.mesh], false);
+  if (hb.length && hb[0].uv) { var pn = hb[0].object.userData.panel; return { kind: "board", panel: pn, idx: pn.hitAt(hb[0].uv.x, hb[0].uv.y), dist: hb[0].distance }; }
+  var ht = raycaster.intersectObjects(tappables, false);
+  if (ht.length) return { kind: "obj", obj: ht[0].object, dist: ht[0].distance, pt: ht[0].point };
+  var hg2 = raycaster.intersectObject(ground, false);
+  if (hg2.length) return { kind: "ground", pt: { x: hg2[0].point.x, z: hg2[0].point.z }, dist: hg2[0].distance };
+  return null;
+}
+function updatePointer(h) {
+  var hp = h && h.kind === "board" ? h.panel : null, newHover = hp ? h.idx : -1;
+  if (hp !== hoverPanel || newHover !== hoverIdx) { if (hoverPanel) hoverPanel.hover = -1; hoverPanel = hp; hoverIdx = newHover; if (hp) hp.hover = newHover; renderBoard(); }
+  var o = h && h.kind === "obj" ? h.obj : null;
+  if (o !== pointerObj) { pointerObj = o; if (o && !guided) { var nm = o.userData.building ? o.userData.building.name : o.userData.name; drawSign(hoverLabel, [nm], 54); hoverLabel.mesh.visible = true; } else hoverLabel.mesh.visible = false; }
+  if (pointerObj && hoverLabel.mesh.visible && h.pt) { hoverLabel.mesh.position.set(h.pt.x, h.pt.y + 0.5, h.pt.z); }
+}
+function press(h) {
+  if (!h) return;
+  if (h.kind === "board") { if (h.idx >= 0 && h.panel.hits[h.idx].action) { tone(1200, 0, 0.04, 0.08); act(h.panel.hits[h.idx].action); } return; }
+  if (h.kind === "obj") { if (!guided) tapObject(h.obj); else { if (!stepDone && !demoRunning) runDemo(); else if (stepDone) act({ act: "next" }); } return; }
+}
+function teleport(pt) { rig.position.set(pt.x, 0, pt.z); rigFixedY = null; tone(600, 0, 0.06, 0.06); }
+
+var controllers = [];
+for (var ci = 0; ci < 2; ci++) (function (i) {
+  var c = renderer.xr.getController(i);
+  var line = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1)]), new THREE.LineBasicMaterial({ color: 0xe8801a, transparent: true, opacity: 0.7 })); line.scale.z = 5; c.add(line); c.userData.line = line;
+  var handle = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.018, 0.11, 16), mat(0x1e2a44)); handle.rotation.x = Math.PI / 2 - 0.35; handle.position.set(0, -0.02, 0.05); c.add(handle);
+  c.addEventListener("connected", function (e) { c.userData.gamepad = e.data.gamepad; c.visible = true; });
+  c.addEventListener("disconnected", function () { c.visible = false; });
+  c.addEventListener("selectstart", function () { var h = castFromController(c); press(h); haptic(c); });
+  c.addEventListener("squeezestart", function () { walkTo(); });
+  c.visible = false; rig.add(c); controllers.push(c);
+})(ci);
+function castFromController(c) { tmpM.identity().extractRotation(c.matrixWorld); o3.setFromMatrixPosition(c.matrixWorld); d3.set(0, 0, -1).applyMatrix4(tmpM); return castFrom(o3, d3); }
+function haptic(c) { try { var gp = c.userData.gamepad; if (gp && gp.hapticActuators && gp.hapticActuators[0]) gp.hapticActuators[0].pulse(0.4, 40); } catch (e) {} }
+var turnCooldown = 0;
+function pollSticks(dt) { turnCooldown -= dt; controllers.forEach(function (c) { var gp = c.userData.gamepad; if (!gp || !gp.axes) return; var ax = gp.axes[2] !== undefined ? gp.axes[2] : gp.axes[0]; if (Math.abs(ax) > 0.7 && turnCooldown <= 0) { rig.rotation.y -= Math.sign(ax) * Math.PI / 6; turnCooldown = 0.35; } }); }
+
+// desktop
+var mouse = new THREE.Vector2(0, 0), yaw = 0, pitch = -0.12, dragging = false, moved = false, lastX = 0, lastY = 0, keys = {};
+renderer.domElement.addEventListener("mousedown", function (e) { dragging = true; moved = false; lastX = e.clientX; lastY = e.clientY; });
+window.addEventListener("mouseup", function (e) { dragging = false; if (moved || renderer.xr.isPresenting) return; updateMouse(e); raycaster.setFromCamera(mouse, camera); var h = castFrom(raycaster.ray.origin, raycaster.ray.direction); if (e.button === 2) { if (h && h.kind === "ground") teleport(h.pt); } else press(h); });
+window.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+window.addEventListener("mousemove", function (e) { if (dragging) { var dx = e.clientX - lastX, dy = e.clientY - lastY; if (Math.abs(dx) + Math.abs(dy) > 3) moved = true; yaw -= dx * 0.004; pitch = Math.max(-1.3, Math.min(1.3, pitch - dy * 0.004)); lastX = e.clientX; lastY = e.clientY; } updateMouse(e); });
+window.addEventListener("keydown", function (e) { keys[e.key.toLowerCase()] = true; if (e.key === "Enter" && stepDone) act({ act: "next" }); if (e.key === " " && guided && !stepDone) { e.preventDefault(); runDemo(); } });
+window.addEventListener("keyup", function (e) { keys[e.key.toLowerCase()] = false; });
+function updateMouse(e) { mouse.x = (e.clientX / window.innerWidth) * 2 - 1; mouse.y = -(e.clientY / window.innerHeight) * 2 + 1; }
+window.addEventListener("resize", function () { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); });
+
+// enter VR
+var btn = document.getElementById("enter"), note = document.getElementById("note");
+if (navigator.xr && navigator.xr.isSessionSupported) {
+  navigator.xr.isSessionSupported("immersive-vr").then(function (ok) {
+    if (ok) { btn.style.display = "inline-block"; note.textContent = "Trigger: press a button, or point at a building. Grip: take me back to the spot for this step. Thumbstick: snap turn."; }
+    else note.textContent = "No headset in this browser. Drag to look, W A S D to walk, click to act, right-click to jump to a spot. Enter for Next, space for Do this step.";
+  });
+} else note.textContent = "No WebXR here. Drag to look, W A S D to walk, click to act, right-click to jump to a spot. Enter for Next, space for Do this step.";
+btn.addEventListener("click", function () { ac(); primeSpeech(); speakStep(); navigator.xr.requestSession("immersive-vr", { optionalFeatures: ["local-floor", "bounded-floor"] }).then(function (session) { session.addEventListener("end", function () { document.getElementById("ui").style.display = "block"; }); renderer.xr.setSession(session); document.getElementById("ui").style.display = "none"; setTimeout(function () { walkTo(); }, 1500); }); });
+
+// ---------- loop ----------
+var boardInit = false, boardFollow = true, boardTarget = new THREE.Vector3(), pageTarget = new THREE.Vector3(), camPos = new THREE.Vector3(), camDir = new THREE.Vector3(), lastT = performance.now();
+scene.add(board.mesh); scene.add(page.mesh); page.mesh.visible = false;
+renderer.setAnimationLoop(function () {
+  var now = performance.now(), dt = Math.min(0.1, (now - lastT) / 1000); lastT = now;
+  if (renderer.xr.isPresenting) {
+    pollSticks(dt);
+    var xrCam = renderer.xr.getCamera(camera); xrCam.getWorldPosition(camPos); xrCam.getWorldDirection(camDir);
+    controllers.forEach(function (c) { if (c.visible) { var h = castFromController(c); updatePointer(h); c.userData.line.scale.z = h ? Math.min(h.dist, 80) : 5; } });
+  } else {
+    camera.rotation.set(pitch, yaw, 0, "YXZ");
+    var sp = 5 * dt, fx = -Math.sin(yaw), fz = -Math.cos(yaw);
+    if (keys.w) { rig.position.x += fx * sp; rig.position.z += fz * sp; } if (keys.s) { rig.position.x -= fx * sp; rig.position.z -= fz * sp; }
+    if (keys.a) { rig.position.x += fz * sp; rig.position.z -= fx * sp; } if (keys.d) { rig.position.x -= fz * sp; rig.position.z += fx * sp; }
+    camera.getWorldPosition(camPos); camera.getWorldDirection(camDir);
+    raycaster.setFromCamera(mouse, camera); updatePointer(castFrom(raycaster.ray.origin, raycaster.ray.direction));
+  }
+  camDir.y = 0; if (camDir.lengthSq() < 0.001) camDir.set(0, 0, -1); camDir.normalize();
+  var vr = renderer.xr.isPresenting, rightV = new THREE.Vector3(-camDir.z, 0, camDir.x);
+  boardTarget.copy(camPos).addScaledVector(camDir, vr ? 0.85 : 1.3).addScaledVector(rightV, vr ? 0 : 0.55); boardTarget.y = camPos.y - (vr ? 0.95 : 0.3);
+  pageTarget.copy(camPos).addScaledVector(camDir, 1.2).addScaledVector(rightV, vr ? 0.25 : -0.55); pageTarget.y = camPos.y - 0.15;
+  var toBoard = new THREE.Vector3().subVectors(board.mesh.position, camPos); toBoard.y = 0; var dBoard = toBoard.length(); toBoard.normalize();
+  var ang = Math.acos(Math.max(-1, Math.min(1, toBoard.dot(camDir))));
+  if (!boardInit || ang > 0.6 || dBoard > 1.6 || dBoard < 0.5) boardFollow = true;
+  if (boardFollow) { board.mesh.position.lerp(boardTarget, boardInit ? 0.08 : 1); page.mesh.position.lerp(pageTarget, boardInit ? 0.08 : 1); if (board.mesh.position.distanceTo(boardTarget) < 0.03) boardFollow = false; boardInit = true; }
+  board.mesh.lookAt(camPos.x, camPos.y, camPos.z);
+  page.mesh.lookAt(camPos.x, page.mesh.position.y + 0.05, camPos.z);
+  focusRing.scale.setScalar((focusTarget && focusTarget.w ? Math.max(1, focusTarget.w / 8) : 1) * (1 + 0.1 * Math.sin(now / 250)));
+  // labels face you
+  LOTITEMS.forEach(function (b) { if (b.roof === "none") { var sp = new THREE.Vector3(); b.signPanel.mesh.getWorldPosition(sp); b.signPanel.mesh.lookAt(camPos.x, sp.y, camPos.z); } });
+  STREET.concat(LOTITEMS).concat([bh]).concat(MODELS).forEach(function (b) { if (b.label.mesh.visible) b.label.mesh.lookAt(camPos.x, b.label.mesh.position.y + b.group.position.y, camPos.z); });
+  [stairLabel].forEach(function (l) { if (l.mesh.visible) { var wp = new THREE.Vector3(); l.mesh.getWorldPosition(wp); l.mesh.lookAt(camPos.x, wp.y, camPos.z); } });
+  if (hoverLabel.mesh.visible) hoverLabel.mesh.lookAt(camPos.x, hoverLabel.mesh.position.y, camPos.z);
+  renderer.render(scene, camera);
+});
+
+switchTab("street");
+</script>
+</body>
+</html>
