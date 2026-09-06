@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NCC Navigator - build 6</title>
+<title>NCC Navigator - build 8</title>
 <style>
   body { margin: 0; overflow: hidden; background: #cfe0ee; font: 17px/1.5 Georgia, "Times New Roman", serif; color: #1e2a44; }
   canvas { display: block; }
@@ -33,7 +33,7 @@
 // Explain page on every step, auto-walk to each spot, spoken instructions.
 // =====================================================================
 
-var BUILD = 6;
+var BUILD = 8;
 var C = { ink: "#1e2a44", paper: "#f4f1e8", ply: "#c9a978", orange: "#e8801a", green: "#2f8f5b", red: "#c9302c", blue: "#2857c4", mute: "#6f7480", rule: "#cfc9b9", white: "#ffffff", gold: "#c99a2e", teal: "#2b8a8a" };
 var FONT = "Georgia, 'Noto Serif', 'Times New Roman', serif";
 
@@ -127,7 +127,7 @@ var LOTITEMS = [
     why: "A6G11(2)(b): a fence is a Class 10b structure. Some States and Territories exempt Class 10 structures of this size from needing a permit, but the classification does not change." },
   { key: "retwall", name: "Retaining wall", cls: "Class 10b", x: -2, z: 45.5, w: 12, d: 0.4, h: 0.9, col: 0x9a9a92, roof: "none",
     why: "A6G11(2)(b): a retaining wall is a Class 10b structure. Note that 11.3.3(2)(a) of the Housing Provisions does not ask for a barrier on it unless it forms part of a path of access to the building." },
-  { key: "shelter", name: "Private bushfire shelter", cls: "Class 10c", x: -9, z: 31.5, w: 2.4, d: 2.4, h: 1.6, col: 0x6f7a80, roof: "flat",
+  { key: "shelter", name: "Private bushfire shelter", cls: "Class 10c", x: -3.5, z: 43.5, w: 2.4, d: 2.4, h: 1.6, col: 0x6f7a80, roof: "flat",
     why: "A6G11(2)(c): Class 10c is a private bushfire shelter. The provisions only address shelters associated with a single Class 1a dwelling, and they sit in Volume Two - H7P6." }
 ];
 function lotItem(key) { for (var i = 0; i < LOTITEMS.length; i++) if (LOTITEMS[i].key === key) return LOTITEMS[i]; return null; }
@@ -181,7 +181,7 @@ function mapItem(key) { for (var i = 0; i < MAPITEMS.length; i++) if (MAPITEMS[i
 // mode, and where to stand. Explain is separate, keyed by tab:key.
 // =====================================================================
 function V(x, z, lx, lz, y) { var v = { x: x, z: z, look: { x: lx, z: lz } }; if (y !== undefined) v.y = y; return v; }
-function frontOf(b, d) { return V(b.x, STREET_Z_FRONT + Math.max(5.5, (d || 9) * 0.6), b.x, b.z); }
+function frontOf(b, d) { return V(b.x, STREET_Z_FRONT + Math.max(8, (d || 9) * 0.85), b.x, b.z); }
 
 var STREET_STEPS = [
   { title: "The street: Part A6, building classification", mode: "intro", key: "s_intro", vantage: V(-40, 30, -40, -8, 22),
@@ -228,50 +228,50 @@ var STREET_STEPS = [
 ];
 
 var LOT_STEPS = [
-  { title: "The allotment: Class 1 and Class 10 on one lot", mode: "intro", key: "l_intro", vantage: V(-2, 31, -2, 31, 30),
+  { title: "The allotment: Class 1 and Class 10 on one lot", mode: "intro", key: "l_intro", vantage: V(-2, 6, -2, 31, 18),
     task: "One Class 1a house, and a yard full of other things. Some of them are part of the Class 1 building. Some are Class 10a buildings. Some are Class 10b structures. The test is A6G11(1): Class 10 is non-habitable.\n\nYou will walk the lot and the game will tell you which is which. Then the boarding house next door shows where Class 1 ends and Volume One begins. Press Next." },
   { title: "The house", mode: "look", key: "l_house", focus: "lothouse", vantage: V(-4, 14, -4, 26),
     task: "A single dwelling. Class 1a under A6G2(2)(a)(i). This is the building that Volume Two and the Housing Provisions are written for." },
-  { title: "The sleepout", mode: "look", key: "l_sleepout", focus: "sleepout", vantage: V(-4, 38, -9, 38),
+  { title: "The sleepout", mode: "look", key: "l_sleepout", focus: "sleepout", vantage: V(-9, 32.5, -9, 38),
     task: "A detached bedroom in the back yard. Habitable, so it cannot be Class 10. It is part of the Class 1a building, even though it is a separate structure. The code's own example." },
   { title: "The entertainment room", mode: "look", key: "l_entroom", focus: "entroom", vantage: V(4, 34, 4, 41),
     task: "A detached room by the pool with a bar and a couch. Habitable, so again part of the Class 1a. Every provision that applies to the house applies to this room." },
-  { title: "The tool shed", mode: "look", key: "l_shed", focus: "shed", vantage: V(-5, 42, -9.5, 44),
+  { title: "The tool shed", mode: "look", key: "l_shed", focus: "shed", vantage: V(-9.5, 39.9, -9.5, 44),
     task: "Non-habitable. Class 10a: a non-habitable building including a private garage, carport, shed or the like. A building, not a structure, so the letter is a." },
   { title: "The carport", mode: "look", key: "l_carport", focus: "carport", vantage: V(5, 13, 5, 21),
     task: "Also Class 10a. Note the pattern: the a and b letters split Class 10 into buildings and structures." },
-  { title: "Pool, fence, retaining wall", mode: "look", key: "l_pool", focus: "pool", vantage: V(1, 30, 1, 38),
+  { title: "Pool, fence, retaining wall", mode: "look", key: "l_pool", focus: "pool", vantage: V(6.5, 36.5, 0, 36),
     task: "Three Class 10b structures: the pool, the boundary fence and the retaining wall at the back. A6G11(2)(b) lists a fence, mast, antenna, retaining wall or free-standing wall or swimming pool or the like." },
-  { title: "The bushfire shelter", mode: "look", key: "l_shelter", focus: "shelter", vantage: V(-4, 31.5, -9, 31.5),
+  { title: "The bushfire shelter", mode: "look", key: "l_shelter", focus: "shelter", vantage: V(-3.5, 38.5, -3.5, 43.5),
     task: "Class 10c: a private bushfire shelter. Only shelters associated with a single Class 1a dwelling, and the provisions are in Volume Two, H7P6." },
   { title: "Next door: the 1a to 1b to Class 3 boundary", mode: "look", key: "l_bh", focus: "bh", vantage: V(20, 12, 20, 24),
     task: "A boarding house. Class 1b while it accommodates not more than 12 people and the total floor area is not more than 300 square metres. Cross either line and it is Class 3, which is Volume One, with fire, egress and access provisions written for a building full of strangers." },
   { title: "Add a bed", mode: "beds2", key: "l_beds", focus: "bh", vantage: V(20, 12, 20, 24),
     task: "Watch the count. At 12 it is still Class 1b. The 13th bed changes the volume you have to open.",
     how: "Press Do this step and watch the count.", watch: "Press Do this step and watch the count." },
-  { title: "What you have seen", mode: "end", key: "l_end", vantage: V(-2, 31, -2, 31, 30),
+  { title: "What you have seen", mode: "end", key: "l_end", vantage: V(-2, 6, -2, 31, 18),
     task: "Habitable and going with the house: part of the Class 1. Non-habitable building: 10a. Non-habitable structure: 10b. Bushfire shelter: 10c. And a boarding house is Class 1 only while it stays under 12 people and 300 square metres.\n\nNext tour: the pathway - how the code is structured, and the two routes to compliance.", nextTab: "path", nextLabel: "The pathway" }
 ];
 
 var PATH_STEPS = [
-  { title: "The pathway: Part A2, how compliance works", mode: "intro", key: "p_intro", vantage: V(-25, 8, -25, 30),
+  { title: "The pathway: Part A2, how compliance works", mode: "intro", key: "p_intro", vantage: V(-25, 16, -25, 30),
     task: "The NCC is a performance-based code. It is built in three layers, and there are two doors through it. The structure will be built in front of you on this lot, then a stair will be taken through both doors.\n\nPress Next to see the three layers." },
-  { title: "Layer one: the Governing Requirements", mode: "build", key: "p_gov", stage: 1, vantage: V(-25, 14, -25, 30),
+  { title: "Layer one: the Governing Requirements", mode: "build", key: "p_gov", stage: 1, vantage: V(-25, 17, -25, 30),
     task: "Section A. The ground everything else stands on: how to read the code, how compliance is demonstrated, how buildings are classified, what counts as evidence. A2G1: to comply with the NCC, a solution must meet the Governing Requirements and the Performance Requirements.",
     how: "Press Do this step to lay the slab.", watch: "Press Do this step to lay the slab." },
-  { title: "Layer two: the Performance Requirements", mode: "build", key: "p_perf", stage: 2, vantage: V(-25, 14, -25, 30),
+  { title: "Layer two: the Performance Requirements", mode: "build", key: "p_perf", stage: 2, vantage: V(-25, 17, -25, 30),
     task: "The frame. What the building must achieve, written as outcomes: H1P1, H2P1, H3P1 and so on. They are mandatory. Nothing in the layer above can replace them; it can only show how they are met.",
     how: "Press Do this step to stand the frame.", watch: "Press Do this step to stand the frame." },
-  { title: "Layer three: the solutions", mode: "build", key: "p_sol", stage: 3, vantage: V(-25, 14, -25, 30),
+  { title: "Layer three: the solutions", mode: "build", key: "p_sol", stage: 3, vantage: V(-25, 17, -25, 30),
     task: "The cladding, in two colours. A Deemed-to-Satisfy Solution follows the DTS Provisions and is deemed to have met the Performance Requirements (A2G3). A Performance Solution meets them directly, by evidence, verification, expert judgement or comparison (A2G2). A2G4: you can combine the two.",
     how: "Press Do this step to hang the cladding.", watch: "Press Do this step to hang the cladding." },
-  { title: "The stair, through the DTS door", mode: "stairdts", key: "p_dts", vantage: V(-19, 26, -19, 36),
+  { title: "The stair, through the DTS door", mode: "stairdts", key: "p_dts", vantage: V(-17, 23.5, -17, 27.5),
     task: "H5P1 is the why: people must be able to move safely to and within the building. H5D2 is one sentence: compliance with Part 11.2 of the Housing Provisions satisfies H5P1 for stairway construction. Part 11.2 is the numbers. Watch the stair build to them.",
     how: "Press Do this step and watch the stair.", watch: "Press Do this step and watch the stair." },
-  { title: "The stair, through the Performance door", mode: "stairperf", key: "p_perf2", vantage: V(-19, 26, -19, 36),
+  { title: "The stair, through the Performance door", mode: "stairperf", key: "p_perf2", vantage: V(-17, 23.5, -17, 27.5),
     task: "Same stair, same H5P1, but the riser is now 200 and the going 230. That is outside Table 11.2.2a, so the DTS door is shut. The only way through is a Performance Solution, and A2G2(4) says exactly what that involves. Watch the four documents appear.",
     how: "Press Do this step and watch.", watch: "Press Do this step and watch." },
-  { title: "What you have seen", mode: "end", key: "p_end", vantage: V(-25, 8, -25, 30),
+  { title: "What you have seen", mode: "end", key: "p_end", vantage: V(-25, 16, -25, 30),
     task: "Governing Requirements underneath. Performance Requirements as the frame. Two doors: DTS, which is a pointer to the Housing Provisions for a Class 1; or a Performance Solution, which is a design brief, analysis, evaluation and a report. Most housing goes through the DTS door, which is why the Housing Provisions are the book you actually open.\n\nNext tour: the map - point at any part of the house and follow the chain.", nextTab: "map", nextLabel: "The map" }
 ];
 
@@ -290,9 +290,9 @@ var MAP_STEPS = [
   mapStep("m_alarm", V(-4, 24, -4, 27)),
   mapStep("m_bath", V(-7, 24, -8, 28)),
   mapStep("m_ceiling", V(-2, 24, -2, 27)),
-  mapStep("m_deck", V(-1, 36, -1, 31)),
-  mapStep("m_stair", V(-9, 36, -8, 32)),
-  mapStep("m_balustrade", V(-3, 37, -3, 32)),
+  mapStep("m_deck", V(-7, 36, -1, 32.5)),
+  mapStep("m_stair", V(-7.5, 37, -3.6, 32.5)),
+  mapStep("m_balustrade", V(7, 36, 0.5, 32.5)),
   mapStep("m_insul", V(-4, 14, -4, 26, 8)),
   mapStep("m_flue", V(-4, 14, -3, 26, 8)),
   mapStep("m_livable", V(-6, 13, -6, 22)),
@@ -408,24 +408,24 @@ var SPEC_NAMES = { 1: "Fire-resistance of building elements", 3: "Fire hazard pr
 var V1_STEPS = [
   { title: "Volume One: the same pathway, one more link", mode: "intro", key: "v_intro", vantage: V(V1C.x, 12, V1C.x, V1C.z, 16),
     task: "Volume One is Class 2 to 9. Section A is the same Section A. The Performance Requirements are the same idea, now across nine Sections, B to J. The two doors are the same two doors.\n\nWhat is new is where the DTS door leads. In Volume Two it points outward, to the Housing Provisions. In Volume One it points inward, to 48 Specifications bound into the back of the same book. The monument on this lot will be built again with the Volume One shape, and one chain will be run through each door. Press Next." },
-  { title: "Section A, again", mode: "v1build", key: "v_gov", stage: 1, vantage: V(V1C.x, 14, V1C.x, V1C.z),
+  { title: "Section A, again", mode: "v1build", key: "v_gov", stage: 1, vantage: V(V1C.x, 17, V1C.x, V1C.z),
     task: "Same slab. The Governing Requirements are written once and apply to all three volumes. A1G1 is the scope of Volume One; A6 classifies the building; A2 is how compliance is shown. Nothing here changes between volumes.", how: "Press Do this step.", watch: "Press Do this step." },
-  { title: "Nine Sections of Performance Requirements", mode: "v1build", key: "v_perf", stage: 2, vantage: V(V1C.x, 14, V1C.x, V1C.z),
+  { title: "Nine Sections of Performance Requirements", mode: "v1build", key: "v_perf", stage: 2, vantage: V(V1C.x, 17, V1C.x, V1C.z),
     task: "The frame, with a beam for each technical Section: B Structure, C Fire resistance, D Access and egress, E Services and equipment, F Health and amenity, G Ancillary provisions, I Special use buildings, J Energy efficiency. There is no Section H in Volume One; H is Volume Two. Each beam carries its P clauses, C1P1 to C1P9 for fire, and they are mandatory.", how: "Press Do this step.", watch: "Press Do this step." },
-  { title: "The two doors, with Volume One wording", mode: "v1build", key: "v_doors", stage: 3, vantage: V(V1C.x, 14, V1C.x, V1C.z),
+  { title: "The two doors, with Volume One wording", mode: "v1build", key: "v_doors", stage: 3, vantage: V(V1C.x, 17, V1C.x, V1C.z),
     task: "The DTS door in Section C is C2D1: where a Deemed-to-Satisfy Solution is proposed, C1P1 to C1P9 are satisfied by complying with C2D2 to C2D15, C3D2 to C3D15 and C4D2 to C4D17. Every Section has a D1 clause that says the same thing for its own Parts. The Performance door is A2G2, unchanged, and C2D1(2) points straight back to it.", how: "Press Do this step.", watch: "Press Do this step." },
   { title: "The Specifications", mode: "v1build", key: "v_specs", stage: 4, vantage: V(V1C.x, 20, V1C.x, V1C.z),
     task: "Behind the doors, a shelf of 48 Specifications. Specification 1 is how fire resistance is proved by test. 5 is the FRL tables for Type A, B and C. 17 sprinklers, 20 smoke detection, 26 wet areas, 28 sound, 34 to 48 the energy modelling rules. A Specification is detail that was too long, or too reusable, to sit inside a clause. On its own it has no standing at all.", how: "Press Do this step.", watch: "Press Do this step." },
-  { title: "How to read a clause number", mode: "anatomy", key: "v_anatomy", vantage: V(V1C.x, 13, V1C.x, V1C.z),
+  { title: "How to read a clause number", mode: "anatomy", key: "v_anatomy", vantage: V(V1C.x, 17, V1C.x, V1C.z),
     task: "Section, Part, Type, Clause. S5C21: S means Specification rather than a Section letter, because one Specification can be called from several Sections. 5 is the Specification number, numbered across all three volumes. C is the clause type. 21 is the clause. The type letter tells you the status: G governing, O objective, F functional statement, P performance requirement, V verification method, D deemed-to-satisfy, C a Specification clause.", how: "Press Do this step and watch the letters.", watch: "Press Do this step and watch the letters." },
-  { title: "Through the DTS door: a Class 5 office, rise 3", mode: "v1chain", key: "v_chain1", vantage: V(V1C.x + 4, 15, V1C.x + 2, V1C.z),
+  { title: "Through the DTS door: a Class 5 office, rise 3", mode: "v1chain", key: "v_chain1", vantage: V(V1C.x + 4, 18, V1C.x + 3, V1C.z),
     task: "One building, one element, followed all the way down. A Class 5 office with a rise in storeys of 3, and its loadbearing external wall, 5 m from the side boundary. What FRL must that wall have? Watch the chain light up, link by link.", how: "Press Do this step.", watch: "Press Do this step." },
-  { title: "Through the Performance door: J1V3", mode: "v1chain2", key: "v_chain2", vantage: V(V1C.x + 4, 15, V1C.x + 2, V1C.z),
+  { title: "Through the Performance door: J1V3", mode: "v1chain2", key: "v_chain2", vantage: V(V1C.x + 4, 18, V1C.x + 3, V1C.z),
     task: "Specifications also serve the Performance side. J1V3 is a Verification Method for energy efficiency: model the proposed building against a reference building using Specification 34 and Specification 35. A Verification Method is optional, so the Specifications it calls are optional too. Same shelf, different door, different status.", how: "Press Do this step.", watch: "Press Do this step." },
-  { title: "Status test", mode: "quiz", key: "v_q1", vantage: V(V1C.x, 13, V1C.x, V1C.z),
+  { title: "Status test", mode: "quiz", key: "v_q1", vantage: V(V1C.x, 17, V1C.x, V1C.z),
     task: "A designer takes the DTS route for a Type B building. C2D2(2) says each building element must comply with Specification 5. What is the status of Specification 5 for that building?", options: ["Optional - Specifications are guidance", "Mandatory - called up by a DTS Provision on the route taken", "Mandatory only if the certifier asks", "It is a Performance Requirement"], answer: 1,
     why: "A Specification takes its status from the clause that calls it. C2D2 is a DTS Provision, the designer chose the DTS door, so C2D2(2) applies and Specification 5 is mandatory for that building. Through the Performance door, Specification 5 would only be one way of demonstrating C1P1." },
-  { title: "One more", mode: "quiz", key: "v_q2", vantage: V(V1C.x, 13, V1C.x, V1C.z),
+  { title: "One more", mode: "quiz", key: "v_q2", vantage: V(V1C.x, 17, V1C.x, V1C.z),
     task: "A student quotes C1O1 as the requirement a wall must meet. What is C1O1?", options: ["A Performance Requirement - mandatory", "A DTS Provision", "An Objective - guidance, not a requirement", "A Governing Requirement"], answer: 2,
     why: "O is Objective. O and F clauses are guidance that explains why the Performance Requirements exist. The mandatory clause is C1P1. Reading the type letter is the whole skill." },
   { title: "What you have seen", mode: "end", key: "v_end", vantage: V(V1C.x, 12, V1C.x, V1C.z, 16),
@@ -635,7 +635,7 @@ function renderBoard() {
   if (s.mode === "end") P.button(P.cw - L - 320, fy, 320, 60, "Next: " + s.nextLabel, "primary", { tab: s.nextTab }, 26);
   else if (guided && !stepDone && ["use", "beds", "beds2", "tenpc", "build", "stairdts", "stairperf", "count", "v1build", "anatomy", "v1chain", "v1chain2"].indexOf(s.mode) >= 0) P.button(P.cw - L - 300, fy, 300, 60, demoRunning ? "Working..." : "Do this step", demoRunning ? "dim" : "primary", demoRunning ? null : { act: "demo" }, 26);
   else P.button(P.cw - L - 190, fy, 190, 60, "Next", stepDone ? "primary" : "dim", stepDone ? { act: "next" } : null, 26);
-  P.text(score.right + " right, " + score.missed + " missed    build " + BUILD + "    you: " + Math.round(camPos.x) + ", " + Math.round(camPos.z), L + 750, fy + 40, C.mute, 20);
+  P.text(score.right + " right, " + score.missed + " missed    build " + BUILD + (renderer.xr.isPresenting ? "    xr" : ""), L + 750, fy + 40, C.mute, 20);
   P.end();
   renderPage();
 }
@@ -677,58 +677,63 @@ renderer.outputEncoding = THREE.sRGBEncoding; renderer.xr.enabled = true;
 document.body.appendChild(renderer.domElement);
 var scene = new THREE.Scene(); scene.background = new THREE.Color(0xcfe0ee); scene.fog = new THREE.Fog(0xcfe0ee, 90, 220);
 var camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.05, 400);
-var rig = new THREE.Group(); rig.add(camera); scene.add(rig); camera.position.set(0, 1.6, 0); rig.position.set(-40, 0, 8);
+var rig = new THREE.Group(); rig.add(camera); scene.add(rig); camera.position.set(0, 1.6, 0); rig.position.set(0, 0, 0);
 scene.add(new THREE.HemisphereLight(0xdfe9f5, 0x6b5a3a, 0.95));
 var sunL = new THREE.DirectionalLight(0xfff1d6, 0.85); sunL.position.set(30, 50, 20); scene.add(sunL);
 
-function mat(c, o) { var m = new THREE.MeshStandardMaterial({ color: c, roughness: 0.9, metalness: 0 }); if (o) { Object.keys(o).forEach(function (k) { m[k] = o[k]; }); } return m; }
+function mat(c, o) { var p = { color: c, roughness: 0.9, metalness: 0 }; if (o) { Object.keys(o).forEach(function (k) { p[k] = o[k]; }); } return new THREE.MeshStandardMaterial(p); }
+var tappables = [], world = new THREE.Group(); scene.add(world);
 var mGround = mat(0x7d9a5c), mRoad = mat(0x5b5b5b), mPath = mat(0xbdb6a6), mRoof = mat(0x6d6a63), mFire = mat(0xc9302c), mGlass = mat(0x9fc4d8, { transparent: true, opacity: 0.55 }), mBrick = mat(0xb9836a), mTimber = mat(0xc9a978), mWater = mat(0x4fa3c9, { transparent: true, opacity: 0.8 });
-var ground = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), mGround); ground.rotation.x = -Math.PI / 2; scene.add(ground);
-var road = new THREE.Mesh(new THREE.BoxGeometry(260, 0.02, 10), mRoad); road.position.set(0, 0.01, 0); scene.add(road);
-var pathN = new THREE.Mesh(new THREE.BoxGeometry(260, 0.03, 3), mPath); pathN.position.set(0, 0.015, -5 + 0.5); scene.add(pathN);
-var pathS = new THREE.Mesh(new THREE.BoxGeometry(260, 0.03, 3.5), mPath); pathS.position.set(0, 0.015, 7); scene.add(pathS);
-(function () { var g = new THREE.BufferGeometry(), pts = []; for (var x = -120; x < 120; x += 4) { pts.push(new THREE.Vector3(x, 0.03, 0), new THREE.Vector3(x + 2, 0.03, 0)); } g.setFromPoints(pts); scene.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0xf4f1e8 }))); })();
-function tree(x, z, h) { var t = new THREE.Group(); var tr = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.22, h, 8), mat(0x6b4f36)); tr.position.y = h / 2; t.add(tr); var cr = new THREE.Mesh(new THREE.SphereGeometry(h * 0.45, 10, 8), mat(0x4f7a3c)); cr.position.y = h * 1.05; cr.scale.y = 0.8; t.add(cr); t.position.set(x, 0, z); scene.add(t); }
+var ground = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), mGround); ground.rotation.x = -Math.PI / 2; world.add(ground);
+var road = new THREE.Mesh(new THREE.BoxGeometry(260, 0.02, 10), mRoad); road.position.set(0, 0.01, 0); world.add(road);
+var pathN = new THREE.Mesh(new THREE.BoxGeometry(260, 0.03, 3), mPath); pathN.position.set(0, 0.015, -5 + 0.5); world.add(pathN);
+var pathS = new THREE.Mesh(new THREE.BoxGeometry(260, 0.03, 3.5), mPath); pathS.position.set(0, 0.015, 7); world.add(pathS);
+(function () { var g = new THREE.BufferGeometry(), pts = []; for (var x = -120; x < 120; x += 4) { pts.push(new THREE.Vector3(x, 0.03, 0), new THREE.Vector3(x + 2, 0.03, 0)); } g.setFromPoints(pts); world.add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: 0xf4f1e8 }))); })();
+function tree(x, z, h) { var t = new THREE.Group(); var tr = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.22, h, 8), mat(0x6b4f36)); tr.position.y = h / 2; t.add(tr); var cr = new THREE.Mesh(new THREE.SphereGeometry(h * 0.45, 10, 8), mat(0x4f7a3c)); cr.position.y = h * 1.05; cr.scale.y = 0.8; t.add(cr); t.position.set(x, 0, z); world.add(t); }
 for (var ti = -100; ti <= 100; ti += 26) { tree(ti, 12.5, 3 + (ti % 3)); }
 
 // ---------- text labels in the world ----------
 function makeLabel(w, h, cw, ch) { var p = new Panel(w, h, cw, ch); p.mesh.material.transparent = true; return p; }
+function fitPx(p, text, px, maxW) { p.font(px); while (px > 14 && p.ctx.measureText(text).width > maxW) { px -= 2; p.font(px); } return px; }
 function drawSign(p, lines, big) {
   var x = p.ctx; p.hits = []; x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = C.paper; x.fillRect(0, 0, p.cw, p.ch); x.lineWidth = 8; x.strokeStyle = C.ink; x.strokeRect(4, 4, p.cw - 8, p.ch - 8);
-  var y = p.ch / 2 - (lines.length - 1) * (big || 48) * 0.6 + (big || 48) * 0.36;
-  lines.forEach(function (l, i) { p.text(l, p.cw / 2, y, i === 0 ? C.ink : C.mute, i === 0 ? (big || 48) : (big || 48) * 0.72, "", "center"); y += (big || 48) * 1.2; });
+  big = big || 48; var maxW = p.cw - 60, sizes = lines.map(function (l, i) { return fitPx(p, l, i === 0 ? big : big * 0.72, maxW); });
+  var total = 0; sizes.forEach(function (sz) { total += sz * 1.2; }); var scale = Math.min(1, (p.ch - 24) / total); sizes = sizes.map(function (sz) { return sz * scale; });
+  var y = p.ch / 2 - total * scale / 2 + sizes[0] * 0.95;
+  lines.forEach(function (l, i) { p.text(l, p.cw / 2, y, i === 0 ? C.ink : C.mute, sizes[i], "", "center"); y += sizes[i] * 1.2; });
   p.tex.needsUpdate = true;
 }
 function drawClassLabel(p, cls, sub) {
   var x = p.ctx; x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, p.cw, p.ch); x.fillStyle = C.orange; x.fillRect(0, 0, p.cw, p.ch);
-  p.text(cls, p.cw / 2, sub ? p.ch * 0.48 : p.ch * 0.62, C.white, sub ? 64 : 76, "", "center"); if (sub) p.text(sub, p.cw / 2, p.ch * 0.84, C.white, 34, "", "center");
+  var a = fitPx(p, cls, sub ? 64 : 76, p.cw - 40), b2 = sub ? fitPx(p, sub, 34, p.cw - 40) : 0;
+  p.text(cls, p.cw / 2, sub ? p.ch * 0.48 : p.ch * 0.62, C.white, a, "", "center"); if (sub) p.text(sub, p.cw / 2, p.ch * 0.84, C.white, b2, "", "center");
   p.tex.needsUpdate = true;
 }
 
 // ---------- buildings ----------
-var tappables = [], world = new THREE.Group(); scene.add(world);
+
 function gableRoof(w, d, h, m) {
   var shape = new THREE.Shape(); shape.moveTo(-w / 2 - 0.3, 0); shape.lineTo(w / 2 + 0.3, 0); shape.lineTo(0, h); shape.lineTo(-w / 2 - 0.3, 0);
   var g = new THREE.ExtrudeGeometry(shape, { depth: d + 0.6, bevelEnabled: false }); g.translate(0, 0, -(d + 0.6) / 2);
   return new THREE.Mesh(g, m || mRoof);
 }
 function building(b, group) {
-  var g = new THREE.Group(); g.position.set(b.x, 0, b.z);
+  var g = new THREE.Group(); g.position.set(b.x, 0, b.z); var F = group ? -1 : 1;   // which way the front faces: +z for the street, -z for the lots
   var m = mat(b.col), body;
   if (b.open) { for (var cx = -1; cx <= 1; cx += 2) for (var cz = -1; cz <= 1; cz += 2) { var post = new THREE.Mesh(new THREE.BoxGeometry(0.3, b.h, 0.3), mat(0x777777)); post.position.set(cx * (b.w / 2 - 0.3), b.h / 2, cz * (b.d / 2 - 0.3)); g.add(post); } body = new THREE.Mesh(new THREE.BoxGeometry(b.w, 0.3, b.d), mat(0x9a9a9a)); body.position.y = b.h; g.add(body); if (b.key === "carpark") { var deck = new THREE.Mesh(new THREE.BoxGeometry(b.w, 0.25, b.d), mat(0x9a9a9a)); deck.position.y = b.h / 2; g.add(deck); } }
   else if (b.roof === "none") { body = new THREE.Mesh(new THREE.BoxGeometry(b.w, Math.max(b.h, 0.05), b.d), b.key === "pool" ? mWater : m); body.position.y = Math.max(b.h, 0.05) / 2; g.add(body); if (b.key === "pool") { var coping = new THREE.Mesh(new THREE.BoxGeometry(b.w + 0.8, 0.12, b.d + 0.8), mPath); coping.position.y = 0.06; g.add(coping); body.position.y = 0.13; } }
   else { body = new THREE.Mesh(new THREE.BoxGeometry(b.w, b.h, b.d), m); body.position.y = b.h / 2; g.add(body);
     if (b.roof === "gable") { var r = gableRoof(b.w, b.d, Math.min(2.2, b.w * 0.22)); r.position.y = b.h; g.add(r); } else { var cap = new THREE.Mesh(new THREE.BoxGeometry(b.w + 0.3, 0.25, b.d + 0.3), mRoof); cap.position.y = b.h + 0.1; g.add(cap); }
     // windows: a strip per storey on the street face
-    var storeys = Math.max(1, Math.round(b.h / 3)); for (var s = 0; s < storeys; s++) { var win = new THREE.Mesh(new THREE.BoxGeometry(b.w * 0.7, Math.min(1.3, b.h / storeys * 0.45), 0.06), mGlass); win.position.set(0, (s + 0.55) * (b.h / storeys), b.d / 2 + 0.02); g.add(win); }
+    var storeys = Math.max(1, Math.round(b.h / 3)); for (var s = 0; s < storeys; s++) { var win = new THREE.Mesh(new THREE.BoxGeometry(b.w * 0.7, Math.min(1.3, b.h / storeys * 0.45), 0.06), mGlass); win.position.set(0, (s + 0.55) * (b.h / storeys), F * (b.d / 2 + 0.02)); g.add(win); }
     if (b.units) { for (var u = 1; u < b.units; u++) { var fw = new THREE.Mesh(new THREE.BoxGeometry(0.25, b.h + 0.6, b.d + 0.4), mFire); fw.position.set(-b.w / 2 + u * (b.w / b.units), (b.h + 0.6) / 2, 0); g.add(fw); } }
     if (b.key === "shopflat") { var band = new THREE.Mesh(new THREE.BoxGeometry(b.w + 0.1, 0.3, b.d + 0.1), mat(0x3a4a5a)); band.position.y = 3.3; g.add(band); }
     if (b.officeFrac !== undefined) { b.office = new THREE.Mesh(new THREE.BoxGeometry(1, b.h + 0.5, 1), mat(0xd8b07a)); g.add(b.office); setOffice(b, b.officeFrac); }
   }
   body.userData.building = b; tappables.push(body); b.body = body; b.baseMat = m;
   // sign
-  var sign = makeLabel(Math.min(b.w * 0.8, 8), 1.1, 900, 124); drawSign(sign, [b.sign], 56); sign.mesh.position.set(0, b.h + (b.roof === "gable" ? 0.9 : 0.9), b.d / 2 + 0.05); if (b.roof === "none" || b.open) sign.mesh.position.y = Math.max(b.h, 1.2) + 0.9; g.add(sign.mesh); b.signPanel = sign;
-  var lab = makeLabel(3.4, 1.0, 680, 200); lab.mesh.position.set(0, b.h + 2.6 + (b.roof === "gable" ? 1.2 : 0), b.d / 2 - 1); lab.mesh.visible = false; g.add(lab.mesh); b.label = lab;
+  var sign = makeLabel(Math.min(b.w * 0.8, 8), 1.1, 900, 124); drawSign(sign, [b.sign || b.name], 56); sign.mesh.position.set(0, b.h + 0.9, F * (b.d / 2 + 0.05)); if (F < 0) sign.mesh.rotation.y = Math.PI; if (b.roof === "none" || b.open) sign.mesh.position.y = Math.max(b.h, 1.2) + 0.9; g.add(sign.mesh); b.signPanel = sign;
+  var lab = makeLabel(3.4, 1.0, 680, 200); lab.mesh.position.set(0, b.h + 2.6 + (b.roof === "gable" ? 1.2 : 0), F * (b.d / 2 - 1)); lab.mesh.visible = false; g.add(lab.mesh); b.label = lab;
   (group || world).add(g); b.group = g; return g;
 }
 function setOffice(b, frac) { b.officeFrac = frac; var area = b.w * b.d * frac, side = Math.sqrt(area); b.office.scale.set(side, 1, side); b.office.position.set(-b.w / 2 + side / 2, (b.h + 0.5) / 2, b.d / 2 - side / 2); b.office.material.color.set(frac < 0.10 ? 0xd8b07a : 0xc9302c); }
@@ -743,7 +748,7 @@ LOTITEMS.forEach(function (b) { building(b, lotG); });
 // the boarding house next door, with countable beds
 var bh = { key: "bh", name: "Boarding house next door", sign: "Harrow Lodge annexe - 10 rooms", cls: "Class 1b", x: 20, z: 24, w: 12, d: 11, h: 5.6, col: 0xd6c3a0, roof: "gable" }; building(bh, lotG);
 var bedMeshes = [];
-function rebuildBeds(n) { bedMeshes.forEach(function (m) { bh.group.remove(m); }); bedMeshes = []; for (var i = 0; i < n; i++) { var bm = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 1.9), mat(i < 12 ? 0xf4f1e8 : 0xc9302c)); var row = i < 6 ? 0 : 1, col = i % 6; bm.position.set(-4.5 + col * 1.7, 0.25 + row * 0.02, bh.d / 2 + 1.8 + row * 2.6); bh.group.add(bm); bedMeshes.push(bm); } }
+function rebuildBeds(n) { bedMeshes.forEach(function (m) { bh.group.remove(m); }); bedMeshes = []; for (var i = 0; i < n; i++) { var bm = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 1.9), mat(i < 12 ? 0xf4f1e8 : 0xc9302c)); var row = i < 6 ? 0 : 1, col = i % 6; bm.position.set(-4.5 + col * 1.7, 0.25 + row * 0.02, -(bh.d / 2 + 1.8 + row * 2.6)); bh.group.add(bm); bedMeshes.push(bm); } }
 rebuildBeds(10);
 // street-side beds for the street tour too
 var beds2 = []; function rebuildBeds2(n) { var b = bldg("boarding"); beds2.forEach(function (m) { b.group.remove(m); }); beds2 = []; for (var i = 0; i < n; i++) { var bm = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 1.9), mat(i < 12 ? 0xf4f1e8 : 0xc9302c)); var row = i < 6 ? 0 : 1, col = i % 6; bm.position.set(-4.5 + col * 1.7, 0.25, b.d / 2 + 1.8 + row * 2.6); b.group.add(bm); beds2.push(bm); } }
@@ -754,7 +759,7 @@ var house = lotItem("lothouse"), hg = house.group, mapMeshes = {};
 function mapMesh(key, mesh, hidden) { mesh.userData.mapKey = key; mesh.userData.name = mapItem(key).name; if (!hidden) tappables.push(mesh); mapMeshes[key] = mesh; hg.add(mesh); return mesh; }
 mapMesh("m_slab", new THREE.Mesh(new THREE.BoxGeometry(house.w + 0.3, 0.2, house.d + 0.3), mat(0x9a9a92))).position.y = 0.1;
 mapMesh("m_termite", new THREE.Mesh(new THREE.BoxGeometry(house.w + 0.36, 0.05, house.d + 0.36), mat(0x2b8a8a))).position.y = 0.21;
-(function () { var dp = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, house.h, 8), mat(0xe0e0e0)); dp.position.set(-house.w / 2 - 0.1, house.h / 2, house.d / 2 - 0.3); mapMesh("m_drain", dp); var pit = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.1, 0.5), mat(0x555555)); pit.position.set(-house.w / 2 - 0.9, 0.05, house.d / 2 + 0.3); hg.add(pit); })();
+(function () { var dp = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, house.h, 8), mat(0xe0e0e0)); dp.position.set(-house.w / 2 - 0.1, house.h / 2, -house.d / 2 + 0.3); mapMesh("m_drain", dp); var pit = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.1, 0.5), mat(0x555555)); pit.position.set(-house.w / 2 - 0.9, 0.05, -house.d / 2 - 0.3); hg.add(pit); })();
 mapMesh("m_wall", new THREE.Mesh(new THREE.BoxGeometry(0.12, house.h - 0.4, house.d * 0.6), mBrick)).position.set(-house.w / 2 - 0.07, house.h / 2 - 0.1, -house.d * 0.1);
 (function () { var fr = new THREE.Group(); for (var i = -4; i <= 4; i++) { var raf = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.25, house.d + 0.2), mTimber); raf.position.set(i * 1.3, house.h + 0.9 + Math.abs(i) * -0.05, 0); fr.add(raf); } var ridge = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, house.d + 0.2), mTimber); ridge.position.set(0, house.h + Math.min(2.2, house.w * 0.22) - 0.15, 0); fr.add(ridge); var rm = new THREE.Mesh(new THREE.BoxGeometry(house.w, 0.1, house.d), mTimber); rm.position.y = house.h + 0.05; rm.userData.mapKey = "m_frame"; fr.add(rm); mapMesh("m_frame", rm, true); hg.add(fr); })();
 (function () { var r = hg.children.filter(function (c) { return c.geometry && c.geometry.type === "ExtrudeGeometry"; })[0]; if (r) { r.userData.mapKey = "m_roof"; r.userData.name = "Sheet roof cladding"; tappables.push(r); mapMeshes.m_roof = r; } })();
@@ -765,17 +770,17 @@ mapMesh("m_firewall", new THREE.Mesh(new THREE.BoxGeometry(0.14, house.h - 0.2, 
 (function () { var c = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.06, 3.5), mat(0xf4f1e8)); c.position.set(2.5, house.h - 0.3, 1.5); mapMesh("m_ceiling", c); var post = new THREE.Mesh(new THREE.BoxGeometry(0.05, house.h - 0.3, 0.05), mat(0x1e2a44)); post.position.set(2.5, (house.h - 0.3) / 2 + 0.2, 1.5); hg.add(post); })();
 // deck at the rear, 1.2 m up, with a stair and a balustrade
 var DECK = { w: 7, d: 3, y: 1.2 };
-(function () { var dk = new THREE.Mesh(new THREE.BoxGeometry(DECK.w, 0.15, DECK.d), mTimber); dk.position.set(0.5, DECK.y, -house.d / 2 - DECK.d / 2); mapMesh("m_deck", dk);
-  var led = new THREE.Mesh(new THREE.BoxGeometry(DECK.w, 0.25, 0.1), mat(0x8a6a4a)); led.position.set(0.5, DECK.y - 0.1, -house.d / 2 - 0.05); hg.add(led);
-  for (var px = -1; px <= 1; px += 2) { var pst = new THREE.Mesh(new THREE.BoxGeometry(0.12, DECK.y, 0.12), mTimber); pst.position.set(0.5 + px * (DECK.w / 2 - 0.3), DECK.y / 2, -house.d / 2 - DECK.d + 0.2); hg.add(pst); }
-  var bal = new THREE.Group(); var rail = new THREE.Mesh(new THREE.BoxGeometry(DECK.w, 0.06, 0.06), mTimber); rail.position.set(0, 1.0, 0); bal.add(rail); for (var i = 0; i <= 20; i++) { var bl = new THREE.Mesh(new THREE.BoxGeometry(0.03, 1.0, 0.03), mTimber); bl.position.set(-DECK.w / 2 + i * (DECK.w / 20), 0.5, 0); bal.add(bl); } bal.position.set(0.5, DECK.y + 0.07, -house.d / 2 - DECK.d + 0.05); var balHit = new THREE.Mesh(new THREE.BoxGeometry(DECK.w, 1.05, 0.1), mat(0xffffff, { transparent: true, opacity: 0.0 })); balHit.position.set(0, 0.52, 0); bal.add(balHit); balHit.userData.mapKey = "m_balustrade"; balHit.userData.name = "Deck balustrade"; tappables.push(balHit); mapMeshes.m_balustrade = balHit; hg.add(bal);
+(function () { var dk = new THREE.Mesh(new THREE.BoxGeometry(DECK.w, 0.15, DECK.d), mTimber); dk.position.set(0.5, DECK.y, house.d / 2 + DECK.d / 2); mapMesh("m_deck", dk);
+  var led = new THREE.Mesh(new THREE.BoxGeometry(DECK.w, 0.25, 0.1), mat(0x8a6a4a)); led.position.set(0.5, DECK.y - 0.1, house.d / 2 + 0.05); hg.add(led);
+  for (var px = -1; px <= 1; px += 2) { var pst = new THREE.Mesh(new THREE.BoxGeometry(0.12, DECK.y, 0.12), mTimber); pst.position.set(0.5 + px * (DECK.w / 2 - 0.3), DECK.y / 2, house.d / 2 + DECK.d - 0.2); hg.add(pst); }
+  var bal = new THREE.Group(); var rail = new THREE.Mesh(new THREE.BoxGeometry(DECK.w, 0.06, 0.06), mTimber); rail.position.set(0, 1.0, 0); bal.add(rail); for (var i = 0; i <= 20; i++) { var bl = new THREE.Mesh(new THREE.BoxGeometry(0.03, 1.0, 0.03), mTimber); bl.position.set(-DECK.w / 2 + i * (DECK.w / 20), 0.5, 0); bal.add(bl); } bal.position.set(0.5, DECK.y + 0.07, house.d / 2 + DECK.d - 0.05); var balHit = new THREE.Mesh(new THREE.BoxGeometry(DECK.w, 1.05, 0.1), mat(0xffffff, { transparent: true, opacity: 0.0 })); balHit.position.set(0, 0.52, 0); bal.add(balHit); balHit.userData.mapKey = "m_balustrade"; balHit.userData.name = "Deck balustrade"; tappables.push(balHit); mapMeshes.m_balustrade = balHit; hg.add(bal);
   // stair: 7 risers of 171 mm, going 260, down the west end of the deck
-  var st = new THREE.Group(); var R = DECK.y / 7, G = 0.26; for (var s = 0; s < 7; s++) { var tr = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.04, G), mTimber); tr.position.set(0, DECK.y - s * R - 0.02, -(s + 0.5) * G); st.add(tr); var rs = new THREE.Mesh(new THREE.BoxGeometry(1.0, R, 0.03), mTimber); rs.position.set(0, DECK.y - s * R - R / 2, -(s) * G - 0.015); st.add(rs); }
-  st.position.set(0.5 - DECK.w / 2 - 0.6, 0, -house.d / 2 - DECK.d); var stHit = new THREE.Mesh(new THREE.BoxGeometry(1.0, DECK.y, 7 * G), mat(0xffffff, { transparent: true, opacity: 0.0 })); stHit.position.set(0, DECK.y / 2, -3.5 * G); st.add(stHit); stHit.userData.mapKey = "m_stair"; stHit.userData.name = "Deck stair"; tappables.push(stHit); mapMeshes.m_stair = stHit; hg.add(st);
+  var st = new THREE.Group(); var R = DECK.y / 7, G = 0.26; for (var s = 0; s < 7; s++) { var tr = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.04, G), mTimber); tr.position.set(0, DECK.y - s * R - 0.02, (s + 0.5) * G); st.add(tr); var rs = new THREE.Mesh(new THREE.BoxGeometry(1.0, R, 0.03), mTimber); rs.position.set(0, DECK.y - s * R - R / 2, (s) * G + 0.015); st.add(rs); }
+  st.position.set(0.5 - DECK.w / 2 - 0.6, 0, house.d / 2 + DECK.d); var stHit = new THREE.Mesh(new THREE.BoxGeometry(1.0, DECK.y, 7 * G), mat(0xffffff, { transparent: true, opacity: 0.0 })); stHit.position.set(0, DECK.y / 2, 3.5 * G); st.add(stHit); stHit.userData.mapKey = "m_stair"; stHit.userData.name = "Deck stair"; tappables.push(stHit); mapMeshes.m_stair = stHit; hg.add(st);
 })();
 (function () { var ins = new THREE.Mesh(new THREE.BoxGeometry(house.w - 0.4, 0.2, house.d - 0.4), mat(0xf2a7c2)); ins.position.y = house.h + 0.25; mapMesh("m_insul", ins); })();
 (function () { var fl = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 2.2, 10), mat(0x555555)); fl.position.set(3.5, house.h + 1.9, -1.5); mapMesh("m_flue", fl); })();
-(function () { var ramp = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.2, 2.2), mPath); ramp.position.set(-2.5, 0.1, house.d / 2 + 1.1); mapMesh("m_livable", ramp); var door = new THREE.Mesh(new THREE.BoxGeometry(0.82, 2.1, 0.08), mat(0x1e2a44)); door.position.set(-2.5, 1.05 + 0.2, house.d / 2 + 0.04); hg.add(door); })();
+(function () { var ramp = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.2, 2.2), mPath); ramp.position.set(-2.5, 0.1, -house.d / 2 - 1.1); mapMesh("m_livable", ramp); var door = new THREE.Mesh(new THREE.BoxGeometry(0.82, 2.1, 0.08), mat(0x1e2a44)); door.position.set(-2.5, 1.05 + 0.2, -house.d / 2 - 0.04); hg.add(door); })();
 (function () { var pool = lotItem("pool"); var fence = new THREE.Group(); var pw = pool.w + 3, pd = pool.d + 3; [[0, -pd / 2], [0, pd / 2]].forEach(function (p) { var f = new THREE.Mesh(new THREE.BoxGeometry(pw, 1.2, 0.04), mat(0x333333, { transparent: true, opacity: 0.5 })); f.position.set(p[0], 0.6, p[1]); fence.add(f); }); [[-pw / 2, 0], [pw / 2, 0]].forEach(function (p) { var f = new THREE.Mesh(new THREE.BoxGeometry(0.04, 1.2, pd), mat(0x333333, { transparent: true, opacity: 0.5 })); f.position.set(p[0], 0.6, p[1]); fence.add(f); }); fence.position.set(pool.x, 0, pool.z); var hit = new THREE.Mesh(new THREE.BoxGeometry(pw, 1.2, pd), mat(0xffffff, { transparent: true, opacity: 0 })); hit.position.set(pool.x, 0.6, pool.z); hit.userData.mapKey = "m_pool"; hit.userData.name = "Pool barrier"; tappables.push(hit); mapMeshes.m_pool = hit; lotG.add(fence); lotG.add(hit); })();
 
 // ---------- the section models ----------
@@ -810,7 +815,7 @@ function buildModel(m) {
       var mzt = new THREE.Mesh(new THREE.BoxGeometry(fw - 0.1, 0.05, D - 0.3), mFloorTint); mzt.position.set(cx, f.y0 + 0.03, 0.15); g.add(mzt);
     }
     if (f.wall) { var wm = new THREE.Mesh(new THREE.BoxGeometry(0.2, f.h, D), mWallS); wm.position.set(x1 + 0.1, f.y0 + f.h / 2, 0); g.add(wm); }
-    if (f.room) { var rl = makeLabel(Math.min(fw * 0.8, 5), 0.7, 800, 112); drawSign(rl, [f.room], 48); rl.mesh.position.set(cx, f.y0 + Math.min(f.h, 3.2) * 0.55, D / 2 - 0.25); rl.mesh.rotation.y = Math.PI; g.add(rl.mesh); }
+    if (f.room) { var rl = makeLabel(Math.min(fw * 0.85, 7), 1.0, 900, 130); drawSign(rl, [f.room], 60); rl.mesh.position.set(cx, f.y0 + Math.min(f.h, 3.2) * 0.55, D / 2 - 0.25); rl.mesh.rotation.y = Math.PI; g.add(rl.mesh); }
     f.cx = cx; f.x0m = x0; f.ceilY = ceil;
   });
   if (m.twelve) { var br = new THREE.Mesh(new THREE.BoxGeometry(W, 0.12, 0.12), mBracket); br.position.set(0, 0.3, -D / 2 - 0.6); g.add(br); var bl = makeLabel(2.2, 0.5, 440, 100); drawSign(bl, ["12 m"], 48); bl.mesh.position.set(0, 0.9, -D / 2 - 0.6); bl.mesh.rotation.y = Math.PI; g.add(bl.mesh); }
@@ -822,7 +827,7 @@ function buildModel(m) {
 }
 MODELS.forEach(buildModel);
 function clearTags() { MODELS.forEach(function (m) { m.tags.forEach(function (t) { m.group.remove(t.mesh); }); m.tags = []; }); }
-function tagFloor(m, f, txt, good) { var t = makeLabel(3.2, 0.62, 640, 124); var x = t.ctx; x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = good ? C.green : C.red; x.fillRect(0, 0, t.cw, t.ch); t.text(txt, t.cw / 2, t.ch * 0.68, C.white, 52, "", "center"); t.tex.needsUpdate = true; t.mesh.position.set(f.cx, f.y0 + Math.min(f.h, 3.2) * 0.5, -STOREY_D / 2 - 0.15); t.mesh.rotation.y = Math.PI; m.group.add(t.mesh); m.tags.push(t); }
+function tagFloor(m, f, txt, good) { var t = makeLabel(3.2, 0.62, 640, 124); var x = t.ctx; x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = good ? C.green : C.red; x.fillRect(0, 0, t.cw, t.ch); t.text(txt, t.cw / 2, t.ch * 0.68, C.white, fitPx(t, txt, 52, t.cw - 30), "", "center"); t.tex.needsUpdate = true; t.mesh.position.set(f.cx, f.y0 + Math.min(f.h, 3.2) * 0.5, -STOREY_D / 2 - 0.15); t.mesh.rotation.y = Math.PI; m.group.add(t.mesh); m.tags.push(t); }
 
 // house walls go translucent in the map tour so the inside shows
 var houseBody = house.body, houseSolid = house.baseMat, houseGhost = mat(house.col, { transparent: true, opacity: 0.35 });
@@ -831,16 +836,16 @@ var houseBody = house.body, houseSolid = house.baseMat, houseGhost = mat(house.c
 var pathG = new THREE.Group(); pathG.position.set(-25, 0, 30); world.add(pathG);
 var monoSlab = new THREE.Mesh(new THREE.BoxGeometry(10, 0.5, 8), mat(0x1e2a44)); monoSlab.position.y = 0.25; monoSlab.visible = false; pathG.add(monoSlab);
 var monoFrame = new THREE.Group(); [[-4.5, -3.5], [4.5, -3.5], [-4.5, 3.5], [4.5, 3.5], [0, -3.5], [0, 3.5]].forEach(function (p) { var c = new THREE.Mesh(new THREE.BoxGeometry(0.3, 4, 0.3), mat(0xe8801a)); c.position.set(p[0], 2.5, p[1]); monoFrame.add(c); }); [[0, -3.5], [0, 3.5]].forEach(function (p) { var b = new THREE.Mesh(new THREE.BoxGeometry(9.3, 0.3, 0.3), mat(0xe8801a)); b.position.set(p[0], 4.5, p[1]); monoFrame.add(b); }); [[-4.5, 0], [4.5, 0], [0, 0]].forEach(function (p) { var b = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.3, 7.3), mat(0xe8801a)); b.position.set(p[0], 4.5, p[1]); monoFrame.add(b); }); monoFrame.visible = false; pathG.add(monoFrame);
-var doorDTS = new THREE.Mesh(new THREE.BoxGeometry(4.2, 3.9, 0.15), mat(0x2b8a8a)); doorDTS.position.set(-2.3, 2.45, 3.6); var doorPerf = new THREE.Mesh(new THREE.BoxGeometry(4.2, 3.9, 0.15), mat(0xc99a2e)); doorPerf.position.set(2.3, 2.45, 3.6); doorDTS.visible = doorPerf.visible = false; pathG.add(doorDTS); pathG.add(doorPerf);
+var doorDTS = new THREE.Mesh(new THREE.BoxGeometry(4.2, 3.9, 0.15), mat(0x2b8a8a, { transparent: true, opacity: 0.6 })); doorDTS.position.set(2.3, 2.45, -3.6); var doorPerf = new THREE.Mesh(new THREE.BoxGeometry(4.2, 3.9, 0.15), mat(0xc99a2e, { transparent: true, opacity: 0.6 })); doorPerf.position.set(-2.3, 2.45, -3.6); doorDTS.visible = doorPerf.visible = false; pathG.add(doorDTS); pathG.add(doorPerf);
 var lblSlab = makeLabel(6, 0.9, 900, 135), lblFrame = makeLabel(6, 0.9, 900, 135), lblDTS = makeLabel(3.6, 1.4, 720, 280), lblPerf = makeLabel(3.6, 1.4, 720, 280);
 drawSign(lblSlab, ["Governing Requirements", "Section A"], 60); drawSign(lblFrame, ["Performance Requirements", "H1P1, H2P1, H3P1 ... mandatory"], 56); drawSign(lblDTS, ["Deemed-to-Satisfy", "A2G3 - follow the pointer"], 60); drawSign(lblPerf, ["Performance Solution", "A2G2 - brief, analysis, report"], 60);
-lblSlab.mesh.position.set(0, 0.9, 4.2); lblFrame.mesh.position.set(0, 5.3, 3.8); lblDTS.mesh.position.set(-2.3, 2.5, 3.75); lblPerf.mesh.position.set(2.3, 2.5, 3.75);
-[lblSlab, lblFrame, lblDTS, lblPerf].forEach(function (l) { l.mesh.visible = false; pathG.add(l.mesh); });
+lblSlab.mesh.position.set(0, 0.9, -4.2); lblFrame.mesh.position.set(0, 5.3, -3.8); lblDTS.mesh.position.set(2.3, 2.5, -3.75); lblPerf.mesh.position.set(-2.3, 2.5, -3.75);
+[lblSlab, lblFrame, lblDTS, lblPerf].forEach(function (l) { l.mesh.visible = false; l.mesh.rotation.y = Math.PI; pathG.add(l.mesh); });
 // the demonstration stair: built step by step, to whichever riser and going the step asks for
-var demoStair = new THREE.Group(); demoStair.position.set(7.5, 0, 3); pathG.add(demoStair);
+var demoStair = new THREE.Group(); demoStair.position.set(8, 0, -3); pathG.add(demoStair);
 var stairSteps = [], stairLabel = makeLabel(3.2, 1.0, 640, 200); stairLabel.mesh.position.set(0, 2.9, 0); stairLabel.mesh.visible = false; demoStair.add(stairLabel.mesh);
 function clearStair() { stairSteps.forEach(function (m) { demoStair.remove(m); }); stairSteps = []; }
-function addStairStep(i, R, G, bad) { var tr = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.04, G), bad ? mat(0xc99a2e) : mat(0x2b8a8a)); tr.position.set(0, (i + 1) * R - 0.02, -(i + 0.5) * G); demoStair.add(tr); stairSteps.push(tr); var rs = new THREE.Mesh(new THREE.BoxGeometry(1.0, R, 0.03), mTimber); rs.position.set(0, i * R + R / 2, -i * G - 0.015); demoStair.add(rs); stairSteps.push(rs); }
+function addStairStep(i, R, G, bad) { var tr = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.04, G), bad ? mat(0xc99a2e) : mat(0x2b8a8a)); tr.position.set(0, (i + 1) * R - 0.02, (i + 0.5) * G); demoStair.add(tr); stairSteps.push(tr); var rs = new THREE.Mesh(new THREE.BoxGeometry(1.0, R, 0.03), mTimber); rs.position.set(0, i * R + R / 2, i * G + 0.015); demoStair.add(rs); stairSteps.push(rs); }
 var docs = []; function clearDocs() { docs.forEach(function (d) { pathG.remove(d.mesh); }); docs = []; }
 
 
@@ -850,28 +855,28 @@ var v1G = new THREE.Group(); v1G.position.set(V1C.x, 0, V1C.z); world.add(v1G);
 var v1Slab = new THREE.Mesh(new THREE.BoxGeometry(12, 0.5, 9), mat(0x1e2a44)); v1Slab.position.y = 0.25; v1Slab.visible = false; v1G.add(v1Slab);
 var v1Frame = new THREE.Group(), SECTIONS = ["B", "C", "D", "E", "F", "G", "I", "J"];
 [[-5.5, -4], [5.5, -4], [-5.5, 4], [5.5, 4], [0, -4], [0, 4]].forEach(function (p) { var c = new THREE.Mesh(new THREE.BoxGeometry(0.3, 4.2, 0.3), mat(0xe8801a)); c.position.set(p[0], 2.6, p[1]); v1Frame.add(c); });
-SECTIONS.forEach(function (sec, i) { var b = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 8.3), mat(0xe8801a)); var x = -5.5 + i * (11 / 7); b.position.set(x, 4.7, 0); v1Frame.add(b); var l = makeLabel(0.9, 0.9, 200, 200); drawSign(l, [sec], 120); l.mesh.position.set(x, 5.4, 4.2); v1Frame.add(l.mesh); });
+SECTIONS.forEach(function (sec, i) { var b = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 8.3), mat(0xe8801a)); var x = 5.5 - i * (11 / 7); b.position.set(x, 4.7, 0); v1Frame.add(b); var l = makeLabel(0.9, 0.9, 200, 200); drawSign(l, [sec], 120); l.mesh.position.set(x, 5.4, -4.2); l.mesh.rotation.y = Math.PI; v1Frame.add(l.mesh); });
 v1Frame.visible = false; v1G.add(v1Frame);
-var v1DoorDTS = new THREE.Mesh(new THREE.BoxGeometry(4.6, 4.0, 0.15), mat(0x2b8a8a)); v1DoorDTS.position.set(-2.6, 2.5, 4.1); var v1DoorPerf = new THREE.Mesh(new THREE.BoxGeometry(4.6, 4.0, 0.15), mat(0xc99a2e)); v1DoorPerf.position.set(2.6, 2.5, 4.1); v1DoorDTS.visible = v1DoorPerf.visible = false; v1G.add(v1DoorDTS); v1G.add(v1DoorPerf);
+var v1DoorDTS = new THREE.Mesh(new THREE.BoxGeometry(4.6, 4.0, 0.15), mat(0x2b8a8a, { transparent: true, opacity: 0.6 })); v1DoorDTS.position.set(2.6, 2.5, -4.1); var v1DoorPerf = new THREE.Mesh(new THREE.BoxGeometry(4.6, 4.0, 0.15), mat(0xc99a2e, { transparent: true, opacity: 0.6 })); v1DoorPerf.position.set(-2.6, 2.5, -4.1); v1DoorDTS.visible = v1DoorPerf.visible = false; v1G.add(v1DoorDTS); v1G.add(v1DoorPerf);
 var v1LblDTS = makeLabel(4.0, 1.6, 720, 290), v1LblPerf = makeLabel(4.0, 1.6, 720, 290), v1LblSlab = makeLabel(7, 0.9, 900, 120);
 drawSign(v1LblDTS, ["C2D1: C1P1 to C1P9 satisfied by", "C2D2 to C2D15, C3D2 to C3D15,", "C4D2 to C4D17"], 44); drawSign(v1LblPerf, ["A2G2: Performance Solution", "assessment methods,", "verification methods (V clauses)"], 44); drawSign(v1LblSlab, ["Section A - Governing Requirements"], 54);
-v1LblDTS.mesh.position.set(-2.6, 2.5, 4.25); v1LblPerf.mesh.position.set(2.6, 2.5, 4.25); v1LblSlab.mesh.position.set(0, 0.95, 4.7);
-[v1LblDTS, v1LblPerf, v1LblSlab].forEach(function (l) { l.mesh.visible = false; v1G.add(l.mesh); });
+v1LblDTS.mesh.position.set(2.6, 2.5, -4.25); v1LblPerf.mesh.position.set(-2.6, 2.5, -4.25); v1LblSlab.mesh.position.set(0, 0.95, -4.7);
+[v1LblDTS, v1LblPerf, v1LblSlab].forEach(function (l) { l.mesh.visible = false; l.mesh.rotation.y = Math.PI; v1G.add(l.mesh); });
 // the shelf of 48 Specifications along the back of the monument
 var shelf = new THREE.Group(), books = {};
-(function () { var plank = new THREE.Mesh(new THREE.BoxGeometry(11.6, 0.12, 0.7), mTimber); plank.position.set(0, 1.0, -3.5); shelf.add(plank); var plank2 = new THREE.Mesh(new THREE.BoxGeometry(11.6, 0.12, 0.7), mTimber); plank2.position.set(0, 2.5, -3.5); shelf.add(plank2);
-  for (var n = 1; n <= 48; n++) { var row = n <= 24 ? 1 : 0, col = (n - 1) % 24; var bk = new THREE.Mesh(new THREE.BoxGeometry(0.34, 1.25, 0.55), mat(SPEC_NAMES[n] ? 0x8fa3ad : 0xb0b8c4)); bk.position.set(-5.5 + col * (11 / 23), (row ? 2.5 : 1.0) + 0.7, -3.5); bk.userData.spec = n; shelf.add(bk); books[n] = bk;
-    if (SPEC_NAMES[n]) { var sl = makeLabel(0.32, 1.1, 90, 300); var x = sl.ctx; x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = C.paper; x.fillRect(0, 0, 90, 300); x.save(); x.translate(45, 150); x.rotate(-Math.PI / 2); sl.text(String(n), 0, 18, C.ink, 54, "", "center"); x.restore(); sl.tex.needsUpdate = true; sl.mesh.position.set(bk.position.x, bk.position.y, bk.position.z + 0.29); shelf.add(sl.mesh); } }
-  var t = makeLabel(6, 0.8, 900, 120); drawSign(t, ["Specifications 1 to 48"], 54); t.mesh.position.set(0, 3.9, -3.3); shelf.add(t.mesh);
+(function () { var plank = new THREE.Mesh(new THREE.BoxGeometry(11.6, 0.12, 0.7), mTimber); plank.position.set(0, 1.0, 3.5); shelf.add(plank); var plank2 = new THREE.Mesh(new THREE.BoxGeometry(11.6, 0.12, 0.7), mTimber); plank2.position.set(0, 2.5, 3.5); shelf.add(plank2);
+  for (var n = 1; n <= 48; n++) { var row = n <= 24 ? 1 : 0, col = (n - 1) % 24; var bk = new THREE.Mesh(new THREE.BoxGeometry(0.34, 1.25, 0.55), mat(SPEC_NAMES[n] ? 0x8fa3ad : 0xb0b8c4)); bk.position.set(-5.5 + col * (11 / 23), (row ? 2.5 : 1.0) + 0.7, 3.5); bk.userData.spec = n; shelf.add(bk); books[n] = bk;
+    if (SPEC_NAMES[n]) { var sl = makeLabel(0.32, 1.1, 90, 300); var x = sl.ctx; x.setTransform(1, 0, 0, 1, 0, 0); x.fillStyle = C.paper; x.fillRect(0, 0, 90, 300); x.save(); x.translate(45, 150); x.rotate(-Math.PI / 2); sl.text(String(n), 0, 18, C.ink, 54, "", "center"); x.restore(); sl.tex.needsUpdate = true; sl.mesh.position.set(bk.position.x, bk.position.y, bk.position.z - 0.29); sl.mesh.rotation.y = Math.PI; shelf.add(sl.mesh); } }
+  var t = makeLabel(6, 0.8, 900, 120); drawSign(t, ["Specifications 1 to 48"], 54); t.mesh.position.set(0, 3.9, 3.3); t.mesh.rotation.y = Math.PI; shelf.add(t.mesh);
 })();
 shelf.visible = false; v1G.add(shelf);
-var v1Docs = []; function clearV1Docs() { v1Docs.forEach(function (d) { v1G.remove(d.mesh); }); v1Docs = []; Object.keys(books).forEach(function (n) { var b = books[n]; b.position.z = -3.5; b.material.color.set(SPEC_NAMES[n] ? 0x8fa3ad : 0xb0b8c4); }); }
-function v1Doc(lines, x, y, z, w, col) { var d = makeLabel(w || 3.2, 1.3, 760, 310); var c = d.ctx; c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = col || C.paper; c.fillRect(0, 0, d.cw, d.ch); c.lineWidth = 8; c.strokeStyle = C.ink; c.strokeRect(4, 4, d.cw - 8, d.ch - 8); var yy = d.ch / 2 - (lines.length - 1) * 30 + 16; lines.forEach(function (l, i) { d.text(l, d.cw / 2, yy, col ? C.white : (i === 0 ? C.ink : C.mute), i === 0 ? 46 : 36, "", "center"); yy += 60; }); d.tex.needsUpdate = true; d.mesh.position.set(x, y, z); v1G.add(d.mesh); v1Docs.push(d); return d; }
+var v1Docs = []; function clearV1Docs() { v1Docs.forEach(function (d) { v1G.remove(d.mesh); }); v1Docs = []; Object.keys(books).forEach(function (n) { var b = books[n]; b.position.z = 3.5; b.material.color.set(SPEC_NAMES[n] ? 0x8fa3ad : 0xb0b8c4); }); }
+function v1Doc(lines, x, y, z, w, col) { var d = makeLabel(w || 3.2, 1.3, 760, 310); var c = d.ctx; c.setTransform(1, 0, 0, 1, 0, 0); c.fillStyle = col || C.paper; c.fillRect(0, 0, d.cw, d.ch); c.lineWidth = 8; c.strokeStyle = C.ink; c.strokeRect(4, 4, d.cw - 8, d.ch - 8); var yy = d.ch / 2 - (lines.length - 1) * 30 + 16; lines.forEach(function (l, i) { d.text(l, d.cw / 2, yy, col ? C.white : (i === 0 ? C.ink : C.mute), i === 0 ? 46 : 36, "", "center"); yy += 60; }); d.tex.needsUpdate = true; d.mesh.position.set(x, y, z); d.mesh.rotation.y = Math.PI; v1G.add(d.mesh); v1Docs.push(d); return d; }
 function showV1Stage(n) { v1Slab.visible = v1LblSlab.mesh.visible = n >= 1; v1Frame.visible = n >= 2; v1DoorDTS.visible = v1DoorPerf.visible = v1LblDTS.mesh.visible = v1LblPerf.mesh.visible = n >= 3; shelf.visible = n >= 4; }
 var v1Stage = 0;
 
 // ---------- focus ring and class label ----------
-var focusRing = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.15, 40), new THREE.MeshBasicMaterial({ color: 0xe8801a, side: THREE.DoubleSide, transparent: true, opacity: 0.85 })); focusRing.rotation.x = -Math.PI / 2; focusRing.visible = false; scene.add(focusRing);
+var focusRing = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.15, 40), new THREE.MeshBasicMaterial({ color: 0xe8801a, side: THREE.DoubleSide, transparent: true, opacity: 0.85 })); focusRing.rotation.x = -Math.PI / 2; focusRing.visible = false; world.add(focusRing);
 var focusTarget = null;
 function setFocus(key) {
   focusTarget = null; STREET.concat(LOTITEMS).concat([bh]).concat(MODELS).forEach(function (b) { b.label.mesh.visible = false; if (b.body && b.baseMat) b.body.material = b.baseMat; });
@@ -922,7 +927,7 @@ function switchTab(t) {
 function enterStep() {
   var s = step(); feedback = ""; quizPicked = -1; showExplain = false; demoRunning = false;
   stepDone = ["intro", "end", "look", "chain"].indexOf(s.mode) >= 0;
-  setFocus(s.focus || null); clearTags(); MODELS.forEach(function (m) { m.floors.forEach(function (f) { f.tagged = false; }); });
+  setFocus(s.focus || null); houseBody.material = tab === "map" ? houseGhost : houseSolid; clearTags(); MODELS.forEach(function (m) { m.floors.forEach(function (f) { f.tagged = false; }); });
   if (s.mode === "look") { var it = s.focus === "bh" ? bh : lotItem(s.focus); revealClass(it, it.cls === "Part of the Class 1a" ? "Class 1a" : it.cls, it.cls === "Part of the Class 1a" ? "part of the house" : null); }
   if (s.mode === "use") { useIdx = -1; drawSign(bldg("chameleon").signPanel, ["TO LET"], 56); }
   if (s.mode === "beds") { bedCount = 10; rebuildBeds2(10); revealClass(bldg("boarding"), "Class 1b", "10 people"); }
@@ -961,15 +966,15 @@ function runDemo() {
     q.push(later(function () { v1Stage = s.stage; showV1Stage(v1Stage); thunk(); feedback = ["Section A. Same slab as Volume Two.", "Eight beams, eight Sections. The P clauses hang off them and they are mandatory.", "Two doors. Teal: C2D1 and its cousins, the D1 clause in every Section. Gold: A2G2.", "Forty-eight Specifications on the shelf behind the doors. The numbered ones are the ones you will meet most."][s.stage - 1]; renderBoard(); }, 600));
   } else if (s.mode === "anatomy") {
     var parts = [["S", "Specification, not a Section"], ["5", "Specification number 5"], ["C", "Type: Specification clause"], ["21", "Clause 21"]];
-    parts.forEach(function (pt, i) { q.push(later(function () { v1Doc([pt[0], pt[1]], -4.8 + i * 3.2, 7.2, 4.5, 2.9); feedback = pt[0] + ": " + pt[1] + "."; renderBoard(); ding(); }, i === 0 ? 500 : 2200)); });
-    q.push(later(function () { v1Doc(["S5C21", "Specification 5, clause 21: Type B construction"], 0, 9.0, 4.5, 6.5, C.ink); feedback = "S5C21. The letter in the third position is the status. Read it before you read the clause."; renderBoard(); }, 2400));
+    parts.forEach(function (pt, i) { q.push(later(function () { v1Doc([pt[0], pt[1]], 4.8 - i * 3.2, 7.2, -4.5, 2.9); feedback = pt[0] + ": " + pt[1] + "."; renderBoard(); ding(); }, i === 0 ? 500 : 2200)); });
+    q.push(later(function () { v1Doc(["S5C21", "Specification 5, clause 21: Type B construction"], 0, 9.0, -4.5, 6.5, C.ink); feedback = "S5C21. The letter in the third position is the status. Read it before you read the clause."; renderBoard(); }, 2400));
   } else if (s.mode === "v1chain") {
     var chain = [["A6G6", "Class 5 office"], ["C2D3", "rise in storeys 3"], ["Table C2D2", "Class 5, rise 3: Type B"], ["C2D2(2)", "each element must comply with Specification 5"], ["S5C21(1)(a)", "FRL not less than the Tables"], ["Table S5C21a", "loadbearing external wall, Class 5, 3 m to 9 m: 120/30/30"]];
-    chain.forEach(function (l, i) { q.push(later(function () { v1Doc([l[0], l[1]], 8.5, 8.6 - i * 1.5, 1.5 - i * 0.02, 5.6, i === 3 ? C.teal : null); if (i === 3) { books[5].position.z = -2.9; books[5].material.color.set(0x2b8a8a); } feedback = l[0] + ": " + l[1] + "."; renderBoard(); if (i === 5) ding(); else tone(700 + i * 60, 0, 0.1, 0.1); }, i === 0 ? 500 : 2800)); });
+    chain.forEach(function (l, i) { q.push(later(function () { v1Doc([l[0], l[1]], 8.5, 8.6 - i * 1.5, -1.5, 5.6, i === 3 ? C.teal : null); if (i === 3) { books[5].position.z = 2.9; books[5].material.color.set(0x2b8a8a); } feedback = l[0] + ": " + l[1] + "."; renderBoard(); if (i === 5) ding(); else tone(700 + i * 60, 0, 0.1, 0.1); }, i === 0 ? 500 : 2800)); });
     q.push(later(function () { feedback = "120/30/30. Six links from the class to the number, and the number is in a Specification, called up by a D clause, so it is mandatory."; renderBoard(); }, 2600));
   } else if (s.mode === "v1chain2") {
     var chain2 = [["J1P1", "energy efficiency: the outcome"], ["J1V3", "verification using a reference building: optional"], ["Specification 34", "modelling parameters: optional, because J1V3 is"], ["Specification 35", "modelling profiles: optional, because J1V3 is"]];
-    chain2.forEach(function (l, i) { q.push(later(function () { v1Doc([l[0], l[1]], 8.5, 8.6 - i * 1.5, 1.5, 5.6, i >= 2 ? C.gold : null); if (i >= 2) { var b = books[i === 2 ? 34 : 35]; b.position.z = -2.9; b.material.color.set(0xc99a2e); } feedback = l[0] + ": " + l[1] + "."; renderBoard(); tone(700 + i * 60, 0, 0.1, 0.1); }, i === 0 ? 500 : 2800)); });
+    chain2.forEach(function (l, i) { q.push(later(function () { v1Doc([l[0], l[1]], 8.5, 8.6 - i * 1.5, -1.5, 5.6, i >= 2 ? C.gold : null); if (i >= 2) { var b = books[i === 2 ? 34 : 35]; b.position.z = 2.9; b.material.color.set(0xc99a2e); } feedback = l[0] + ": " + l[1] + "."; renderBoard(); tone(700 + i * 60, 0, 0.1, 0.1); }, i === 0 ? 500 : 2800)); });
     q.push(later(function () { feedback = "Same shelf, gold door. Specification 34 and 35 bind you only if you chose J1V3."; ding(); renderBoard(); }, 2600));
   } else if (s.mode === "build") {
     q.push(later(function () { pathStage = s.stage; showPathStage(pathStage); thunk(); feedback = s.stage === 1 ? "Section A. Everything stands on it." : (s.stage === 2 ? "The Performance Requirements. Mandatory. The frame that every solution must hang off." : "Two doors. Teal: deemed to satisfy. Gold: performance solution. Both lead to the same frame."); renderBoard(); }, 600));
@@ -982,7 +987,7 @@ function runDemo() {
   } else if (s.mode === "stairperf") {
     q.push(later(function () { clearStair(); for (var i = 0; i < 7; i++) addStairStep(i, 0.2, 0.23, true); drawSign(stairLabel, ["Riser 200, going 230", "outside Table 11.2.2a - DTS door shut"], 46); stairLabel.mesh.visible = true; buzz(); feedback = "Riser 200 is over 190. Going 230 is under 240. The DTS door is shut."; renderBoard(); }, 600));
     var pages = [["1  Design brief", "A2G2(4)(a) - with stakeholders"], ["2  Analysis", "A2G2(4)(b) - as the brief proposed"], ["3  Evaluation", "A2G2(4)(c) - against the acceptance criteria"], ["4  Final report", "A2G2(4)(d) - PRs, methods, steps, conditions"]];
-    pages.forEach(function (p, i) { q.push(later(function () { var d = makeLabel(2.4, 1.4, 600, 350); drawSign(d, p, 48); d.mesh.position.set(2.3 + (i - 1.5) * 2.6, 6.3, 3.9); pathG.add(d.mesh); docs.push(d); feedback = p[0].slice(3) + ". " + p[1] + "."; renderBoard(); ding(); }, i === 0 ? 2800 : 3000)); });
+    pages.forEach(function (p, i) { q.push(later(function () { var d = makeLabel(2.4, 1.4, 600, 350); drawSign(d, p, 48); d.mesh.position.set(-2.3 - (i - 1.5) * 2.6, 6.3, -3.9); d.mesh.rotation.y = Math.PI; pathG.add(d.mesh); docs.push(d); feedback = p[0].slice(3) + ". " + p[1] + "."; renderBoard(); ding(); }, i === 0 ? 2800 : 3000)); });
     q.push(later(function () { feedback = "Four documents, and the gold door opens. Same H5P1, satisfied by a different route."; renderBoard(); }, 2800));
   }
   runQueue(q, function () { demoRunning = false; stepDone = true; renderBoard(); });
@@ -1006,31 +1011,27 @@ function primeSpeech() { try { if (window.speechSynthesis) { loadVoices(); var u
 function stepText(s) { var t = (s.n === 0 || s.mode === "end" ? "" : "Step " + s.n + ". ") + s.title + ". " + s.task; if (s.mode === "chain") { var m = mapItem(s.key); t = s.title + ". " + m.pr + ". Then " + m.dts + ". Which points to " + m.hp + ". " + m.plain; } if (s.how && !stepDone) t += " " + (guided ? (s.watch || s.how) : s.how); return t; }
 function speakStep() { lastSpoken = ""; speak(stepText(step())); }
 
-// ---------- walking you to the spot ----------
-var rigFixedY = null;
-function faceAndStand(v) {
-  if (renderer.xr.isPresenting && v.y !== undefined) {
-    var dx = v.x - v.look.x, dz = v.z - v.look.z, dl = Math.hypot(dx, dz) || 1;
-    v = { x: v.look.x + dx / dl * 9, z: v.look.z + dz / dl * 9, y: Math.min(v.y, 3.5), look: v.look };
-  }
-  var yawWanted = Math.atan2(-(v.look.x - v.x), -(v.look.z - v.z)), stand = v.y !== undefined ? v.y : 0;
-  if (renderer.xr.isPresenting) {
-    // Work entirely in world space: where the head is and which way it faces right now.
-    var hw = new THREE.Vector3(), fw = new THREE.Vector3();
-    camera.getWorldPosition(hw); camera.getWorldDirection(fw);
-    var headYaw = Math.atan2(-fw.x, -fw.z), oldYaw = rig.rotation.y, newYaw = oldYaw + (yawWanted - headYaw);
-    // head offset from the rig origin, expressed in the rig's own frame
-    var ox = hw.x - rig.position.x, oz = hw.z - rig.position.z, c0 = Math.cos(-oldYaw), s0 = Math.sin(-oldYaw);
-    var lx = ox * c0 + oz * s0, lz = -ox * s0 + oz * c0;
-    if (Math.hypot(lx, lz) > 4) { lx = 0; lz = 0; }   // implausible: ignore the offset rather than fling the rig
-    var c1 = Math.cos(newYaw), s1 = Math.sin(newYaw);
-    rig.rotation.y = newYaw;
-    rig.position.set(v.x - (lx * c1 + lz * s1), stand, v.z - (-lx * s1 + lz * c1));
-  } else { yaw = yawWanted; pitch = v.y !== undefined ? -0.85 : -0.12; rig.position.set(v.x, stand, v.z); }
-  rigFixedY = v.y !== undefined ? v.y : null;
+// ---------- bringing the spot to you ----------
+// The player stays at the origin of the room. For each step the whole world is rotated and slid so the thing
+// to look at sits straight ahead of wherever the head is facing, at the distance the step asks for.
+// Nothing about the headset's tracking or reference space can put the player in the wrong place.
+function currentHeadYaw() { if (renderer.xr.isPresenting) return Math.atan2(-camDir.x, -camDir.z); return yaw; }
+function stage(v) {
+  var dx = v.look.x - v.x, dz = v.look.z - v.z, dist = Math.max(3, Math.hypot(dx, dz));
+  var beta = Math.atan2(-dx, -dz);            // the direction the step wants you to look, in world terms
+  var theta = currentHeadYaw();               // the direction you are actually facing
+  var alpha = theta - beta;                   // turn the world so those two agree
+  var hx = renderer.xr.isPresenting ? camPos.x : 0, hz = renderer.xr.isPresenting ? camPos.z : 0;
+  var fx = -Math.sin(theta), fz = -Math.cos(theta);
+  var sx = hx + fx * dist, sz = hz + fz * dist;                       // where the look point must end up
+  var ca = Math.cos(alpha), sa = Math.sin(alpha);
+  var tx = v.look.x * ca + v.look.z * sa, tz = -v.look.x * sa + v.look.z * ca;   // the look point after rotation
+  var lift = v.y !== undefined ? Math.min(v.y, renderer.xr.isPresenting ? 3.5 : 12) : 0;
+  world.rotation.y = alpha; world.position.set(sx - tx, -lift, sz - tz);
+  if (!renderer.xr.isPresenting) pitch = v.y !== undefined ? -Math.atan2(lift + 1.6, dist) : 0.04;
   tone(600, 0, 0.06, 0.06);
 }
-function walkTo() { var v = step().vantage; if (v) faceAndStand(v); }
+function walkTo() { var v = step().vantage; if (v) stage(v); }
 
 // ---------- interaction ----------
 var raycaster = new THREE.Raycaster(), tmpM = new THREE.Matrix4(), o3 = new THREE.Vector3(), d3 = new THREE.Vector3();
@@ -1057,7 +1058,7 @@ function press(h) {
   if (h.kind === "board") { if (h.idx >= 0 && h.panel.hits[h.idx].action) { tone(1200, 0, 0.04, 0.08); act(h.panel.hits[h.idx].action); } return; }
   if (h.kind === "obj") { if (!guided) tapObject(h.obj); else { if (!stepDone && !demoRunning) runDemo(); else if (stepDone) act({ act: "next" }); } return; }
 }
-function teleport(pt) { rig.position.set(pt.x, 0, pt.z); rigFixedY = null; tone(600, 0, 0.06, 0.06); }
+
 
 var controllers = [];
 for (var ci = 0; ci < 2; ci++) (function (i) {
@@ -1067,18 +1068,17 @@ for (var ci = 0; ci < 2; ci++) (function (i) {
   c.addEventListener("connected", function (e) { c.userData.gamepad = e.data.gamepad; c.visible = true; });
   c.addEventListener("disconnected", function () { c.visible = false; });
   c.addEventListener("selectstart", function () { var h = castFromController(c); press(h); haptic(c); });
-  c.addEventListener("squeezestart", function () { var h = castFromController(c); if (h && h.kind === "ground") teleport(h.pt); });
+  c.addEventListener("squeezestart", function () { walkTo(); });
   c.visible = false; rig.add(c); controllers.push(c);
 })(ci);
 function castFromController(c) { tmpM.identity().extractRotation(c.matrixWorld); o3.setFromMatrixPosition(c.matrixWorld); d3.set(0, 0, -1).applyMatrix4(tmpM); return castFrom(o3, d3); }
 function haptic(c) { try { var gp = c.userData.gamepad; if (gp && gp.hapticActuators && gp.hapticActuators[0]) gp.hapticActuators[0].pulse(0.4, 40); } catch (e) {} }
-var turnCooldown = 0;
-function pollSticks(dt) { turnCooldown -= dt; controllers.forEach(function (c) { var gp = c.userData.gamepad; if (!gp || !gp.axes) return; var ax = gp.axes[2] !== undefined ? gp.axes[2] : gp.axes[0]; if (Math.abs(ax) > 0.7 && turnCooldown <= 0) { rig.rotation.y -= Math.sign(ax) * Math.PI / 6; turnCooldown = 0.35; } }); }
+function pollSticks() {}
 
 // desktop
 var mouse = new THREE.Vector2(0, 0), yaw = 0, pitch = -0.12, dragging = false, moved = false, lastX = 0, lastY = 0, keys = {};
 renderer.domElement.addEventListener("mousedown", function (e) { dragging = true; moved = false; lastX = e.clientX; lastY = e.clientY; });
-window.addEventListener("mouseup", function (e) { dragging = false; if (moved || renderer.xr.isPresenting) return; updateMouse(e); raycaster.setFromCamera(mouse, camera); var h = castFrom(raycaster.ray.origin, raycaster.ray.direction); if (e.button === 2) { if (h && h.kind === "ground") teleport(h.pt); } else press(h); });
+window.addEventListener("mouseup", function (e) { dragging = false; if (moved || renderer.xr.isPresenting) return; updateMouse(e); raycaster.setFromCamera(mouse, camera); var h = castFrom(raycaster.ray.origin, raycaster.ray.direction); if (e.button !== 2) press(h); });
 window.addEventListener("contextmenu", function (e) { e.preventDefault(); });
 window.addEventListener("mousemove", function (e) { if (dragging) { var dx = e.clientX - lastX, dy = e.clientY - lastY; if (Math.abs(dx) + Math.abs(dy) > 3) moved = true; yaw -= dx * 0.004; pitch = Math.max(-1.3, Math.min(1.3, pitch - dy * 0.004)); lastX = e.clientX; lastY = e.clientY; } updateMouse(e); });
 window.addEventListener("keydown", function (e) { keys[e.key.toLowerCase()] = true; if (e.key === "Enter" && stepDone) act({ act: "next" }); if (e.key === " " && guided && !stepDone) { e.preventDefault(); runDemo(); } });
@@ -1090,11 +1090,11 @@ window.addEventListener("resize", function () { camera.aspect = window.innerWidt
 var btn = document.getElementById("enter"), note = document.getElementById("note");
 if (navigator.xr && navigator.xr.isSessionSupported) {
   navigator.xr.isSessionSupported("immersive-vr").then(function (ok) {
-    if (ok) { btn.style.display = "inline-block"; note.textContent = "Trigger: press a button, or point at a building. Grip: teleport where you point. Thumbstick: snap turn."; }
-    else note.textContent = "No headset in this browser. Drag to look, W A S D to walk, click to act, right-click to jump to a spot. Enter for Next, space for Do this step.";
+    if (ok) { btn.style.display = "inline-block"; note.textContent = "Stand still: each step brings the spot to you. Trigger: press a button or point at a building. Grip: bring the spot back in front of you."; }
+    else note.textContent = "No headset in this browser. Drag to look around, click to act. Enter for Next, space for Do this step. Each step brings the spot to you.";
   });
-} else note.textContent = "No WebXR here. Drag to look, W A S D to walk, click to act, right-click to jump to a spot. Enter for Next, space for Do this step.";
-btn.addEventListener("click", function () { ac(); primeSpeech(); speakStep(); navigator.xr.requestSession("immersive-vr", { optionalFeatures: ["local-floor", "bounded-floor"] }).then(function (session) { session.addEventListener("end", function () { document.getElementById("ui").style.display = "block"; }); renderer.xr.setSession(session); document.getElementById("ui").style.display = "none"; setTimeout(function () { walkTo(); }, 1500); }); });
+} else note.textContent = "No WebXR here. Drag to look around, click to act. Enter for Next, space for Do this step. Each step brings the spot to you.";
+btn.addEventListener("click", function () { ac(); primeSpeech(); speakStep(); navigator.xr.requestSession("immersive-vr", { optionalFeatures: ["local-floor", "bounded-floor"] }).then(function (session) { session.addEventListener("end", function () { document.getElementById("ui").style.display = "block"; }); renderer.xr.setSession(session); document.getElementById("ui").style.display = "none"; setTimeout(function () { walkTo(); }, 1500); setTimeout(function () { walkTo(); }, 4000); }); });
 
 // ---------- loop ----------
 var boardInit = false, boardFollow = true, boardTarget = new THREE.Vector3(), pageTarget = new THREE.Vector3(), camPos = new THREE.Vector3(), camDir = new THREE.Vector3(), lastT = performance.now();
@@ -1107,9 +1107,6 @@ renderer.setAnimationLoop(function () {
     controllers.forEach(function (c) { if (c.visible) { var h = castFromController(c); updatePointer(h); c.userData.line.scale.z = h ? Math.min(h.dist, 80) : 5; } });
   } else {
     camera.rotation.set(pitch, yaw, 0, "YXZ");
-    var sp = 5 * dt, fx = -Math.sin(yaw), fz = -Math.cos(yaw);
-    if (keys.w) { rig.position.x += fx * sp; rig.position.z += fz * sp; } if (keys.s) { rig.position.x -= fx * sp; rig.position.z -= fz * sp; }
-    if (keys.a) { rig.position.x += fz * sp; rig.position.z -= fx * sp; } if (keys.d) { rig.position.x -= fz * sp; rig.position.z += fx * sp; }
     camera.getWorldPosition(camPos); camera.getWorldDirection(camDir);
     raycaster.setFromCamera(mouse, camera); updatePointer(castFrom(raycaster.ray.origin, raycaster.ray.direction));
   }
@@ -1125,6 +1122,7 @@ renderer.setAnimationLoop(function () {
   page.mesh.lookAt(camPos.x, page.mesh.position.y + 0.05, camPos.z);
   focusRing.scale.setScalar((focusTarget && focusTarget.w ? Math.max(1, focusTarget.w / 8) : 1) * (1 + 0.1 * Math.sin(now / 250)));
   // labels face you
+  LOTITEMS.forEach(function (b) { if (b.roof === "none") { var sp = new THREE.Vector3(); b.signPanel.mesh.getWorldPosition(sp); b.signPanel.mesh.lookAt(camPos.x, sp.y, camPos.z); } });
   STREET.concat(LOTITEMS).concat([bh]).concat(MODELS).forEach(function (b) { if (b.label.mesh.visible) b.label.mesh.lookAt(camPos.x, b.label.mesh.position.y + b.group.position.y, camPos.z); });
   [stairLabel].forEach(function (l) { if (l.mesh.visible) { var wp = new THREE.Vector3(); l.mesh.getWorldPosition(wp); l.mesh.lookAt(camPos.x, wp.y, camPos.z); } });
   if (hoverLabel.mesh.visible) hoverLabel.mesh.lookAt(camPos.x, hoverLabel.mesh.position.y, camPos.z);
